@@ -5,6 +5,7 @@ https://wren.io/classes.html
 
 To-Do / proposals
 =================
+- Newlines and other statement/expression separators
 - Generic types? maybe later, if needed
 - Default parameters?
 - Named parameters by (<arg> = <exp>)
@@ -16,6 +17,9 @@ To-Do / proposals
   - Allows positional arguments and named arguments
   - Automatically "destructured" to function call
   - Problem: what to do when you want to pass a single block parameter? (syntax)
+- Compound assignment operators?
+- Ternary operator? Don't think, I like lua's and-or method
+- Pure functions as optimisation?
 
 Operators and keywords
 =========
@@ -31,12 +35,55 @@ Operators and keywords
     - + = { ()(a: Num, b: Num) => a + b } (would need to define this method on Num class load)
     - Num = { +(b) => this + b }
 - keywords: return, yield (maybe later, together with coroutines/continuations), break, throw?
+  - External / foreign? for function definitions that get populated later on by C or as interfaces
 - true, false and nil/null are not keywords, but instances of Bool and Nil/Null classes
+- unary operators: '-', '!' and other custom ones
+- binary operators: '-', '+' and other custom ones
+- wrap operators: '{}', '()', '[]', '""'
+  - allow custom wrap operators? like '<>' would be nice, or '||'
+  - I think impossible, interfering with allowing single-param function call without parentheses:
+      a | b | c
+      as 2x binary operator: (a | b) | c
+      as wrap operator: a |b| c  (which is  a(|b|)(c))
+    - possible (bad) solution: require no space present inside "brackets"
+	  - problem for strings: " airy string "
+	- better solution: set wrap operator precedence(?) such that this is not a problem (really low?)
+  - maybe best to disallow custom wrap operators but have a few default unassigned
+  - possible problem: does the wrap operator apply on only the content or also the expression before?
+	- a[b] should call '[]' from a with b as argument: a.[](b)
+	  - definition of '[]' method should be defined in class of a
+    - a [b] should call '[]' with b as argument and pass that as argument to a: a([](b))
+	  - definition of '[]' method should be defined in its own operator class
+	    (see operators as first-class citizens ^)
+  - disallow defining of predefined wrap operators as unary or binary operators!
+
+The following:
+	a
+	-b
+	.c()
+gets parsed as expression:
+	a - b.c()
+But this:
+	a
+	-b
+	c()
+gets parsed as expression? followed by statement:
+	a - b
+	c()
+This means ?
 
 Blocks, classes, functions (all the same?)
 ==========================================
+Blocks serve many purposes at once:
+- Objects (storing values by string keys)
+- Arrays (storing values by numeric keys)
+- Maps? (storing values by any type keys)
+- Classes (objects with constructors and instance variables/methods)
+- Grouping of code chunks (if, while, for etc)
+- Functions (code chunks with parameters)
+
 - exp ::= var | number | string | unop exp | exp binop exp | block | lambda | fncall | '(' exp ')'
-- stat ::= ';'
+- stat ::= sep
          | varlist '=' explist
          | fncall
          | {modifier} identifier ['(' arglist ')'] '=>' chunk
@@ -49,23 +96,28 @@ Blocks, classes, functions (all the same?)
 - identifier ::= letter [{alphanum}]  |  '`' {character} '`'
 - fncall ::= prefixexp args
 - args ::= exp  |  '(' [explist] ')'
-- explist ::= exp  {',' exp}
+- explist ::= exp {sep exp}
+- sep ::= '\n' | ';' | ','
+
+List / array syntax using `()` or `[]` as syntax sugar. These are all equal:
+(10, 20, a = b, 30)
+(
+	10
+	20
+	a = b
+	30
+)
+extend List {
+	`1` = 10
+	`2` = 20
+	a = b
+	`3` = 30
+}
 
 Inheritance:
 - Point = Vector { } (call static superclass)
 - Point = extend Vector { } (with `extend` keyword)
 - Point = { @extend Vector } (with @attribute annotation)
-
-Explist at start of block is syntax sugar for assignment to next integer index:
-{
-	10,
-	20
-}
-is syntax sugar for
-{
-	`1` = 10
-	`2` = 20
-}
 
 Example
 =======

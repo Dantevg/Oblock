@@ -3,6 +3,20 @@
 ================================================================================
 https://wren.io/classes.html
 
+To-Do / proposals
+=================
+- Generic types? maybe later, if needed
+- Default parameters?
+- Named parameters by (<arg> = <exp>)
+  - Following C# valid-ness, valid when one of:
+    - First all positional parameters, then all named parameters
+    - Named parameters in correct place?
+- Passing single block as parameter
+  - "Immediately-invoked function"
+  - Allows positional arguments and named arguments
+  - Automatically "destructured" to function call
+  - Problem: what to do when you want to pass a single block parameter? (syntax)
+
 Operators and keywords
 =========
 - precedence
@@ -14,8 +28,8 @@ Operators and keywords
     - use any value as operator like haskell? not nice for readability
   - operators as classes? define operator instance methods inside operator's class
     instead of inside type's class:
-	- + = { ()(a: Num, b: Num) => a + b } (would need to define this method on Num class load)
-	- Num = { +(b) => this + b }
+    - + = { ()(a: Num, b: Num) => a + b } (would need to define this method on Num class load)
+    - Num = { +(b) => this + b }
 - keywords: return, yield (maybe later, together with coroutines/continuations), break, throw?
 - true, false and nil/null are not keywords, but instances of Bool and Nil/Null classes
 
@@ -26,9 +40,9 @@ Blocks, classes, functions (all the same?)
          | varlist '=' explist
          | fncall
          | {modifier} identifier ['(' arglist ')'] '=>' chunk
-		 | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
+         | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
          | 'while' exp ':' chunk
-		 | 'for' varlist 'in' explist ':' chunk
+         | 'for' varlist 'in' explist ':' chunk
 - chunk ::= stat  |  block
 - block ::= {modifier} '{' [explist] {stat} '}'
 - lambda ::= '(' arglist ')' '=>' chunk (also allow leaving out '('arglist')' here? I think impossible)
@@ -82,7 +96,7 @@ Functions
 - callback (x: Int): Int => x + 1
 - Optional types: (x: Int) or (Int x)
   - C-style:  Int myFunction(Int x) => x + 1 (can only be used in normal definitions)
-  - TS-style: myFunction(x: Int): Int => x + 1 (can also be used in lambda definitions?)
+  - TS / Kotlin-style: myFunction(x: Int): Int => x + 1 (can also be used in lambda definitions?)
 - no space allowed between name and arglist, otherwise function application
 - define associativity, which is more useful? `map increment myList` can be
   - `map(increment)(myList)` (functional style / currying?)

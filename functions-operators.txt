@@ -1,0 +1,45 @@
+add(x, y) => x + y
+incr(x) => x + 1
+one = 1
+
+sqr(x) => add(x, x)
+two = add(1, 1)
+getTwo() => add(1, 1)
+
+Defining custom operators / extending existing operators
+- Defining new infix operators needs a precedence value and associativity
+  - Where to define this?
+  - What to do about clashing precedence values?
+  - Solution: pre-define some operators and their precedence,
+    use the same precedence and associativity for all new operators.
+
+ string + char * int
+ string +(char * int)
+(string + char)* int
+ "hello" + 'a' * 3
+ "hello" +('a' * 3) = "hello" + "aaa" = "helloaaa"
+("hello" + 'a')* 3 = "helloa" * 3 = "helloahelloahelloa"
+
+Possible syntax for using operators as index:
+
++(b) = this + b
+`+`(b) = this + b
+[+](b) = this + b
+operator +(b) = this + b
+
+Allowing words as operators might not be a good idea, ambiguous-syntax wise
+is(b) = this is b
+`is`(b) = this is b
+[is](b) = this is b
+operator is(b) = this is b
+
+()(b) = b()
+`()`(b) = b()
+[()](b) = b()
+operator ()(b) = b()
+
+Using keyword "operator" might not be generic enough, numbers are not operators
+2(b) = this + b
+`2`(b) = this + b
+[2](b) = this + b
+operator 2(b) = this + b

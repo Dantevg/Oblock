@@ -1,0 +1,140 @@
+================================================================================
+									Syntax
+================================================================================
+https://wren.io/classes.html
+
+Operators and keywords
+=========
+- precedence
+- associativity
+- operators and keywords as first-class citizens? Would allow using all things as keys (and values)
+  - as keys for defining operator methods
+  - as values for storing and passing to functions
+  - problem: how to use operators from parameters?
+    - use any value as operator like haskell? not nice for readability
+  - operators as classes? define operator instance methods inside operator's class
+    instead of inside type's class:
+	- + = { ()(a: Num, b: Num) => a + b } (would need to define this method on Num class load)
+	- Num = { +(b) => this + b }
+- keywords: return, yield (maybe later, together with coroutines/continuations), break, throw?
+- true, false and nil/null are not keywords, but instances of Bool and Nil/Null classes
+
+Blocks, classes, functions (all the same?)
+==========================================
+- exp ::= var | number | string | unop exp | exp binop exp | block | lambda | fncall | '(' exp ')'
+- stat ::= ';'
+         | varlist '=' explist
+         | fncall
+         | {modifier} identifier ['(' arglist ')'] '=>' chunk
+		 | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
+         | 'while' exp ':' chunk
+		 | 'for' varlist 'in' explist ':' chunk
+- chunk ::= stat  |  block
+- block ::= {modifier} '{' [explist] {stat} '}'
+- lambda ::= '(' arglist ')' '=>' chunk (also allow leaving out '('arglist')' here? I think impossible)
+- identifier ::= letter [{alphanum}]  |  '`' {character} '`'
+- fncall ::= prefixexp args
+- args ::= exp  |  '(' [explist] ')'
+- explist ::= exp  {',' exp}
+
+Inheritance:
+- Point = Vector { } (call static superclass)
+- Point = extend Vector { } (with `extend` keyword)
+- Point = { @extend Vector } (with @attribute annotation)
+
+Explist at start of block is syntax sugar for assignment to next integer index:
+{
+	10,
+	20
+}
+is syntax sugar for
+{
+	`1` = 10
+	`2` = 20
+}
+
+Example
+=======
+Point = { (Point is a block/class/object, but really an immediately-invoked function)
+	static `()`(x, y) => { (call method for Point "class" / object)
+		this.x = x
+		this.y = y
+	}
+	`+`(p) => Point(this.x + p.x, this.y + p.y) (addition method for Point instances)
+	getX => this.x ("getter method", no argument list, will be invoked on myPoint.getX)
+	setX(x) => { this.x = x } (normal method, assignments are not expressions so brackets necessary)
+	
+	static base = { (static immediately-invoked function, block: Point.base = 11)
+		x = 10
+		return x + 1
+	}
+	static next = static.base + 1 (static "immediately-invoked function", really just a field)
+	static nget => static.base + 1 (static "getter method")
+	static getBase() => Point.base (static shorthand method, Point.getBase() returns 11)
+}
+
+Functions
+=========
+- myFunction(x: Int): Int => {
+	return x + 1
+}
+- callback () => 10
+- callback (x: Int): Int => x + 1
+- Optional types: (x: Int) or (Int x)
+  - C-style:  Int myFunction(Int x) => x + 1 (can only be used in normal definitions)
+  - TS-style: myFunction(x: Int): Int => x + 1 (can also be used in lambda definitions?)
+- no space allowed between name and arglist, otherwise function application
+- define associativity, which is more useful? `map increment myList` can be
+  - `map(increment)(myList)` (functional style / currying?)
+  - `map(increment(myList))`
+- "Full" definition is syntax sugar for lambda style:
+  - add(x, y) => x + y (definition as statement)
+  - add = (x, y) => x + y (definition by assigning function expression)
+- overloading based on arity, otherwise argument types when present
+- Getters by using argument-less methods, setters?
+
+
+
+================================================================================
+									Semantics
+================================================================================
+- Function closures
+
+Self (this?) upvalue (keyword?)
+- Only for instance (non-static) methods
+- Refers to current instance
+
+Static upvalue (keyword?)
+- Refers to current block / class
+
+Super upvalue (keyword?)
+- Refers to superclass
+
+Variable lookup
+===============
+1. locals
+2. (for instance methods) instance variables of current class (implicit `self.`/`this.`)
+2.1. instance variables of superclass
+3. static variables of current class (implicit `static.`)
+3.1. static variables of superclass
+
+Modifiers
+=========
+Apply to variables (not values). By default, only `public` is applied implicitly.
+- private: variable only accessable (readable/writable) within the same class
+- public: opposite of private, and thus mutually exclusive
+- const: cannot assign other value to variable
+- static: variable exists in class, instead of in its instances
+
+- assign to const value: error
+- read private value: yield nil/null?
+- write private value: error? do nothing?
+
+Blocks can have default modifiers, which apply to all variables inside
+the block that are not marked the opposite:
+Point = private {
+	public getX => this.x (this method is public)
+	setX(x) => { this.x = x } (this one is private)
+}
+
+"Class" (block) constructors are static call operator methods

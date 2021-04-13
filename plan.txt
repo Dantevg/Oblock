@@ -1,0 +1,12 @@
+Generalised semi-OOP language with optional typing
+
+1. Define basic syntax
+2. Define basic semantics
+3. Implement lexer
+4. Implement parser
+5. Decide on intermediate representation (bytecode?)
+6. Implement interpreter / VM
+7. Define and implement API
+8. Create standard library
+9. ???
+10. profit!

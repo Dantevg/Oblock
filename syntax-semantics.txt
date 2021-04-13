@@ -1,5 +1,5 @@
 ================================================================================
-									Syntax
+                                     Syntax
 ================================================================================
 https://wren.io/classes.html
 
@@ -17,7 +17,14 @@ To-Do / proposals
   - Allows positional arguments and named arguments
   - Automatically "destructured" to function call
   - Problem: what to do when you want to pass a single block parameter? (syntax)
+  - Solution: maybe use list/array syntax (which uses '()' already, how convenient!)
+  - Problem again: list syntax is syntax sugar for block extending List, still same problem
 - Compound assignment operators?
+- Expressions as statements and statements as expressions?
+  - New style: var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"
+  - In Lua style: var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")
+  - https://news.ycombinator.com/item?id=8827843
+- Keyword for binary actual data layout in const classes like Int (8 bytes for long long)?
 - Ternary operator? Don't think, I like lua's and-or method
 - Pure functions as optimisation?
 
@@ -85,13 +92,13 @@ Blocks serve many purposes at once:
 - exp ::= var | number | string | unop exp | exp binop exp | block | lambda | fncall | '(' exp ')'
 - stat ::= sep
          | varlist '=' explist
-         | fncall
+         | exp
          | {modifier} identifier ['(' arglist ')'] '=>' chunk
          | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
          | 'while' exp ':' chunk
          | 'for' varlist 'in' explist ':' chunk
 - chunk ::= stat  |  block
-- block ::= {modifier} '{' [explist] {stat} '}'
+- block ::= {modifier} '{' {stat} '}'
 - lambda ::= '(' arglist ')' '=>' chunk (also allow leaving out '('arglist')' here? I think impossible)
 - identifier ::= letter [{alphanum}]  |  '`' {character} '`'
 - fncall ::= prefixexp args
@@ -162,7 +169,7 @@ Functions
 
 
 ================================================================================
-									Semantics
+                                   Semantics
 ================================================================================
 - Function closures
 

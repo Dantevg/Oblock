@@ -3,8 +3,8 @@
 ================================================================================
 https://wren.io/classes.html
 
-To-Do / proposals
-=================
+To-Do / roadmap / proposals
+===========================
 - Newlines and other statement/expression separators
 - Generic types? maybe later, if needed
 - Default parameters?
@@ -20,16 +20,37 @@ To-Do / proposals
   - Solution: maybe use list/array syntax (which uses '()' already, how convenient!)
   - Problem again: list syntax is syntax sugar for block extending List, still same problem
 - Compound assignment operators?
-- Expressions as statements and statements as expressions?
+- Statements as expressions?
   - New style: var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"
   - In Lua style: var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")
   - https://news.ycombinator.com/item?id=8827843
+  - I think not for all statements, because waste of memory if return value
+    is not used (loops create lists?)
+  - Maybe make assignment an expression
+    - Pro: terse `a = b = c`
+    - Con: cryptic "code-golf" things
+    - Con: possible mistakes like `while x = 1`
 - Keyword for binary actual data layout in const classes like Int (8 bytes for long long)?
+  - Maybe define class instance size in bytes for const classes: sizeof(struct MyClass) in C?
+    - should you need to define size for foreign/external classes *within* the language?
+      maybe makes creating classes too much work: when changing internal size, need to recalculate "by hand"
+- Comment syntax:
+  - C-like: // and /* */
+  - Lua-like: -- and --[[ ]] works well in combination with long/raw strings
+  - Might not be needed: strings as statements as comments (but does not work within lists)
+- Pointers / references
+- Enums
+  - Boolean should be an enum with 2 values? true and false are the only 2 instances of Bool
+  - Maybe like Java?
+  - Enum instance (true, false, colours) is const instance with no values,
+    enum "class" itself should be const as well (but do not enforce)
 - Ternary operator? Don't think, I like lua's and-or method
+- Type cast operator? to let nil/null and false both evaluate falsy
+  - Problem: should not be able to make custom types falsy.
 - Pure functions as optimisation?
 
 Operators and keywords
-=========
+======================
 - precedence
 - associativity
 - operators and keywords as first-class citizens? Would allow using all things as keys (and values)
@@ -53,15 +74,15 @@ Operators and keywords
       as 2x binary operator: (a | b) | c
       as wrap operator: a |b| c  (which is  a(|b|)(c))
     - possible (bad) solution: require no space present inside "brackets"
-	  - problem for strings: " airy string "
-	- better solution: set wrap operator precedence(?) such that this is not a problem (really low?)
+      - problem for strings: " airy string "
+    - better solution: set wrap operator precedence(?) such that this is not a problem (really low?)
   - maybe best to disallow custom wrap operators but have a few default unassigned
   - possible problem: does the wrap operator apply on only the content or also the expression before?
-	- a[b] should call '[]' from a with b as argument: a.[](b)
-	  - definition of '[]' method should be defined in class of a
+    - a[b] should call '[]' from a with b as argument: a.[](b)
+      - definition of '[]' method should be defined in class of a
     - a [b] should call '[]' with b as argument and pass that as argument to a: a([](b))
-	  - definition of '[]' method should be defined in its own operator class
-	    (see operators as first-class citizens ^)
+      - definition of '[]' method should be defined in its own operator class
+        (see operators as first-class citizens ^)
   - disallow defining of predefined wrap operators as unary or binary operators!
 
 The following:
@@ -194,10 +215,9 @@ Variable lookup
 Modifiers
 =========
 Apply to variables (not values). By default, only `public` is applied implicitly.
-- private: variable only accessable (readable/writable) within the same class
-- public: opposite of private, and thus mutually exclusive
-- const: cannot assign other value to variable
-- static: variable exists in class, instead of in its instances
+- private and public: variable only accessable (readable/writable) within the same class
+- const (and varying/changing/volatile?): cannot assign other value to variable
+- static (and ??? instance? "dynamic" is weird): variable exists in class, instead of in its instances
 
 - assign to const value: error
 - read private value: yield nil/null?
@@ -211,3 +231,4 @@ Point = private {
 }
 
 "Class" (block) constructors are static call operator methods
+Prototype-based classes (seem more generic) with class-based syntax

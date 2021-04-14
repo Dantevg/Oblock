@@ -118,7 +118,8 @@ This means ?
 
 Blocks, classes, functions (all the same?)
 ==========================================
-- exp ::= var | number | string | exp binop exp | unop exp | wrapopl exp wrapopr | block | lambda | fncall | '(' exp ')'
+- exp ::= var | number | string | exp binop exp | unop exp | wrapopl exp wrapopr
+        | block | lambda | fncall | varlist '=' explist | '(' exp ')'
 - stat ::= sep
          | varlist '=' explist
          | exp
@@ -128,10 +129,11 @@ Blocks, classes, functions (all the same?)
          | 'for' varlist 'in' explist ':' chunk
 - chunk ::= stat  |  block
 - block ::= {modifier} '{' {stat} '}'
-- lambda ::= '(' arglist ')' '=>' chunk (also allow leaving out '('arglist')' here? I think impossible)
+- lambda ::= '(' arglist ')' '=>' chunk
 - identifier ::= letter [{alphanum}]  |  '`' {character} '`'
 - fncall ::= prefixexp args
 - args ::= exp  |  '(' [explist] ')'
+- varlist ::= {modifier} var {sep {modifier} var}
 - explist ::= exp {sep exp}
 - sep ::= '\n' | ';' | ','
 

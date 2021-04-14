@@ -10,3 +10,9 @@ Generalised semi-OOP language with optional typing
 8. Create standard library
 9. ???
 10. profit!
+
+Versions:
+0.1 Basics: blocks, statements, expressions, functions, control flow
+0.2 Classes and instances, operators and overloading
+0.3 Modifiers and syntax sugar, parameter things
+0.4 Optional types, standard library

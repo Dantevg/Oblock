@@ -40,7 +40,7 @@ Some way to not have to allocate for simple types (numbers)!
 ================================================================================
                                 Interpreter / VM
 ================================================================================
-http://craftinginterpreters.com/contents.html
+https://craftinginterpreters.com/contents.html
 
 
 

@@ -2,6 +2,39 @@
                                     Bytecode
 ================================================================================
 
+Notes / ideas
+=============
+I'm not having much of a clue what I'm doing here, it might also be a bit
+premature to think about the bytecode before the syntax and semantics are clear.
+
+Special type coding for integers? Con: implementation becomes less generic
+- ?? nothing?
+- 00 block
+- 01 function
+- 10 unsigned long int (62-bit)
+- 11 long int (62-bit)
+
+Datatypes / values
+==================
+
+2 (3?) basic datatypes
+- Nothing?
+- Block / instance / class / prototype
+  - Variable-length code for class?
+  - number of elements (size)
+  - optionally instance contents
+- Function
+  - list of parameters (with names and default values) and return values
+  - class
+
+Variables / fields
+==================
+Some way to not have to allocate for simple types (numbers)!
+
+- modifiers: private, const, static
+- type? possible data duplication, type is also stored in value
+- data or pointer, plus something to indicate which of the two
+
 
 
 ================================================================================

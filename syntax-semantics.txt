@@ -8,6 +8,7 @@ To-Do / roadmap / proposals
 - Newlines and other statement/expression separators
 - Generic types? maybe later, if needed
 - Default parameters?
+- `...` keyword, like in Lua
 - Named parameters by (<arg> = <exp>)
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
@@ -90,8 +91,7 @@ Operators and keywords
 - true, false and nil/null are not keywords, but instances of Bool and Nil/Null classes
 - unary operators: '-', '!' and other custom ones
 - binary operators: '-', '+' and other custom ones
-- wrap operators: '{}', '()', '[]', '""'
-  - these are technically unary operators, but go around the operand instead of before it
+- wrap operators: '{}', '()', '[]', '""' (n-ary operators)
   - '()' serves multiple purposes, but in different contexts this should be ok:
     - expression: grouping
     - function call: argument list
@@ -218,6 +218,17 @@ Variable lookup
 2.1. instance variables of superclass
 3. static variables of current class (implicit `static.`)
 3.1. static variables of superclass
+
+Operators
+=========
+Operators defined in the class they apply to
+Using an operator is simply calling the operator method on the leftmost(?) operand
+- unary operators are simple
+- binary operators are less simple because their second argument might not be of a usable type
+- n-ary operators (wrap operators) are weird because the content does not really
+  have anything to do with the result
+  - application on first type is still possible: default operator in Object / Block base class
+    creates a list of itself and its arguments
 
 Modifiers
 =========

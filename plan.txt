@@ -12,7 +12,8 @@ Generalised semi-OOP language with optional typing
 10. profit!
 
 Versions:
-0.1 Basics: blocks, statements, expressions, functions, control flow
-0.2 Classes and instances, operators and overloading
-0.3 Modifiers and syntax sugar, parameter things
-0.4 Optional types, standard library
+0.0.1 Basic blocks, basic statements, basic expressions
+0.1   Functions, control flow, rest of blocks, statements and expressions
+0.2   Classes and instances, operators and overloading
+0.3   Modifiers and syntax sugar, parameter things
+0.4   Optional types, standard library

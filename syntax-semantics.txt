@@ -73,6 +73,27 @@ To-Do / roadmap / proposals
     - definition of '[]' method should be defined in its own operator class
       (see operators as first-class citizens ^)
 
+Formal syntax
+=============
+- exp ::= var | number | string | exp binop exp | unop exp | wrapopl exp wrapopr
+        | block | lambda | fncall | varlist '=' explist | '(' exp ')'
+- stat ::= sep
+         | varlist '=' explist
+         | exp
+         | {modifier} identifier ['(' arglist ')'] '=>' chunk
+         | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
+         | 'while' exp ':' chunk
+         | 'for' varlist 'in' explist ':' chunk
+- chunk ::= stat  |  block
+- block ::= {modifier} '{' {stat} '}'
+- lambda ::= '(' arglist ')' '=>' chunk
+- identifier ::= letter [{alphanum}]  |  '`' {character} '`'
+- fncall ::= exp args
+- args ::= exp  |  '(' [explist] ')'
+- varlist ::= {modifier} var {sep {modifier} var}
+- explist ::= exp {sep exp}
+- sep ::= '\n' | ';' | ','
+
 Operators and keywords
 ======================
 - precedence
@@ -127,27 +148,6 @@ gets parsed as expression followed by statement:
 	c()
 This means ?
 
-Formal syntax
-=============
-- exp ::= var | number | string | exp binop exp | unop exp | wrapopl exp wrapopr
-        | block | lambda | fncall | varlist '=' explist | '(' exp ')'
-- stat ::= sep
-         | varlist '=' explist
-         | exp
-         | {modifier} identifier ['(' arglist ')'] '=>' chunk
-         | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
-         | 'while' exp ':' chunk
-         | 'for' varlist 'in' explist ':' chunk
-- chunk ::= stat  |  block
-- block ::= {modifier} '{' {stat} '}'
-- lambda ::= '(' arglist ')' '=>' chunk
-- identifier ::= letter [{alphanum}]  |  '`' {character} '`'
-- fncall ::= exp args
-- args ::= exp  |  '(' [explist] ')'
-- varlist ::= {modifier} var {sep {modifier} var}
-- explist ::= exp {sep exp}
-- sep ::= '\n' | ';' | ','
-
 List / array syntax using `()` or `[]` as syntax sugar. These are all equal:
 [10, 20, a = b, 30]
 [
@@ -167,26 +167,6 @@ Inheritance:
 - Point = Vector { } (call static superclass)
 - Point = extend Vector { } (with `extend` keyword)
 - Point = { @extend Vector } (with @attribute annotation)
-
-Example
-=======
-Point = { (Point is a block/class/object, but really an immediately-invoked function)
-	static `()`(x, y) => { (call method for Point "class" / object)
-		this.x = x
-		this.y = y
-	}
-	`+`(p) => Point(this.x + p.x, this.y + p.y) (addition method for Point instances)
-	getX => this.x ("getter method", no argument list, will be invoked on myPoint.getX)
-	setX(x) => { this.x = x } (normal method, assignments are not expressions so brackets necessary)
-	
-	static base = { (static immediately-invoked function, block: Point.base = 11)
-		x = 10
-		return x + 1
-	}
-	static next = static.base + 1 (static "immediately-invoked function", really just a field)
-	static nget => static.base + 1 (static "getter method")
-	static getBase() => Point.base (static shorthand method, Point.getBase() returns 11)
-}
 
 Functions
 =========
@@ -208,6 +188,26 @@ Functions
 - overloading based on arity, otherwise argument types when present
 - Getters by using argument-less methods, setters?
 - Parentheses can be omitted if only one argument passed on the same line
+
+Example
+=======
+Point = { (Point is a block/class/object, but really an immediately-invoked function)
+	static `()`(x, y) => { (call method for Point "class" / object)
+		this.x = x
+		this.y = y
+	}
+	`+`(p) => Point(this.x + p.x, this.y + p.y) (addition method for Point instances)
+	getX => this.x ("getter method", no argument list, will be invoked on myPoint.getX)
+	setX(x) => { this.x = x } (normal method, assignments are not expressions so brackets necessary)
+	
+	static base = { (static immediately-invoked function, block: Point.base = 11)
+		x = 10
+		return x + 1
+	}
+	static next = static.base + 1 (static "immediately-invoked function", really just a field)
+	static nget => static.base + 1 (static "getter method")
+	static getBase() => Point.base (static shorthand method, Point.getBase() returns 11)
+}
 
 
 

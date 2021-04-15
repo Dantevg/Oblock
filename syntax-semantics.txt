@@ -103,6 +103,11 @@ Operators and keywords
   - when used in a variable definition, they are ternary operators, called
     just like in an expression context, but also with the value as second argument
 
+Statements and expressions
+==========================
+Blocks, classes and function bodies are all the same
+In general, newlines are ignored and seen as whitespace (like Lua).
+
 The following:
 	a
 	-b
@@ -122,8 +127,8 @@ gets parsed as expression followed by statement:
 	c()
 This means ?
 
-Blocks, classes, functions (all the same?)
-==========================================
+Formal syntax
+=============
 - exp ::= var | number | string | exp binop exp | unop exp | wrapopl exp wrapopr
         | block | lambda | fncall | varlist '=' explist | '(' exp ')'
 - stat ::= sep
@@ -193,7 +198,7 @@ Functions
 - Optional types: (x: Int) or (Int x)
   - C-style:  Int myFunction(Int x) => x + 1 (can only be used in normal definitions)
   - TS / Kotlin-style: myFunction(x: Int): Int => x + 1 (can also be used in lambda definitions?)
-- no space allowed between name and arglist, otherwise function application
+- for definition: no space allowed between name and arglist, otherwise function application
 - define associativity, which is more useful? `map increment myList` can be
   - `map(increment)(myList)` (functional style / currying?)
   - `map(increment(myList))`

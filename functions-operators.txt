@@ -20,26 +20,37 @@ Defining custom operators / extending existing operators
  "hello" +('a' * 3) = "hello" + "aaa" = "helloaaa"
 ("hello" + 'a')* 3 = "helloa" * 3 = "helloahelloahelloa"
 
-Possible syntax for using operators as index:
+Possible syntax for using different values as index:
+- Character operator
+  +(b),   a.+(b)  (clashes with string indexing syntax sugar: translates to a["+"](b))
+  `+`(b)          (meh)
+  [+](b), a[+](b) (like Lua, good idea)
+  operator +(b)   (not generic enough (numbers?), how does getter/setter work?)
 
-+(b) = this + b
-`+`(b) = this + b
-[+](b) = this + b
-operator +(b) = this + b
+- Keyword operator (words as operators might not be a good idea, ambiguous-syntax wise)
+  is(b),   a.is(b)
+  `is`(b)
+  [is](b), a[is](b)
+  operator is(b)
 
-Allowing words as operators might not be a good idea, ambiguous-syntax wise
-is(b) = this is b
-`is`(b) = this is b
-[is](b) = this is b
-operator is(b) = this is b
+- Other character operator
+  ()(b),   a.()(b)
+  `()`(b)
+  [()](b), a[()](b)
+  operator ()(b)
 
-()(b) = b()
-`()`(b) = b()
-[()](b) = b()
-operator ()(b) = b()
+- Numbers
+  2(b),   a.2(b)
+  `2`(b)
+  [2](b), a[2](b)
+  operator 2(b)
 
-Using keyword "operator" might not be generic enough, numbers are not operators
-2(b) = this + b
-`2`(b) = this + b
-[2](b) = this + b
-operator 2(b) = this + b
+- Strings
+  "x"(b)
+  x(b),     a.x(b)
+  ["x"](b), a["x"](b)
+
+- Arbitrary expressions
+  (x+1)(b), a.(x+1)(b)
+  `x+1`(b)
+  [x+1](b), a[x+1](b)

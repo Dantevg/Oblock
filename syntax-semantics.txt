@@ -96,6 +96,12 @@ Operators and keywords
     - expression: grouping
     - function call: argument list
     - function definition: parameter list
+- index operators: '.' and '[]'
+  - a.b is syntax sugar for a["b"]
+  - when used in an expression, they are binary operators, called on the left
+    operand with the right (or enclosed) operand as argument
+  - when used in a variable definition, they are ternary operators, called
+    just like in an expression context, but also with the value as second argument
 
 The following:
 	a
@@ -131,7 +137,7 @@ Blocks, classes, functions (all the same?)
 - block ::= {modifier} '{' {stat} '}'
 - lambda ::= '(' arglist ')' '=>' chunk
 - identifier ::= letter [{alphanum}]  |  '`' {character} '`'
-- fncall ::= prefixexp args
+- fncall ::= exp args
 - args ::= exp  |  '(' [explist] ')'
 - varlist ::= {modifier} var {sep {modifier} var}
 - explist ::= exp {sep exp}
@@ -196,6 +202,7 @@ Functions
   - add = (x, y) => x + y (definition by assigning function expression)
 - overloading based on arity, otherwise argument types when present
 - Getters by using argument-less methods, setters?
+- Parentheses can be omitted if only one argument passed on the same line
 
 
 

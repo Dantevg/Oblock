@@ -75,24 +75,27 @@ To-Do / roadmap / proposals
 
 Formal syntax
 =============
-- exp ::= var | number | string | exp binop exp | unop exp | wrapopl exp wrapopr
+- exp ::= var | number | string | list | exp op exp | op exp | wrapopl exp wrapopr
         | block | lambda | fncall | varlist '=' explist | '(' exp ')'
 - stat ::= sep
-         | varlist '=' explist
          | exp
-         | {modifier} identifier ['(' arglist ')'] '=>' chunk
-         | 'if' exp ':' chunk {'elseif' exp ':' chunk} ['else' chunk]
-         | 'while' exp ':' chunk
-         | 'for' varlist 'in' explist ':' chunk
-- chunk ::= stat  |  block
+         | {modifier} identifier ['(' arglist ')'] '=>' exp
+         | 'if' exp ':' exp {'elseif' exp ':' exp} ['else' exp]
+         | 'while' exp ':' exp
+         | 'for' varlist 'in' explist ':' exp
 - block ::= {modifier} '{' {stat} '}'
-- lambda ::= '(' arglist ')' '=>' chunk
-- identifier ::= letter [{alphanum}]  |  '`' {character} '`'
+- list ::= '[' [explist] ']'
+- lambda ::= '(' arglist ')' '=>' exp
+- identifier ::= (letter | '_') [{alphanum | '_'}]
 - fncall ::= exp args
 - args ::= exp  |  '(' [explist] ')'
 - varlist ::= {modifier} var {sep {modifier} var}
 - explist ::= exp {sep exp}
-- sep ::= '\n' | ';' | ','
+- op ::= '+' | '-' | '*' | '/' | '^' | '%'
+	   | '!' | '||' | '&&' | '<' | '>' | '==' | '!=' | '<=' | '>='
+       | '~' | '|' | '&' | '<<' | '>>'
+	   | '@' | '#' | '$' | '\' | '?' | ':'
+- sep ::= ';' | ','
 
 Operators and keywords
 ======================
@@ -119,6 +122,7 @@ Operators and keywords
     - function definition: parameter list
 - index operators: '.' and '[]'
   - a.b is syntax sugar for a["b"]
+    - this means that '.' is not an operator, but fixed in the syntax (meh, but necessary)
   - when used in an expression, they are binary operators, called on the left
     operand with the right (or enclosed) operand as argument
   - when used in a variable definition, they are ternary operators, called

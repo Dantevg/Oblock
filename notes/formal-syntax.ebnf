@@ -1,5 +1,7 @@
 program		= expression ;
-expression	= assignment ;
+expression	= block
+			| assignment ;
+
 assignment	= variable {'=' comparison} ;                                 (* assignment *)
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ; (* comparison *)
 bitwise		= addsub {('>>' | '<<') addsub} ;                             (* bitwise *)
@@ -8,4 +10,8 @@ muldiv		= unary {('*' | '/') unary} ;                                 (* multipl
 unary		= ('-' | '!') unary
 			| primary ;
 primary		= variable | Number | String | '(' expression ')' ;
+
+block		= '{' {statement} '}';
+statement	= 'print' expression | expression ;
+
 variable	= Name {'[' exp ']'} ;

@@ -81,7 +81,7 @@ function Lexer:string()
 	end
 	
 	self:advance() -- Closing "
-	self:addToken("string", self.source:sub(self.start+1, self.current-1))
+	self:addToken("string", self.source:sub(self.start+1, self.current-2))
 end
 
 function Lexer:number()
@@ -150,6 +150,7 @@ Lexer.tokens = {
 Lexer.keywords = {
 	["if"] = true, ["elseif"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
+	["print"] = true, -- TODO: remove, temporary!
 }
 
 return setmetatable(Lexer, {

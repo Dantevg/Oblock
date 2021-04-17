@@ -134,6 +134,60 @@ setmetatable(Parser.Expr.Literal, {
 
 
 
+Parser.Block = {}
+Parser.Block.__index = Parser.Block
+
+function Parser.Block.new(statements)
+	local self = {}
+	self.statements = statements
+	return setmetatable(self, Parser.Block)
+end
+
+function Parser.Block:evaluate()
+	for _, statement in ipairs(self.statements) do
+		statement:evaluate()
+	end
+end
+
+function Parser.Block:__tostring()
+	local strings = {}
+	for _, statement in ipairs(self.statements) do
+		table.insert(strings, tostring(statement))
+	end
+	return "{"..table.concat(strings, "; ").."}"
+end
+
+setmetatable(Parser.Block, {
+	__call = function(_, ...) return Parser.Block.new(...) end,
+})
+
+
+
+Parser.Statement = {}
+
+Parser.Statement.Print = {}
+Parser.Statement.Print.__index = Parser.Statement.Print
+
+function Parser.Statement.Print.new(expr)
+	local self = {}
+	self.expr = expr
+	return setmetatable(self, Parser.Statement.Print)
+end
+
+function Parser.Statement.Print:evaluate()
+	print(self.expr:evaluate())
+end
+
+function Parser.Statement.Print:__tostring()
+	return string.format("print(%s)", self.expr)
+end
+
+setmetatable(Parser.Statement.Print, {
+	__call = function(_, ...) return Parser.Statement.Print.new(...) end,
+})
+
+
+
 function Parser.new(tokens)
 	local self = {}
 	self.tokens = tokens
@@ -194,8 +248,14 @@ function Parser:binary(tokens, next)
 	return expr
 end
 
+function Parser:parse()
+	return self:expression()
+end
+
 function Parser:expression()
-	return self:assignment()
+	return self:match {"opening curly bracket"}
+		and self:block()
+		or self:assignment()
 end
 
 function Parser:assignment()
@@ -240,6 +300,26 @@ function Parser:primary()
 		self:consume("closing parenthesis", "Expected ')'")
 		return Parser.Expr.Group(expr)
 	end
+end
+
+function Parser:block()
+	local statements = {}
+	while not self:match {"closing curly bracket"} do
+		table.insert(statements, self:statement())
+	end
+	return Parser.Block(statements)
+end
+
+function Parser:statement()
+	if self:match {"print"} then
+		return self:printStatement()
+	else
+		return self:expression()
+	end
+end
+
+function Parser:printStatement()
+	return Parser.Statement.Print(self:expression())
 end
 
 return setmetatable(Parser, {

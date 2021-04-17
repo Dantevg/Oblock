@@ -33,7 +33,7 @@ function Lexer:lex()
 		self:scanToken()
 	end
 	table.insert(self.tokens, Token("EOF", "", nil, self.line))
-	return self.tokens
+	if not self.hasError then return self.tokens end
 end
 
 function Lexer:addToken(type, literal)

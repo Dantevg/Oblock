@@ -1,3 +1,6 @@
+-- Inspired by http://craftinginterpreters.com/parsing-expressions.html
+-- and https://craftinginterpreters.com/evaluating-expressions.html
+
 local Parser = {}
 Parser.__index = Parser
 
@@ -7,10 +10,20 @@ Parser.Expr.Unary = {}
 Parser.Expr.Unary.__index = Parser.Expr.Unary
 
 function Parser.Expr.Unary.new(op, right)
-	local self = Parser.Expr()
+	local self = {}
 	self.op = op
 	self.right = right
 	return setmetatable(self, Parser.Expr.Unary)
+end
+
+function Parser.Expr.Unary:evaluate()
+	-- TODO: generalise
+	local right = self.right:evaluate()
+	if self.op.type == "minus" then
+		return -right
+	elseif self.op.type == "exclamation" then
+		return not right
+	end
 end
 
 function Parser.Expr.Unary:__tostring()
@@ -27,11 +40,42 @@ Parser.Expr.Binary = {}
 Parser.Expr.Binary.__index = Parser.Expr.Binary
 
 function Parser.Expr.Binary.new(left, op, right)
-	local self = Parser.Expr()
+	local self = {}
 	self.left = left
 	self.op = op
 	self.right = right
 	return setmetatable(self, Parser.Expr.Binary)
+end
+
+function Parser.Expr.Binary:evaluate()
+	-- TODO: generalise
+	local left = self.left:evaluate()
+	local right = self.right:evaluate()
+	if self.op.type == "equal equal" then
+		return left == right
+	elseif self.op.type == "exclamation equal" then
+		return left ~= right
+	elseif self.op.type == "less" then
+		return left < right
+	elseif self.op.type == "greater" then
+		return left > right
+	elseif self.op.type == "less equal" then
+		return left <= right
+	elseif self.op.type == "greater equal" then
+		return left >= right
+	elseif self.op.type == "plus" then
+		return left + right
+	elseif self.op.type == "minus" then
+		return left - right
+	elseif self.op.type == "star" then
+		return left * right
+	elseif self.op.type == "slash" then
+		return left / right
+	elseif self.op.type == "less less" then
+		return left << right
+	elseif self.op.type == "greater greater" then
+		return left >> right
+	end
 end
 
 function Parser.Expr.Binary:__tostring()
@@ -48,9 +92,13 @@ Parser.Expr.Group = {}
 Parser.Expr.Group.__index = Parser.Expr.Group
 
 function Parser.Expr.Group.new(expr)
-	local self = Parser.Expr()
+	local self = {}
 	self.expr = expr
 	return setmetatable(self, Parser.Expr.Group)
+end
+
+function Parser.Expr.Group:evaluate()
+	return self.expr:evaluate()
 end
 
 function Parser.Expr.Group:__tostring()
@@ -67,9 +115,13 @@ Parser.Expr.Literal = {}
 Parser.Expr.Literal.__index = Parser.Expr.Literal
 
 function Parser.Expr.Literal.new(value)
-	local self = Parser.Expr()
+	local self = {}
 	self.value = value
 	return setmetatable(self, Parser.Expr.Literal)
+end
+
+function Parser.Expr.Literal:evaluate()
+	return self.value
 end
 
 function Parser.Expr.Literal:__tostring()

@@ -111,6 +111,85 @@ setmetatable(Parser.Expr.Group, {
 
 
 
+Parser.Expr.Variable = {}
+Parser.Expr.Variable.__index = Parser.Expr.Variable
+
+function Parser.Expr.Variable.new(name)
+	local self = {}
+	self.name = name
+	return setmetatable(self, Parser.Expr.Variable)
+end
+
+function Parser.Expr.Variable:evaluate()
+	-- TODO: implement
+end
+
+function Parser.Expr.Variable:__tostring()
+	return tostring(self.name.lexeme)
+end
+
+setmetatable(Parser.Expr.Variable, {
+	__call = function(_, ...) return Parser.Expr.Variable.new(...) end,
+})
+
+
+
+Parser.Expr.Block = {}
+Parser.Expr.Block.__index = Parser.Expr.Block
+
+function Parser.Expr.Block.new(statements, parentEnvironment)
+	local self = {}
+	self.statements = statements
+	self.environment = {}
+	self.parentEnv = parentEnvironment
+	return setmetatable(self, Parser.Expr.Block)
+end
+
+function Parser.Expr.Block:evaluate()
+	for _, statement in ipairs(self.statements) do
+		statement:evaluate()
+	end
+	return self
+end
+
+function Parser.Expr.Block:__tostring()
+	local strings = {}
+	for _, statement in ipairs(self.statements) do
+		table.insert(strings, tostring(statement))
+	end
+	return "Block {"..table.concat(strings, "; ").."}"
+end
+
+setmetatable(Parser.Expr.Block, {
+	__call = function(_, ...) return Parser.Expr.Block.new(...) end,
+})
+
+
+
+Parser.Expr.Assignment = {}
+Parser.Expr.Assignment.__index = Parser.Expr.Assignment
+
+function Parser.Expr.Assignment.new(name, expr)
+	local self = {}
+	self.name = name
+	self.expr = expr
+	return setmetatable(self, Parser.Expr.Assignment)
+end
+
+function Parser.Expr.Assignment:evaluate()
+	-- TODO: implement
+end
+
+function Parser.Expr.Assignment:__tostring()
+	return self.name.." = "..self.expr
+end
+
+setmetatable(Parser.Expr.Assignment, {
+	__call = function(_, ...) return Parser.Expr.Assignment.new(...) end,
+})
+
+
+
 Parser.Expr.Literal = {}
 Parser.Expr.Literal.__index = Parser.Expr.Literal
 
@@ -134,31 +213,24 @@ setmetatable(Parser.Expr.Literal, {
 
 
 
-Parser.Block = {}
-Parser.Block.__index = Parser.Block
+Parser.Expr.Literal.Nil = {}
+Parser.Expr.Literal.Nil.__index = Parser.Expr.Literal.Nil
 
-function Parser.Block.new(statements)
-	local self = {}
-	self.statements = statements
-	return setmetatable(self, Parser.Block)
+function Parser.Expr.Literal.Nil.new()
+	return setmetatable({}, Parser.Expr.Literal.Nil)
 end
 
-function Parser.Block:evaluate()
-	for _, statement in ipairs(self.statements) do
-		statement:evaluate()
-	end
+function Parser.Expr.Literal.Nil:evaluate()
+	return nil
 end
 
-function Parser.Block:__tostring()
-	local strings = {}
-	for _, statement in ipairs(self.statements) do
-		table.insert(strings, tostring(statement))
-	end
-	return "{"..table.concat(strings, "; ").."}"
+function Parser.Expr.Literal.Nil:__tostring()
+	return "(nil)"
 end
 
-setmetatable(Parser.Block, {
-	__call = function(_, ...) return Parser.Block.new(...) end,
+setmetatable(Parser.Expr.Literal.Nil, {
+	__call = function(_, ...) return Parser.Expr.Literal.Nil.new(...) end,
+	__index = Parser.Expr.Literal,
 })
 
 
@@ -176,6 +248,7 @@ end
 
 function Parser.Statement.Print:evaluate()
 	print(self.expr:evaluate())
+	return Parser.Expr.Literal.Nil()
 end
 
 function Parser.Statement.Print:__tostring()
@@ -259,7 +332,19 @@ function Parser:expression()
 end
 
 function Parser:assignment()
-	return self:comparison()
+	local expr = self:comparison()
+	
+	if self:match {"equal"} then
+		local equal = self:previous()
+		local value = self:assignment()
+		if expr.__index == Parser.Expr.Variable then
+			return Parser.Expr.Assignment(expr.name, value)
+		else
+			Parser.error(equal, "Attempt to assign to non-variable")
+		end
+	end
+	
+	return expr
 end
 
 function Parser:comparison()
@@ -269,7 +354,7 @@ function Parser:comparison()
 	}, Parser.bitwise)
 end
 
-function Parser:comparison()
+function Parser:bitwise()
 	return self:binary({"less less", "greater greater"}, Parser.addsub)
 end
 
@@ -292,13 +377,14 @@ function Parser:unary()
 end
 
 function Parser:primary()
-	-- TODO: variables
 	if self:match {"number", "string"} then
 		return Parser.Expr.Literal(self:previous().literal)
 	elseif self:match {"opening parenthesis"} then
 		local expr = self:expression()
 		self:consume("closing parenthesis", "Expected ')'")
 		return Parser.Expr.Group(expr)
+	elseif self:match {"identifier"} then -- variable
+		return Parser.Expr.Variable(self:previous())
 	end
 end
 
@@ -307,7 +393,7 @@ function Parser:block()
 	while not self:match {"closing curly bracket"} do
 		table.insert(statements, self:statement())
 	end
-	return Parser.Block(statements)
+	return Parser.Expr.Block(statements)
 end
 
 function Parser:statement()

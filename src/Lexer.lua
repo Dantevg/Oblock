@@ -12,35 +12,6 @@ end
 local Lexer = {}
 Lexer.__index = Lexer
 
-function Lexer.checkNext(char)
-	return function(self, type)
-		self:addToken(self:match(char) and type.." "..Lexer.tokens[char][2] or type)
-	end
-end
-
-Lexer.tokens = {
-	["("] = {Lexer.addToken, "opening parenthesis"},
-	[")"] = {Lexer.addToken, "closing parenthesis"},
-	["{"] = {Lexer.addToken, "opening curly bracket"},
-	["}"] = {Lexer.addToken, "closing curly bracket"},
-	["["] = {Lexer.addToken, "opening bracket"},
-	["]"] = {Lexer.addToken, "closing bracket"},
-	[","] = {Lexer.addToken, "comma"},
-	["."] = {Lexer.addToken, "dot"},
-	["-"] = {Lexer.addToken, "minus"},
-	["+"] = {Lexer.addToken, "plus"},
-	["*"] = {Lexer.addToken, "star"},
-	["/"] = {Lexer.addToken, "slash"},
-	[";"] = {Lexer.addToken, "semicolon"},
-	["!"] = {Lexer.checkNext("="), "exclamation"},
-	["="] = {Lexer.checkNext("="), "equal"},
-	["<"] = {Lexer.checkNext("="), "less"},
-	[">"] = {Lexer.checkNext("="), "greater"},
-	['"'] = {Lexer.string, "string"},
-}
-
-Lexer.ignored = {[" "] = true, ["\r"] = true, ["\t"] = true}
-
 function Lexer.new(source)
 	local self = {}
 	self.source = source
@@ -48,6 +19,12 @@ function Lexer.new(source)
 	self.start, self.current, self.line = 1, 1, 1
 	self.hasError = false
 	return setmetatable(self, Lexer)
+end
+
+function Lexer.checkNext(char)
+	return function(self, type)
+		self:addToken(self:match(char) and type.." "..Lexer.tokens[char][2] or type)
+	end
 end
 
 function Lexer:lex()
@@ -59,7 +36,12 @@ function Lexer:lex()
 	return self.tokens
 end
 
-function Lexer:error(where, message)
+function Lexer:addToken(type, literal)
+	local text = self:sub()
+	table.insert(self.tokens, Token(type, text, literal, self.line))
+end
+
+function Lexer:error(message, where)
 	self.hasError = true
 	print("["..self.line.."] Error"..(where or "")..": "..(message or ""))
 end
@@ -69,8 +51,9 @@ function Lexer:advance()
 	return self.source:sub(self.current-1, self.current-1)
 end
 
-function Lexer:peek()
-	return self.current <= #self.source and self.source:sub(self.current, self.current) or "\0"
+function Lexer:peek(n)
+	n = n or 0
+	return self.current+n <= #self.source and self.source:sub(self.current+n, self.current+n) or "\0"
 end
 
 function Lexer:match(char)
@@ -82,9 +65,8 @@ function Lexer:match(char)
 	end
 end
 
-function Lexer:addToken(type, literal)
-	local text = self.source:sub(self.start, self.current)
-	table.insert(self.tokens, Token(type, text, literal, self.line))
+function Lexer:sub()
+	return self.source:sub(self.start, self.current-1)
 end
 
 function Lexer:string()
@@ -102,6 +84,28 @@ function Lexer:string()
 	self:addToken("string", self.source:sub(self.start+1, self.current-1))
 end
 
+function Lexer:number()
+	while self:peek():match("%d") do self:advance() end
+	
+	if self:peek() == "." and self:peek(1):match("%d") then
+		self:advance()
+		while self:peek():match("%d") do self:advance() end
+	end
+	
+	self:addToken("number", tonumber(self:sub()))
+end
+
+function Lexer:identifier()
+	while self:peek():match("[%w_]") do self:advance() end
+	local keyword = self:sub()
+	self:addToken(Lexer.keywords[keyword] and keyword or "identifier")
+end
+
+function Lexer:whitespace()
+	while self:peek():match("[ \r\t]") do self:advance() end
+	self:addToken("whitespace")
+end
+
 function Lexer:scanToken()
 	local char = self:advance()
 	local token = Lexer.tokens[char]
@@ -109,10 +113,44 @@ function Lexer:scanToken()
 		self.line = self.line+1
 	elseif token then
 		token[1](self, table.unpack(token, 2))
-	elseif not Lexer.ignored[char] then
+	elseif char:match("%d") then
+		self:number()
+	elseif char:match("[%a_]") then
+		self:identifier()
+	else
 		self:error("Unexpected character")
 	end
 end
+
+Lexer.tokens = {
+	["("] = {Lexer.addToken, "opening parenthesis"},
+	[")"] = {Lexer.addToken, "closing parenthesis"},
+	["{"] = {Lexer.addToken, "opening curly bracket"},
+	["}"] = {Lexer.addToken, "closing curly bracket"},
+	["["] = {Lexer.addToken, "opening bracket"},
+	["]"] = {Lexer.addToken, "closing bracket"},
+	[","] = {Lexer.addToken, "comma"},
+	["."] = {Lexer.addToken, "dot"},
+	["-"] = {Lexer.addToken, "minus"},
+	["+"] = {Lexer.addToken, "plus"},
+	["*"] = {Lexer.addToken, "star"},
+	["/"] = {Lexer.addToken, "slash"},
+	[";"] = {Lexer.addToken, "semicolon"},
+	[":"] = {Lexer.addToken, "colon"},
+	["!"] = {Lexer.checkNext("="), "exclamation"},
+	["="] = {Lexer.checkNext("="), "equal"},
+	["<"] = {Lexer.checkNext("="), "less"},
+	[">"] = {Lexer.checkNext("="), "greater"},
+	['"'] = {Lexer.string, "string"},
+	[" "] = {Lexer.whitespace, "whitespace"},
+	["\r"]= {Lexer.whitespace, "whitespace"},
+	["\t"]= {Lexer.whitespace, "whitespace"},
+}
+
+Lexer.keywords = {
+	["if"] = true, ["elseif"] = true, ["else"] = true,
+	["while"] = true, ["for"] = true, ["in"] = true,
+}
 
 return setmetatable(Lexer, {
 	__call = function(_, ...) return Lexer.new(...) end,

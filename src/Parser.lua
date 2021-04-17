@@ -16,9 +16,9 @@ function Parser.Expr.Unary.new(op, right)
 	return setmetatable(self, Parser.Expr.Unary)
 end
 
-function Parser.Expr.Unary:evaluate()
+function Parser.Expr.Unary:evaluate(env)
 	-- TODO: generalise
-	local right = self.right:evaluate()
+	local right = self.right:evaluate(env)
 	if self.op.type == "minus" then
 		return -right
 	elseif self.op.type == "exclamation" then
@@ -47,10 +47,10 @@ function Parser.Expr.Binary.new(left, op, right)
 	return setmetatable(self, Parser.Expr.Binary)
 end
 
-function Parser.Expr.Binary:evaluate()
+function Parser.Expr.Binary:evaluate(env)
 	-- TODO: generalise
-	local left = self.left:evaluate()
-	local right = self.right:evaluate()
+	local left = self.left:evaluate(env)
+	local right = self.right:evaluate(env)
 	if self.op.type == "equal equal" then
 		return left == right
 	elseif self.op.type == "exclamation equal" then
@@ -97,8 +97,8 @@ function Parser.Expr.Group.new(expr)
 	return setmetatable(self, Parser.Expr.Group)
 end
 
-function Parser.Expr.Group:evaluate()
-	return self.expr:evaluate()
+function Parser.Expr.Group:evaluate(env)
+	return self.expr:evaluate(env)
 end
 
 function Parser.Expr.Group:__tostring()
@@ -120,8 +120,8 @@ function Parser.Expr.Variable.new(name)
 	return setmetatable(self, Parser.Expr.Variable)
 end
 
-function Parser.Expr.Variable:evaluate()
-	-- TODO: implement
+function Parser.Expr.Variable:evaluate(env)
+	return env:get(self.name.lexeme)
 end
 
 function Parser.Expr.Variable:__tostring()
@@ -137,19 +137,33 @@ setmetatable(Parser.Expr.Variable, {
 Parser.Expr.Block = {}
 Parser.Expr.Block.__index = Parser.Expr.Block
 
-function Parser.Expr.Block.new(statements, parentEnvironment)
+function Parser.Expr.Block.new(statements)
 	local self = {}
 	self.statements = statements
 	self.environment = {}
-	self.parentEnv = parentEnvironment
 	return setmetatable(self, Parser.Expr.Block)
 end
 
-function Parser.Expr.Block:evaluate()
+function Parser.Expr.Block:evaluate(env)
+	self.parent = env
 	for _, statement in ipairs(self.statements) do
-		statement:evaluate()
+		statement:evaluate(self)
 	end
 	return self
+end
+
+function Parser.Expr.Block:set(name, value)
+	self.environment[name] = value
+end
+
+function Parser.Expr.Block:get(name)
+	if self.environment[name] then
+		return self.environment[name]
+	elseif self.parent then
+		return self.parent:get(name)
+	else
+		return Parser.Expr.Literal.Nil()
+	end
 end
 
 function Parser.Expr.Block:__tostring()
@@ -176,12 +190,12 @@ function Parser.Expr.Assignment.new(name, expr)
 	return setmetatable(self, Parser.Expr.Assignment)
 end
 
-function Parser.Expr.Assignment:evaluate()
-	-- TODO: implement
+function Parser.Expr.Assignment:evaluate(env)
+	env:set(self.name.lexeme, self.expr:evaluate(env))
 end
 
 function Parser.Expr.Assignment:__tostring()
-	return self.name.." = "..self.expr
+	return self.name.lexeme.." = "..tostring(self.expr)
 end
 
 setmetatable(Parser.Expr.Assignment, {
@@ -200,11 +214,11 @@ function Parser.Expr.Literal.new(value)
 end
 
 function Parser.Expr.Literal:evaluate()
-	return self.value
+	return self.value.literal
 end
 
 function Parser.Expr.Literal:__tostring()
-	return tostring(self.value)
+	return self.value.lexeme
 end
 
 setmetatable(Parser.Expr.Literal, {
@@ -246,8 +260,8 @@ function Parser.Statement.Print.new(expr)
 	return setmetatable(self, Parser.Statement.Print)
 end
 
-function Parser.Statement.Print:evaluate()
-	print(self.expr:evaluate())
+function Parser.Statement.Print:evaluate(env)
+	print(self.expr:evaluate(env))
 	return Parser.Expr.Literal.Nil()
 end
 
@@ -378,7 +392,7 @@ end
 
 function Parser:primary()
 	if self:match {"number", "string"} then
-		return Parser.Expr.Literal(self:previous().literal)
+		return Parser.Expr.Literal(self:previous())
 	elseif self:match {"opening parenthesis"} then
 		local expr = self:expression()
 		self:consume("closing parenthesis", "Expected ')'")
@@ -391,7 +405,11 @@ end
 function Parser:block()
 	local statements = {}
 	while not self:match {"closing curly bracket"} do
-		table.insert(statements, self:statement())
+		local statement = self:statement()
+		if not statement then
+			Parser.error(self:peek(), "Expected statement")
+		end
+		table.insert(statements, statement)
 	end
 	return Parser.Expr.Block(statements)
 end

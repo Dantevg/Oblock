@@ -5,4 +5,8 @@ local file = io.open(path)
 local content = file:read("a")
 file:close()
 
-print( Parser(Lexer(content):lex()):parse():evaluate() )
+local tokens = Lexer(content):lex()
+if not tokens then return end
+local program = Parser(tokens):parse()
+if not program then return end
+print(program:evaluate())

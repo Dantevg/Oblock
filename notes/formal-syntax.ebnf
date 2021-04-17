@@ -2,16 +2,20 @@ program		= expression ;
 expression	= block
 			| assignment ;
 
-assignment	= variable {'=' comparison} ;                                 (* assignment *)
-comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ; (* comparison *)
-bitwise		= addsub {('>>' | '<<') addsub} ;                             (* bitwise *)
-addsub		= muldiv {('+' | '-') muldiv} ;                               (* add, subtract *)
-muldiv		= unary {('*' | '/') unary} ;                                 (* multiply, divide *)
+(* Expressions *)
+assignment	= variable {'=' assignment}
+			| comparison ;
+comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
+bitwise		= addsub {('>>' | '<<') addsub} ;
+addsub		= muldiv {('+' | '-') muldiv} ;
+muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
 			| primary ;
 primary		= variable | Number | String | '(' expression ')' ;
 
+(* Blocks and statements *)
 block		= '{' {statement} '}';
 statement	= 'print' expression | expression ;
 
-variable	= Name {'[' exp ']'} ;
+(* Smaller components *)
+variable	= Identifier ;

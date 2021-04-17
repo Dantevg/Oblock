@@ -1,279 +1,10 @@
 -- Inspired by http://craftinginterpreters.com/parsing-expressions.html
 -- and https://craftinginterpreters.com/evaluating-expressions.html
 
+local AST = require "AST"
+
 local Parser = {}
 Parser.__index = Parser
-
-Parser.Expr = {}
-
-Parser.Expr.Unary = {}
-Parser.Expr.Unary.__index = Parser.Expr.Unary
-
-function Parser.Expr.Unary.new(op, right)
-	local self = {}
-	self.op = op
-	self.right = right
-	return setmetatable(self, Parser.Expr.Unary)
-end
-
-function Parser.Expr.Unary:evaluate(env)
-	-- TODO: generalise
-	local right = self.right:evaluate(env)
-	if self.op.type == "minus" then
-		return -right
-	elseif self.op.type == "exclamation" then
-		return not right
-	end
-end
-
-function Parser.Expr.Unary:__tostring()
-	return string.format("(%s%s)", self.op.lexeme, self.right)
-end
-
-setmetatable(Parser.Expr.Unary, {
-	__call = function(_, ...) return Parser.Expr.Unary.new(...) end,
-})
-
-
-
-Parser.Expr.Binary = {}
-Parser.Expr.Binary.__index = Parser.Expr.Binary
-
-function Parser.Expr.Binary.new(left, op, right)
-	local self = {}
-	self.left = left
-	self.op = op
-	self.right = right
-	return setmetatable(self, Parser.Expr.Binary)
-end
-
-function Parser.Expr.Binary:evaluate(env)
-	-- TODO: generalise
-	local left = self.left:evaluate(env)
-	local right = self.right:evaluate(env)
-	if self.op.type == "equal equal" then
-		return left == right
-	elseif self.op.type == "exclamation equal" then
-		return left ~= right
-	elseif self.op.type == "less" then
-		return left < right
-	elseif self.op.type == "greater" then
-		return left > right
-	elseif self.op.type == "less equal" then
-		return left <= right
-	elseif self.op.type == "greater equal" then
-		return left >= right
-	elseif self.op.type == "plus" then
-		return left + right
-	elseif self.op.type == "minus" then
-		return left - right
-	elseif self.op.type == "star" then
-		return left * right
-	elseif self.op.type == "slash" then
-		return left / right
-	elseif self.op.type == "less less" then
-		return left << right
-	elseif self.op.type == "greater greater" then
-		return left >> right
-	end
-end
-
-function Parser.Expr.Binary:__tostring()
-	return string.format("(%s %s %s)", self.left, self.op.lexeme, self.right)
-end
-
-setmetatable(Parser.Expr.Binary, {
-	__call = function(_, ...) return Parser.Expr.Binary.new(...) end,
-})
-
-
-
-Parser.Expr.Group = {}
-Parser.Expr.Group.__index = Parser.Expr.Group
-
-function Parser.Expr.Group.new(expr)
-	local self = {}
-	self.expr = expr
-	return setmetatable(self, Parser.Expr.Group)
-end
-
-function Parser.Expr.Group:evaluate(env)
-	return self.expr:evaluate(env)
-end
-
-function Parser.Expr.Group:__tostring()
-	return string.format("(%s)", self.expr)
-end
-
-setmetatable(Parser.Expr.Group, {
-	__call = function(_, ...) return Parser.Expr.Group.new(...) end,
-})
-
-
-
-Parser.Expr.Variable = {}
-Parser.Expr.Variable.__index = Parser.Expr.Variable
-
-function Parser.Expr.Variable.new(name)
-	local self = {}
-	self.name = name
-	return setmetatable(self, Parser.Expr.Variable)
-end
-
-function Parser.Expr.Variable:evaluate(env)
-	return env:get(self.name.lexeme)
-end
-
-function Parser.Expr.Variable:__tostring()
-	return tostring(self.name.lexeme)
-end
-
-setmetatable(Parser.Expr.Variable, {
-	__call = function(_, ...) return Parser.Expr.Variable.new(...) end,
-})
-
-
-
-Parser.Expr.Block = {}
-Parser.Expr.Block.__index = Parser.Expr.Block
-
-function Parser.Expr.Block.new(statements)
-	local self = {}
-	self.statements = statements
-	self.environment = {}
-	return setmetatable(self, Parser.Expr.Block)
-end
-
-function Parser.Expr.Block:evaluate(env)
-	self.parent = env
-	for _, statement in ipairs(self.statements) do
-		statement:evaluate(self)
-	end
-	return self
-end
-
-function Parser.Expr.Block:set(name, value)
-	self.environment[name] = value
-end
-
-function Parser.Expr.Block:get(name)
-	if self.environment[name] then
-		return self.environment[name]
-	elseif self.parent then
-		return self.parent:get(name)
-	else
-		return Parser.Expr.Literal.Nil()
-	end
-end
-
-function Parser.Expr.Block:__tostring()
-	local strings = {}
-	for _, statement in ipairs(self.statements) do
-		table.insert(strings, tostring(statement))
-	end
-	return "Block {"..table.concat(strings, "; ").."}"
-end
-
-setmetatable(Parser.Expr.Block, {
-	__call = function(_, ...) return Parser.Expr.Block.new(...) end,
-})
-
-
-
-Parser.Expr.Assignment = {}
-Parser.Expr.Assignment.__index = Parser.Expr.Assignment
-
-function Parser.Expr.Assignment.new(name, expr)
-	local self = {}
-	self.name = name
-	self.expr = expr
-	return setmetatable(self, Parser.Expr.Assignment)
-end
-
-function Parser.Expr.Assignment:evaluate(env)
-	env:set(self.name.lexeme, self.expr:evaluate(env))
-end
-
-function Parser.Expr.Assignment:__tostring()
-	return self.name.lexeme.." = "..tostring(self.expr)
-end
-
-setmetatable(Parser.Expr.Assignment, {
-	__call = function(_, ...) return Parser.Expr.Assignment.new(...) end,
-})
-
-
-
-Parser.Expr.Literal = {}
-Parser.Expr.Literal.__index = Parser.Expr.Literal
-
-function Parser.Expr.Literal.new(value)
-	local self = {}
-	self.value = value
-	return setmetatable(self, Parser.Expr.Literal)
-end
-
-function Parser.Expr.Literal:evaluate()
-	return self.value.literal
-end
-
-function Parser.Expr.Literal:__tostring()
-	return self.value.lexeme
-end
-
-setmetatable(Parser.Expr.Literal, {
-	__call = function(_, ...) return Parser.Expr.Literal.new(...) end,
-})
-
-
-
-Parser.Expr.Literal.Nil = {}
-Parser.Expr.Literal.Nil.__index = Parser.Expr.Literal.Nil
-
-function Parser.Expr.Literal.Nil.new()
-	return setmetatable({}, Parser.Expr.Literal.Nil)
-end
-
-function Parser.Expr.Literal.Nil:evaluate()
-	return nil
-end
-
-function Parser.Expr.Literal.Nil:__tostring()
-	return "(nil)"
-end
-
-setmetatable(Parser.Expr.Literal.Nil, {
-	__call = function(_, ...) return Parser.Expr.Literal.Nil.new(...) end,
-	__index = Parser.Expr.Literal,
-})
-
-
-
-Parser.Statement = {}
-
-Parser.Statement.Print = {}
-Parser.Statement.Print.__index = Parser.Statement.Print
-
-function Parser.Statement.Print.new(expr)
-	local self = {}
-	self.expr = expr
-	return setmetatable(self, Parser.Statement.Print)
-end
-
-function Parser.Statement.Print:evaluate(env)
-	print(self.expr:evaluate(env))
-	return Parser.Expr.Literal.Nil()
-end
-
-function Parser.Statement.Print:__tostring()
-	return string.format("print(%s)", self.expr)
-end
-
-setmetatable(Parser.Statement.Print, {
-	__call = function(_, ...) return Parser.Statement.Print.new(...) end,
-})
-
-
 
 function Parser.new(tokens)
 	local self = {}
@@ -329,7 +60,7 @@ function Parser:binary(tokens, next)
 	while self:match(tokens) do
 		local op = self:previous()
 		local right = self:binary(tokens, next)
-		expr = Parser.Expr.Binary(expr, op, right)
+		expr = AST.Expr.Binary(expr, op, right)
 	end
 	
 	return expr
@@ -351,8 +82,8 @@ function Parser:assignment()
 	if self:match {"equal"} then
 		local equal = self:previous()
 		local value = self:assignment()
-		if expr.__index == Parser.Expr.Variable then
-			return Parser.Expr.Assignment(expr.name, value)
+		if expr.__index == AST.Expr.Variable then
+			return AST.Expr.Assignment(expr.name, value)
 		else
 			Parser.error(equal, "Attempt to assign to non-variable")
 		end
@@ -384,7 +115,7 @@ function Parser:unary()
 	if self:match {"minus", "exclamation"} then
 		local op = self:previous()
 		local right = self:unary()
-		return Parser.Expr.Unary(op, right)
+		return AST.Expr.Unary(op, right)
 	else
 		return self:primary()
 	end
@@ -392,13 +123,13 @@ end
 
 function Parser:primary()
 	if self:match {"number", "string"} then
-		return Parser.Expr.Literal(self:previous())
+		return AST.Expr.Literal(self:previous())
 	elseif self:match {"opening parenthesis"} then
 		local expr = self:expression()
 		self:consume("closing parenthesis", "Expected ')'")
-		return Parser.Expr.Group(expr)
+		return AST.Expr.Group(expr)
 	elseif self:match {"identifier"} then -- variable
-		return Parser.Expr.Variable(self:previous())
+		return AST.Expr.Variable(self:previous())
 	end
 end
 
@@ -411,7 +142,7 @@ function Parser:block()
 		end
 		table.insert(statements, statement)
 	end
-	return Parser.Expr.Block(statements)
+	return AST.Expr.Block(statements)
 end
 
 function Parser:statement()
@@ -423,7 +154,7 @@ function Parser:statement()
 end
 
 function Parser:printStatement()
-	return Parser.Statement.Print(self:expression())
+	return AST.Statement.Print(self:expression())
 end
 
 return setmetatable(Parser, {

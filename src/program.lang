@@ -1,8 +1,4 @@
 {
-	x = 1
-	print x
-	x = x + 1
-	print x
-	y = (x) => x+1
-	print(y(x+10))
+	add = (a) => (b) => a + b
+	print(add(10)(20))
 }

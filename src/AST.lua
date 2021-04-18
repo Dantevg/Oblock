@@ -50,9 +50,9 @@ end
 function AST.Expr.Unary:evaluate(env)
 	-- TODO: generalise
 	local right = self.right:evaluate(env)
-	if self.op.__name == "minus" then
+	if self.op.type == "minus" then
 		return -right
-	elseif self.op.__name == "exclamation" then
+	elseif self.op.type == "exclamation" then
 		return not right
 	end
 end
@@ -83,29 +83,29 @@ function AST.Expr.Binary:evaluate(env)
 	-- TODO: generalise
 	local left = self.left:evaluate(env)
 	local right = self.right:evaluate(env)
-	if self.op.__name == "equal equal" then
+	if self.op.type == "equal equal" then
 		return left == right
-	elseif self.op.__name == "exclamation equal" then
+	elseif self.op.type == "exclamation equal" then
 		return left ~= right
-	elseif self.op.__name == "less" then
+	elseif self.op.type == "less" then
 		return left < right
-	elseif self.op.__name == "greater" then
+	elseif self.op.type == "greater" then
 		return left > right
-	elseif self.op.__name == "less equal" then
+	elseif self.op.type == "less equal" then
 		return left <= right
-	elseif self.op.__name == "greater equal" then
+	elseif self.op.type == "greater equal" then
 		return left >= right
-	elseif self.op.__name == "plus" then
+	elseif self.op.type == "plus" then
 		return left + right
-	elseif self.op.__name == "minus" then
+	elseif self.op.type == "minus" then
 		return left - right
-	elseif self.op.__name == "star" then
+	elseif self.op.type == "star" then
 		return left * right
-	elseif self.op.__name == "slash" then
+	elseif self.op.type == "slash" then
 		return left / right
-	elseif self.op.__name == "less less" then
+	elseif self.op.type == "less less" then
 		return left << right
-	elseif self.op.__name == "greater greater" then
+	elseif self.op.type == "greater greater" then
 		return left >> right
 	end
 end
@@ -151,38 +151,6 @@ end
 
 setmetatable(AST.Expr.Group, {
 	__call = function(_, ...) return AST.Expr.Group.new(...) end,
-})
-
-
-
-AST.Expr.Varlist = {}
-AST.Expr.Varlist.__index = AST.Expr.Varlist
-AST.Expr.Varlist.__name = "Varlist"
-
-function AST.Expr.Varlist.new(variables)
-	local self = {}
-	self.variables = variables
-	return setmetatable(self, AST.Expr.Varlist)
-end
-
-function AST.Expr.Varlist:evaluate(env)
-	local values = {}
-	for _, variable in ipairs(self.variables) do
-		table.insert(values, variable:evaluate(env))
-	end
-	return values
-end
-
-function AST.Expr.Varlist:__tostring()
-	local variables = {}
-	for _, variable in ipairs(self.variables) do
-		table.insert(variables, tostring(variable))
-	end
-	return "("..table.concat(self.variables, ", ")..")"
-end
-
-setmetatable(AST.Expr.Varlist, {
-	__call = function(_, ...) return AST.Expr.Varlist.new(...) end,
 })
 
 
@@ -260,7 +228,7 @@ function AST.Expr.Function:evaluate(parent)
 end
 
 function AST.Expr.Function:call(arguments)
-	for i, parameter in ipairs(self.parameters.variables) do
+	for i, parameter in ipairs(self.parameters.expressions) do
 		self.environment:set(parameter.name.lexeme, arguments[i])
 	end
 	return self.body:evaluate(self.environment)

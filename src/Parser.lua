@@ -10,6 +10,8 @@ function Parser.new(tokens)
 	local self = {}
 	self.tokens = tokens
 	self.current = 1
+	self.wsSensitive = false
+	self.nlSensitive = false
 	return setmetatable(self, Parser)
 end
 
@@ -17,29 +19,39 @@ function Parser.error(token, message)
 	error("["..token.line.."] Error at '"..token.lexeme.."': "..(message or ""), 2)
 end
 
-function Parser:peek()
-	return self.tokens[self.current]
+function Parser:peek(n)
+	n = n or 0
+	return self.current+n <= #self.tokens
+		and self.tokens[self.current+n]
+		or self.tokens[#self.tokens]
 end
 
 function Parser:previous()
 	return self.tokens[self.current-1]
 end
 
-function Parser:advance()
-	if self:peek().type ~= "EOF" then self.current = self.current+1 end
+function Parser:advance(n)
+	if self:peek(n).type ~= "EOF" then self.current = self.current+1+(n or 0) end
 	return self:previous()
 end
 
-function Parser:match(types, whitespaceSensitive)
-	local token = self:peek()
-	while not whitespaceSensitive and token.type == "whitespace" do
-		-- Skip whitespace
-		self:advance()
-		token = self:peek()
+function Parser:skip(whitespace, newlines)
+	local n = 0
+	local token = self:peek(n)
+	while (whitespace and token.type == "whitespace")
+		or (newlines and token.type == "newline") do
+		-- Skip whitespace or newlines
+		n = n+1
+		token = self:peek(n)
 	end
+	return token, n
+end
+
+function Parser:match(types)
+	local token, n = self:skip(not self.wsSensitive, not self.nlSensitive)
 	for _, t in ipairs(types) do
 		if token.type == t then
-			self:advance()
+			self:advance(n)
 			return true
 		end
 	end
@@ -82,10 +94,10 @@ function Parser:assignment()
 	if self:match {"equal"} then
 		local equal = self:previous()
 		local value = self:assignment()
-		if expr.__index == AST.Expr.Variable then
+		if expr.__name == "Variable" then
 			return AST.Expr.Assignment(expr.name, value)
 		else
-			Parser.error(equal, "Attempt to assign to non-variable")
+			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
 		end
 	end
 	
@@ -123,11 +135,15 @@ end
 
 function Parser:call()
 	local expr = self:primary()
+	local nl = self.nlSensitive
+	self.nlSensitive = true
 	local arglist = self:primary()
 	while arglist do
 		expr = AST.Expr.Call(expr, arglist)
+		self.nlSensitive = true
 		arglist = self:primary()
 	end
+	self.nlSensitive = nl
 	return expr
 end
 
@@ -135,10 +151,29 @@ function Parser:primary()
 	if self:match {"number", "string"} then
 		return AST.Expr.Literal(self:previous())
 	elseif self:match {"opening parenthesis"} then
-		return self:group()
+		self.nlSensitive = false
+		return self:func()
 	elseif self:match {"identifier"} then -- variable
 		return AST.Expr.Variable(self:previous())
 	end
+end
+
+function Parser:func()
+	local expr = self:group()
+	
+	if self:match {"equal greater"} then
+		local arrow = self:previous()
+		local body = self:expression()
+		-- Check if expressions are variables
+		for _, arg in ipairs(expr.expressions) do
+			if arg.__name ~= "Variable" then
+				Parser.error(arrow, "Invalid function argument")
+			end
+		end
+		return AST.Expr.Function(expr, body)
+	end
+	
+	return expr
 end
 
 function Parser:group()

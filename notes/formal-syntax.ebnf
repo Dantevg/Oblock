@@ -12,8 +12,10 @@ muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
 			| call ;
 call		= primary primary {primary} ;
-function	= '(' [arglist] ')' '=>' expression ;
-primary		= variable | Number | String | '(' explist ')' ;
+primary		= variable | Number | String | function ;
+function	= '(' [arglist] ')' '=>' expression
+			| group ;
+group		= '(' explist ')' ;
 
 (* Blocks and statements *)
 block		= '{' {statement} '}';

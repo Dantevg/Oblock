@@ -21,9 +21,16 @@ function Lexer.new(source)
 	return setmetatable(self, Lexer)
 end
 
-function Lexer.checkNext(char)
+function Lexer.checkNext(...)
+	local chars = {...}
 	return function(self, type)
-		self:addToken(self:match(char) and type.." "..Lexer.tokens[char][2] or type)
+		for _, char in ipairs(chars) do
+			if self:match(char) then
+				self:addToken(type.." "..Lexer.tokens[char][2])
+				return
+			end
+		end
+		self:addToken(type)
 	end
 end
 
@@ -110,6 +117,7 @@ function Lexer:scanToken()
 	local char = self:advance()
 	local token = Lexer.tokens[char]
 	if char == "\n" then
+		self:addToken("newline")
 		self.line = self.line+1
 	elseif token then
 		token[1](self, table.unpack(token, 2))
@@ -138,9 +146,9 @@ Lexer.tokens = {
 	[";"] = {Lexer.addToken, "semicolon"},
 	[":"] = {Lexer.addToken, "colon"},
 	["!"] = {Lexer.checkNext("="), "exclamation"},
-	["="] = {Lexer.checkNext("="), "equal"},
-	["<"] = {Lexer.checkNext("="), "less"},
-	[">"] = {Lexer.checkNext("="), "greater"},
+	["="] = {Lexer.checkNext("=", ">"), "equal"},
+	["<"] = {Lexer.checkNext("=", "<"), "less"},
+	[">"] = {Lexer.checkNext("=", ">"), "greater"},
 	['"'] = {Lexer.string, "string"},
 	[" "] = {Lexer.whitespace, "whitespace"},
 	["\r"]= {Lexer.whitespace, "whitespace"},

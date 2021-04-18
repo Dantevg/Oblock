@@ -1,7 +1,7 @@
 local AST = require "AST"
 
 local fnClock = AST.Expr.Function(
-	AST.Expr.Varlist {},
+	AST.Expr.Group {},
 	AST.Expr.Literal {
 		type = "number",
 		lexeme = "<builtin: clock>",
@@ -10,7 +10,7 @@ local fnClock = AST.Expr.Function(
 	}
 )
 local fnPrint = AST.Expr.Function(
-	AST.Expr.Varlist {AST.Expr.Variable {type = "identifier", lexeme = "str", line = 1}},
+	AST.Expr.Group {AST.Expr.Variable {type = "identifier", lexeme = "str", line = 1}},
 	{evaluate = function(_, env)
 		print(env:get("str"))
 		return nil

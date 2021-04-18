@@ -10,12 +10,17 @@ bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
-			| primary ;
-primary		= variable | Number | String | '(' expression ')' ;
+			| call ;
+call		= primary primary {primary} ;
+function	= '(' [arglist] ')' '=>' expression ;
+primary		= variable | Number | String | '(' explist ')' ;
 
 (* Blocks and statements *)
 block		= '{' {statement} '}';
-statement	= 'print' expression | expression ;
+statement	= 'return' expression
+			| expression ;
 
 (* Smaller components *)
 variable	= Identifier ;
+arglist		= Identifier {',' Identifier} ;
+explist		= expression {',' expression} ;

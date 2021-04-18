@@ -150,7 +150,7 @@ Lexer.tokens = {
 Lexer.keywords = {
 	["if"] = true, ["elseif"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
-	["print"] = true, -- TODO: remove, temporary!
+	["return"] = true,
 }
 
 return setmetatable(Lexer, {

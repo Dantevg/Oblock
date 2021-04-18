@@ -14,7 +14,7 @@ function Parser.new(tokens)
 end
 
 function Parser.error(token, message)
-	error("["..token.line.."] Error at '"..token.lexeme.."': "..(message or ""))
+	error("["..token.line.."] Error at '"..token.lexeme.."': "..(message or ""), 2)
 end
 
 function Parser:peek()
@@ -117,20 +117,44 @@ function Parser:unary()
 		local right = self:unary()
 		return AST.Expr.Unary(op, right)
 	else
-		return self:primary()
+		return self:call()
 	end
+end
+
+function Parser:call()
+	local expr = self:primary()
+	local arglist = self:primary()
+	while arglist do
+		expr = AST.Expr.Call(expr, arglist)
+		arglist = self:primary()
+	end
+	return expr
 end
 
 function Parser:primary()
 	if self:match {"number", "string"} then
 		return AST.Expr.Literal(self:previous())
 	elseif self:match {"opening parenthesis"} then
-		local expr = self:expression()
-		self:consume("closing parenthesis", "Expected ')'")
-		return AST.Expr.Group(expr)
+		return self:group()
 	elseif self:match {"identifier"} then -- variable
 		return AST.Expr.Variable(self:previous())
 	end
+end
+
+function Parser:group()
+	local expressions = {}
+	while not self:match {"closing parenthesis"} do
+		local expression = self:expression()
+		if not expression then
+			Parser.error(self:peek(), "Expected expression")
+		end
+		table.insert(expressions, expression)
+		if not self:match {"comma"} then
+			self:consume("closing parenthesis", "Expected ')'")
+			break
+		end
+	end
+	return AST.Expr.Group(expressions)
 end
 
 function Parser:block()
@@ -146,15 +170,15 @@ function Parser:block()
 end
 
 function Parser:statement()
-	if self:match {"print"} then
-		return self:printStatement()
+	if self:match {"return"} then
+		return self:returnStatement()
 	else
 		return self:expression()
 	end
 end
 
-function Parser:printStatement()
-	return AST.Statement.Print(self:expression())
+function Parser:returnStatement()
+	return nil
 end
 
 return setmetatable(Parser, {

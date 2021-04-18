@@ -1,3 +1,5 @@
+-- Inspired by https://craftinginterpreters.com/evaluating-expressions.html
+
 local AST = {}
 
 AST.Environment = {}
@@ -192,7 +194,14 @@ end
 function AST.Expr.Block:evaluate(parent)
 	local environment = AST.Environment(parent)
 	for _, statement in ipairs(self.statements) do
-		statement:evaluate(environment)
+		local success, err = pcall(statement.evaluate, statement, environment)
+		if not success then
+			if type(err) == "table" and err.__name == "Return" then
+				return err.value
+			else
+				error(err)
+			end
+		end
 	end
 	return self
 end
@@ -341,6 +350,34 @@ end
 
 setmetatable(AST.Expr.Literal.Nil, {
 	__call = function(_, ...) return AST.Expr.Literal.Nil.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Stat = {}
+
+AST.Stat.Return = {}
+AST.Stat.Return.__index = AST.Stat.Return
+AST.Stat.Return.__name = "Return"
+
+function AST.Stat.Return.new(expression)
+	local self = {}
+	self.expression = expression
+	return setmetatable(self, AST.Stat.Return)
+end
+
+function AST.Stat.Return:evaluate(env)
+	self.value = self.expression and self.expression:evaluate(env)
+	error(self)
+end
+
+function AST.Stat.Return:__tostring()
+	return "return "..tostring(self.expression)
+end
+
+setmetatable(AST.Stat.Return, {
+	__call = function(_, ...) return AST.Stat.Return.new(...) end,
 	__index = AST.Expr.Literal,
 })
 

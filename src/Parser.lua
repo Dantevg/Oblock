@@ -1,5 +1,4 @@
 -- Inspired by http://craftinginterpreters.com/parsing-expressions.html
--- and https://craftinginterpreters.com/evaluating-expressions.html
 
 local AST = require "AST"
 
@@ -219,7 +218,7 @@ function Parser:statement()
 end
 
 function Parser:returnStatement()
-	return nil
+	return AST.Stat.Return(self:expression())
 end
 
 return setmetatable(Parser, {

@@ -4,6 +4,8 @@ expression	= block
 
 (* Expressions *)
 assignment	= variable {'=' assignment}
+			| function ;
+function	= (variable | group) '=>' expression
 			| comparison ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
@@ -12,9 +14,7 @@ muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
 			| call ;
 call		= primary primary {primary} ;
-primary		= variable | Number | String | function ;
-function	= '(' [arglist] ')' '=>' expression
-			| group ;
+primary		= variable | Number | String | group ;
 group		= '(' explist ')' ;
 
 (* Blocks and statements *)

@@ -89,7 +89,7 @@ function Parser:expression()
 end
 
 function Parser:assignment()
-	local expr = self:comparison()
+	local expr = self:func()
 	
 	if self:match {"equal"} then
 		local equal = self:previous()
@@ -98,6 +98,30 @@ function Parser:assignment()
 			return AST.Expr.Assignment(expr.name, value)
 		else
 			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
+		end
+	end
+	
+	return expr
+end
+
+function Parser:func()
+	local expr = self:comparison()
+	
+	if self:match {"equal greater"} then
+		local arrow = self:previous()
+		local body = self:expression()
+		-- Check if expression is variable or group of variables
+		if expr.__name == "Variable" then
+			return AST.Expr.Function(AST.Expr.Group {expr}, body)
+		elseif expr.__name == "Group" then
+			for _, arg in ipairs(expr.expressions) do
+				if arg.__name ~= "Variable" then
+					Parser.error(arrow, "Invalid function argument")
+				end
+			end
+			return AST.Expr.Function(expr, body)
+		else
+			Parser.error(arrow, "Invalid function argument")
 		end
 	end
 	
@@ -152,28 +176,10 @@ function Parser:primary()
 		return AST.Expr.Literal(self:previous())
 	elseif self:match {"opening parenthesis"} then
 		self.nlSensitive = false
-		return self:func()
+		return self:group()
 	elseif self:match {"identifier"} then -- variable
 		return AST.Expr.Variable(self:previous())
 	end
-end
-
-function Parser:func()
-	local expr = self:group()
-	
-	if self:match {"equal greater"} then
-		local arrow = self:previous()
-		local body = self:expression()
-		-- Check if expressions are variables
-		for _, arg in ipairs(expr.expressions) do
-			if arg.__name ~= "Variable" then
-				Parser.error(arrow, "Invalid function argument")
-			end
-		end
-		return AST.Expr.Function(expr, body)
-	end
-	
-	return expr
 end
 
 function Parser:group()

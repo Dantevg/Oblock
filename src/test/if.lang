@@ -1,0 +1,8 @@
+{
+	isPositive = x => x > 0
+	isZero = x => x == 0
+	a = 0
+	if isZero(a): print "zero"
+	else if isPositive(a): print "positive"
+	else print "negative"
+}

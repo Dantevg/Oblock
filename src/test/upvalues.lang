@@ -1,0 +1,11 @@
+{
+	a = "global"
+	{
+		showA = () => {
+			print a
+		}
+		showA()
+		a = "block"
+		showA()
+	}
+}

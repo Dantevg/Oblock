@@ -1,0 +1,13 @@
+{
+	makeCounter = () => {
+		i = 0
+		count = () => {
+			i = i + 1
+			print i
+		}
+		return count
+	}
+	counter = makeCounter()
+	counter()
+	counter()
+}

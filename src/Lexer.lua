@@ -159,6 +159,7 @@ Lexer.keywords = {
 	["if"] = true, ["elseif"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
 	["return"] = true,
+	["true"] = true, ["false"] = true, -- TODO: remove, temporary!
 }
 
 return setmetatable(Lexer, {

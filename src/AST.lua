@@ -211,7 +211,7 @@ function AST.Expr.Block:__tostring()
 	for _, statement in ipairs(self.statements) do
 		table.insert(strings, tostring(statement))
 	end
-	return "Block {"..table.concat(strings, "; ").."}"
+	return "{"..table.concat(strings, "; ").."}"
 end
 
 setmetatable(AST.Expr.Block, {
@@ -345,13 +345,60 @@ function AST.Expr.Literal.Nil:evaluate()
 end
 
 function AST.Expr.Literal.Nil:__tostring()
-	return "(nil)"
+	return "nil"
 end
 
 setmetatable(AST.Expr.Literal.Nil, {
 	__call = function(_, ...) return AST.Expr.Literal.Nil.new(...) end,
 	__index = AST.Expr.Literal,
 })
+
+
+
+AST.Expr.Literal.True = {}
+AST.Expr.Literal.True.__index = AST.Expr.Literal.True
+AST.Expr.Literal.True.__name = "True"
+
+function AST.Expr.Literal.True.new()
+	return setmetatable({}, AST.Expr.Literal.True)
+end
+
+function AST.Expr.Literal.True:evaluate()
+	return true
+end
+
+function AST.Expr.Literal.True:__tostring()
+	return "true"
+end
+
+setmetatable(AST.Expr.Literal.True, {
+	__call = function(_, ...) return AST.Expr.Literal.True.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Expr.Literal.False = {}
+AST.Expr.Literal.False.__index = AST.Expr.Literal.False
+AST.Expr.Literal.False.__name = "False"
+
+function AST.Expr.Literal.False.new()
+	return setmetatable({}, AST.Expr.Literal.False)
+end
+
+function AST.Expr.Literal.False:evaluate()
+	return false
+end
+
+function AST.Expr.Literal.False:__tostring()
+	return "false"
+end
+
+setmetatable(AST.Expr.Literal.False, {
+	__call = function(_, ...) return AST.Expr.Literal.False.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
 
 
 
@@ -380,5 +427,71 @@ setmetatable(AST.Stat.Return, {
 	__call = function(_, ...) return AST.Stat.Return.new(...) end,
 	__index = AST.Expr.Literal,
 })
+
+
+
+AST.Stat.If = {}
+AST.Stat.If.__index = AST.Stat.If
+AST.Stat.If.__name = "If"
+
+function AST.Stat.If.new(condition, ifTrue, ifFalse)
+	local self = {}
+	self.condition = condition
+	self.ifTrue = ifTrue
+	self.ifFalse = ifFalse
+	return setmetatable(self, AST.Stat.If)
+end
+
+function AST.Stat.If:evaluate(env)
+	local value = self.condition:evaluate(env)
+	if value then -- TODO: is truthy
+		self.ifTrue:evaluate(env)
+	elseif self.ifFalse then
+		self.ifFalse:evaluate(env)
+	end
+end
+
+function AST.Stat.If:__tostring()
+	if self.ifFalse then
+		return string.format("if %s: %s else %s", self.condition, self.ifTrue, self.ifFalse)
+	else
+		return string.format("if %s: %s", self.condition, self.ifTrue)
+	end
+end
+
+setmetatable(AST.Stat.If, {
+	__call = function(_, ...) return AST.Stat.If.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Stat.While = {}
+AST.Stat.While.__index = AST.Stat.While
+AST.Stat.While.__name = "While"
+
+function AST.Stat.While.new(condition, body)
+	local self = {}
+	self.condition = condition
+	self.body = body
+	return setmetatable(self, AST.Stat.While)
+end
+
+function AST.Stat.While:evaluate(env)
+	while self.condition:evaluate(env) do -- TODO: is truthy
+		self.body:evaluate(env)
+	end
+end
+
+function AST.Stat.While:__tostring()
+	return string.format("while %s: %s", self.condition, self.body)
+end
+
+setmetatable(AST.Stat.While, {
+	__call = function(_, ...) return AST.Stat.While.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
 
 return AST

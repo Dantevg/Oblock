@@ -18,11 +18,19 @@ function Parser.error(token, message)
 	error("["..token.line.."] Error at '"..token.lexeme.."': "..(message or ""), 2)
 end
 
+function Parser:shouldIgnore(token)
+	return (not self.wsSensitive and token.type == "whitespace")
+		or (not self.nlSensitive and token.type == "newline")
+end
+
 function Parser:peek(n)
 	n = n or 0
-	return self.current+n <= #self.tokens
-		and self.tokens[self.current+n]
-		or self.tokens[#self.tokens]
+	local token
+	repeat
+		token = self.tokens[self.current+n]
+		n = n+1
+	until self.current+n > #self.tokens or not self:shouldIgnore(token)
+	return token, n-1
 end
 
 function Parser:previous()
@@ -34,20 +42,8 @@ function Parser:advance(n)
 	return self:previous()
 end
 
-function Parser:skip(whitespace, newlines)
-	local n = 0
-	local token = self:peek(n)
-	while (whitespace and token.type == "whitespace")
-		or (newlines and token.type == "newline") do
-		-- Skip whitespace or newlines
-		n = n+1
-		token = self:peek(n)
-	end
-	return token, n
-end
-
 function Parser:match(types)
-	local token, n = self:skip(not self.wsSensitive, not self.nlSensitive)
+	local token, n = self:peek()
 	for _, t in ipairs(types) do
 		if token.type == t then
 			self:advance(n)
@@ -173,6 +169,10 @@ end
 function Parser:primary()
 	if self:match {"number", "string"} then
 		return AST.Expr.Literal(self:previous())
+	elseif self:match {"true"} then
+		return AST.Expr.Literal.True()
+	elseif self:match {"false"} then
+		return AST.Expr.Literal.False()
 	elseif self:match {"opening parenthesis"} then
 		self.nlSensitive = false
 		return self:group()
@@ -212,6 +212,10 @@ end
 function Parser:statement()
 	if self:match {"return"} then
 		return self:returnStatement()
+	elseif self:match {"if"} then
+		return self:ifStatement()
+	elseif self:match {"while"} then
+		return self:whileStatement()
 	else
 		return self:expression()
 	end
@@ -219,6 +223,29 @@ end
 
 function Parser:returnStatement()
 	return AST.Stat.Return(self:expression())
+end
+
+function Parser:ifStatement()
+	local condition = self:expression()
+	self:consume("colon", "Expected ':'")
+	local ifTrue = self:statement()
+	if not ifTrue then Parser.error(self:peek(), "Expected statement") end
+	local ifFalse
+	if self:match {"else"} then
+		ifFalse = self:statement()
+		if not ifFalse then
+			Parser.error(self:peek(), "Expected statement")
+		end
+	end
+	return AST.Stat.If(condition, ifTrue, ifFalse)
+end
+
+function Parser:whileStatement()
+	local condition = self:expression()
+	self:consume("colon", "Expected ':'")
+	local body = self:statement()
+	if not body then Parser.error(self:peek(), "Expected statement") end
+	return AST.Stat.While(condition, body)
 end
 
 return setmetatable(Parser, {

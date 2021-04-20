@@ -196,7 +196,7 @@ function AST.Expr.Block:evaluate(parent)
 	for _, statement in ipairs(self.statements) do
 		local success, err = pcall(statement.evaluate, statement, environment)
 		if not success then
-			if type(err) == "table" and err.__name == "Return" then
+			if type(err) == "table" and err.__name == "Yield" then
 				return err.value
 			else
 				error(err)
@@ -240,7 +240,18 @@ function AST.Expr.Function:call(arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		self.environment:set(parameter.name.lexeme, arguments[i])
 	end
-	return self.body:evaluate(self.environment)
+	
+	local values = {pcall(self.body.evaluate, self.body, self.environment)}
+	if values[1] then
+		return table.unpack(values, 2)
+	else
+		local err = values[2]
+		if type(err) == "table" and err.__name == "Return" then
+			return err.value
+		else
+			error(err)
+		end
+	end
 end
 
 function AST.Expr.Function:__tostring()
@@ -266,7 +277,7 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	if not fn or fn.__index ~= AST.Expr.Function then error("Attempt to call non-function") end
+	if not fn or fn.__name ~= "Function" then error("Attempt to call non-function") end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
 end
@@ -425,6 +436,32 @@ end
 
 setmetatable(AST.Stat.Return, {
 	__call = function(_, ...) return AST.Stat.Return.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Stat.Yield = {}
+AST.Stat.Yield.__index = AST.Stat.Yield
+AST.Stat.Yield.__name = "Yield"
+
+function AST.Stat.Yield.new(expression)
+	local self = {}
+	self.expression = expression
+	return setmetatable(self, AST.Stat.Yield)
+end
+
+function AST.Stat.Yield:evaluate(env)
+	self.value = self.expression and self.expression:evaluate(env)
+	error(self)
+end
+
+function AST.Stat.Yield:__tostring()
+	return "yield "..tostring(self.expression)
+end
+
+setmetatable(AST.Stat.Yield, {
+	__call = function(_, ...) return AST.Stat.Yield.new(...) end,
 	__index = AST.Expr.Literal,
 })
 

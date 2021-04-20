@@ -3,7 +3,7 @@ expression	= block
 			| assignment ;
 
 (* Expressions *)
-assignment	= variable {'=' assignment}
+assignment	= variable {'=' expression}
 			| function ;
 function	= (variable | group) '=>' expression
 			| comparison ;
@@ -20,6 +20,7 @@ group		= '(' explist ')' ;
 (* Blocks and statements *)
 block		= '{' {statement} '}';
 statement	= 'return' expression
+			| 'yield' expression
 			| 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
 			| expression ;

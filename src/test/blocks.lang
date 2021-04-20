@@ -1,0 +1,8 @@
+{
+	a = {
+		x = 10
+		y = 20
+		yield x + y
+	}
+	print a
+}

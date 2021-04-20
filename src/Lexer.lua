@@ -158,7 +158,7 @@ Lexer.tokens = {
 Lexer.keywords = {
 	["if"] = true, ["elseif"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
-	["return"] = true,
+	["return"] = true, ["yield"] = true,
 	["true"] = true, ["false"] = true, -- TODO: remove, temporary!
 }
 

@@ -74,7 +74,11 @@ function Parser:binary(tokens, next)
 end
 
 function Parser:parse()
-	return self:expression()
+	local expr = self:expression()
+	if self:peek().type ~= "EOF" then
+		Parser.error(self:peek(), "Expected EOF")
+	end
+	return expr
 end
 
 function Parser:expression()
@@ -88,7 +92,7 @@ function Parser:assignment()
 	
 	if self:match {"equal"} then
 		local equal = self:previous()
-		local value = self:assignment()
+		local value = self:expression()
 		if expr.__name == "Variable" then
 			return AST.Expr.Assignment(expr.name, value)
 		else
@@ -212,6 +216,8 @@ end
 function Parser:statement()
 	if self:match {"return"} then
 		return self:returnStatement()
+	elseif self:match {"yield"} then
+		return self:yieldStatement()
 	elseif self:match {"if"} then
 		return self:ifStatement()
 	elseif self:match {"while"} then
@@ -223,6 +229,10 @@ end
 
 function Parser:returnStatement()
 	return AST.Stat.Return(self:expression())
+end
+
+function Parser:yieldStatement()
+	return AST.Stat.Yield(self:expression())
 end
 
 function Parser:ifStatement()

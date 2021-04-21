@@ -54,3 +54,23 @@ Possible syntax for using different values as index:
   (x+1)(b), a.(x+1)(b)
   `x+1`(b)
   [x+1](b), a[x+1](b)
+
+Lists / arrays
+a = {
+	[1] = 10
+	[2] = 20
+}
+
+a = {[1] = 10, [2] = 20}
+
+map add ...(10, 20, 30)
+
+a = ...(1, 2, 3)
+
+a = ...()
+
+a, b, c = 10, 20, 30
+
+(a, b, c) = (10, 20, 30)
+
+(a, b, c) = ...x

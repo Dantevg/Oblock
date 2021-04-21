@@ -84,7 +84,6 @@ Formal syntax
          | 'while' exp ':' exp
          | 'for' varlist 'in' explist ':' exp
 - block ::= {modifier} '{' {stat} '}'
-- list ::= '[' [explist] ']'
 - lambda ::= '(' arglist ')' '=>' exp
 - identifier ::= (letter | '_') [{alphanum | '_'}]
 - fncall ::= exp args
@@ -94,7 +93,7 @@ Formal syntax
 - op ::= '+' | '-' | '*' | '/' | '^' | '%'
 	   | '!' | '||' | '&&' | '<' | '>' | '==' | '!=' | '<=' | '>='
        | '~' | '|' | '&' | '<<' | '>>'
-	   | '@' | '#' | '$' | '\' | '?' | ':'
+	   | '@' | '#' | '$' | '\' | '?' | ':' | '..' | '...'
 - sep ::= ';' | ','
 
 Operators and keywords
@@ -152,19 +151,20 @@ gets parsed as expression followed by statement:
 	c()
 This means ?
 
-List / array syntax using `()` or `[]` as syntax sugar. These are all equal:
-[10, 20, a = b, 30]
-[
+List / array syntax using `...()` or `[]` as syntax sugar.
+Using `...` as unary list-creation operator, these are all equal:
+...(10, 20, a = b, 30)
+...(
 	10
 	20
 	a = b
 	30
-]
+)
 extend List {
-	`1` = 10
-	`2` = 20
+	[1] = 10
+	[2] = 20
 	a = b
-	`3` = 30
+	[3] = 30
 }
 
 Inheritance:

@@ -192,7 +192,8 @@ function Parser:primary()
 		self.nlSensitive = false
 		return self:group()
 	elseif self:match {"identifier"} then
-		return AST.Expr.Variable(nil, AST.Expr.Literal(self:previous()))
+		local name = self:previous().lexeme
+		return AST.Expr.Variable(nil, AST.Expr.Literal(name, name))
 	end
 end
 

@@ -2,11 +2,14 @@ local AST = require "AST"
 
 local fnClock = AST.Expr.Function(
 	AST.Expr.Group {},
-	AST.Expr.Literal.Number(os.clock())
+	{evaluate = function()
+		local clock = os.clock()
+		return AST.Expr.Literal(clock, tostring(clock))
+	end}
 )
 
 local fnPrint = AST.Expr.Function(
-	AST.Expr.Group {AST.Expr.Variable(nil, AST.Expr.Literal.String("str"))},
+	AST.Expr.Group {AST.Expr.Variable(nil, AST.Expr.Literal("str", '"str"'))},
 	{evaluate = function(_, env)
 		print(env:get("str"))
 		return nil
@@ -15,8 +18,8 @@ local fnPrint = AST.Expr.Function(
 
 local globalBlock = AST.Expr.Block {
 	AST.Expr.Assignment(
-		AST.Expr.Variable(nil, AST.Expr.Literal.String("x")),
-		{evaluate = function() return 10 end}
+		AST.Expr.Variable(nil, AST.Expr.Literal("x", '"x"')),
+		{evaluate = function() return 20 end}
 	)
 }
 

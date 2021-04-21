@@ -172,11 +172,10 @@ function AST.Expr.Variable.new(base, expr)
 end
 
 function AST.Expr.Variable:getBase(env)
-	return self.base and self.base:evaluate(env) or env
+	return self.base and self.base:evaluate(env).environment or env
 end
 
 function AST.Expr.Variable:evaluate(env)
-	if not self.expr.evaluate then print(require("pretty")(self.expr, true)) end
 	return self:getBase(env):get(self.expr:evaluate(env))
 end
 
@@ -188,7 +187,7 @@ function AST.Expr.Variable:__tostring()
 	if self.base then
 		return tostring(self.base).."["..tostring(self.expr).."]"
 	else
-		return tostring(self.expr)
+		return self.expr.__name == "Literal" and self.expr.literal or tostring(self.expr)
 	end
 end
 
@@ -340,18 +339,24 @@ AST.Expr.Literal = {}
 AST.Expr.Literal.__index = AST.Expr.Literal
 AST.Expr.Literal.__name = "Literal"
 
-function AST.Expr.Literal.new(value)
+function AST.Expr.Literal.new(literal, lexeme)
 	local self = {}
-	self.value = value
+	if lexeme then
+		self.literal = literal
+		self.lexeme = lexeme
+	else
+		self.literal = literal.literal
+		self.lexeme = literal.lexeme
+	end
 	return setmetatable(self, AST.Expr.Literal)
 end
 
 function AST.Expr.Literal:evaluate()
-	return self.value.literal
+	return self.literal
 end
 
 function AST.Expr.Literal:__tostring()
-	return self.value.lexeme
+	return self.lexeme
 end
 
 setmetatable(AST.Expr.Literal, {
@@ -424,56 +429,6 @@ end
 
 setmetatable(AST.Expr.Literal.False, {
 	__call = function(_, ...) return AST.Expr.Literal.False.new(...) end,
-	__index = AST.Expr.Literal,
-})
-
-
-
-AST.Expr.Literal.String = {}
-AST.Expr.Literal.String.__index = AST.Expr.Literal.String
-AST.Expr.Literal.String.__name = "String"
-
-function AST.Expr.Literal.String.new(value)
-	local self = {}
-	self.value = value
-	return setmetatable(self, AST.Expr.Literal.String)
-end
-
-function AST.Expr.Literal.String:evaluate()
-	return self.value
-end
-
-function AST.Expr.Literal.String:__tostring()
-	return '"'..self.value..'"'
-end
-
-setmetatable(AST.Expr.Literal.String, {
-	__call = function(_, ...) return AST.Expr.Literal.String.new(...) end,
-	__index = AST.Expr.Literal,
-})
-
-
-
-AST.Expr.Literal.Number = {}
-AST.Expr.Literal.Number.__index = AST.Expr.Literal.Number
-AST.Expr.Literal.Number.__name = "Number"
-
-function AST.Expr.Literal.Number.new(value)
-	local self = {}
-	self.value = value
-	return setmetatable(self, AST.Expr.Literal.Number)
-end
-
-function AST.Expr.Literal.Number:evaluate()
-	return self.value
-end
-
-function AST.Expr.Literal.Number:__tostring()
-	return self.value
-end
-
-setmetatable(AST.Expr.Literal.Number, {
-	__call = function(_, ...) return AST.Expr.Literal.Number.new(...) end,
 	__index = AST.Expr.Literal,
 })
 

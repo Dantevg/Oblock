@@ -14,7 +14,7 @@ muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
 			| call ;
 call		= index index {index} ;
-index		= primary {'[' expression ']'} ;
+index		= [primary] {'[' expression ']'} ;
 primary		= Identifier | Number | String | group ;
 group		= '(' explist ')' ;
 

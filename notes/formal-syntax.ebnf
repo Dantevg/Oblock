@@ -3,9 +3,9 @@ expression	= block
 			| assignment ;
 
 (* Expressions *)
-assignment	= variable {'=' expression}
+assignment	= index {'=' expression}
 			| function ;
-function	= (variable | group) '=>' expression
+function	= (Identifier | group) '=>' expression
 			| comparison ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
@@ -13,8 +13,9 @@ addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
 			| call ;
-call		= primary primary {primary} ;
-primary		= variable | Number | String | group ;
+call		= index index {index} ;
+index		= primary {'[' expression ']'} ;
+primary		= Identifier | Number | String | group ;
 group		= '(' explist ')' ;
 
 (* Blocks and statements *)
@@ -26,6 +27,5 @@ statement	= 'return' expression
 			| expression ;
 
 (* Smaller components *)
-variable	= Identifier ;
 arglist		= Identifier {',' Identifier} ;
 explist		= expression {',' expression} ;

@@ -161,18 +161,35 @@ AST.Expr.Variable = {}
 AST.Expr.Variable.__index = AST.Expr.Variable
 AST.Expr.Variable.__name = "Variable"
 
-function AST.Expr.Variable.new(name)
+-- a  is  Variable(nil, a)
+-- b[c][d]  is  (b[c])[d]  is  Variable(Variable(Variable(nil, b), c), d)
+
+function AST.Expr.Variable.new(base, expr)
 	local self = {}
-	self.name = name
+	self.base = base
+	self.expr = expr
 	return setmetatable(self, AST.Expr.Variable)
 end
 
+function AST.Expr.Variable:getBase(env)
+	return self.base and self.base:evaluate(env) or env
+end
+
 function AST.Expr.Variable:evaluate(env)
-	return env:get(self.name.lexeme)
+	if not self.expr.evaluate then print(require("pretty")(self.expr, true)) end
+	return self:getBase(env):get(self.expr:evaluate(env))
+end
+
+function AST.Expr.Variable:evaluateReference()
+	return self.expr:evaluate()
 end
 
 function AST.Expr.Variable:__tostring()
-	return tostring(self.name.lexeme)
+	if self.base then
+		return tostring(self.base).."["..tostring(self.expr).."]"
+	else
+		return tostring(self.expr)
+	end
 end
 
 setmetatable(AST.Expr.Variable, {
@@ -192,9 +209,9 @@ function AST.Expr.Block.new(statements)
 end
 
 function AST.Expr.Block:evaluate(parent)
-	local environment = AST.Environment(parent)
+	self.environment = AST.Environment(parent)
 	for _, statement in ipairs(self.statements) do
-		local success, err = pcall(statement.evaluate, statement, environment)
+		local success, err = pcall(statement.evaluate, statement, self.environment)
 		if not success then
 			if type(err) == "table" and err.__name == "Yield" then
 				return err.value
@@ -238,7 +255,7 @@ end
 
 function AST.Expr.Function:call(arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
-		self.environment:set(parameter.name.lexeme, arguments[i])
+		self.environment:set(parameter:evaluateReference(), arguments[i])
 	end
 	
 	local values = {pcall(self.body.evaluate, self.body, self.environment)}
@@ -296,21 +313,21 @@ AST.Expr.Assignment = {}
 AST.Expr.Assignment.__index = AST.Expr.Assignment
 AST.Expr.Assignment.__name = "Assignment"
 
-function AST.Expr.Assignment.new(name, expr)
+function AST.Expr.Assignment.new(target, expr)
 	local self = {}
-	self.name = name
+	self.target = target
 	self.expr = expr
 	return setmetatable(self, AST.Expr.Assignment)
 end
 
 function AST.Expr.Assignment:evaluate(env)
 	local value = self.expr:evaluate(env)
-	env:set(self.name.lexeme, value)
+	self.target:getBase(env):set(self.target.expr:evaluate(env), value)
 	return value
 end
 
 function AST.Expr.Assignment:__tostring()
-	return self.name.lexeme.." = "..tostring(self.expr)
+	return tostring(self.target).." = "..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Assignment, {
@@ -410,6 +427,55 @@ setmetatable(AST.Expr.Literal.False, {
 	__index = AST.Expr.Literal,
 })
 
+
+
+AST.Expr.Literal.String = {}
+AST.Expr.Literal.String.__index = AST.Expr.Literal.String
+AST.Expr.Literal.String.__name = "String"
+
+function AST.Expr.Literal.String.new(value)
+	local self = {}
+	self.value = value
+	return setmetatable(self, AST.Expr.Literal.String)
+end
+
+function AST.Expr.Literal.String:evaluate()
+	return self.value
+end
+
+function AST.Expr.Literal.String:__tostring()
+	return '"'..self.value..'"'
+end
+
+setmetatable(AST.Expr.Literal.String, {
+	__call = function(_, ...) return AST.Expr.Literal.String.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Expr.Literal.Number = {}
+AST.Expr.Literal.Number.__index = AST.Expr.Literal.Number
+AST.Expr.Literal.Number.__name = "Number"
+
+function AST.Expr.Literal.Number.new(value)
+	local self = {}
+	self.value = value
+	return setmetatable(self, AST.Expr.Literal.Number)
+end
+
+function AST.Expr.Literal.Number:evaluate()
+	return self.value
+end
+
+function AST.Expr.Literal.Number:__tostring()
+	return self.value
+end
+
+setmetatable(AST.Expr.Literal.Number, {
+	__call = function(_, ...) return AST.Expr.Literal.Number.new(...) end,
+	__index = AST.Expr.Literal,
+})
 
 
 

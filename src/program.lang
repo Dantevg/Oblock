@@ -1,5 +1,3 @@
 {
-	add = a => b => a + b
-	print(add(10)(20))
-	return add(20)(50)
+	["print"](["block"]["x"])
 }

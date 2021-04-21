@@ -94,7 +94,7 @@ function Parser:assignment()
 		local equal = self:previous()
 		local value = self:expression()
 		if expr.__name == "Variable" then
-			return AST.Expr.Assignment(expr.name, value)
+			return AST.Expr.Assignment(expr, value)
 		else
 			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
 		end
@@ -157,16 +157,27 @@ function Parser:unary()
 end
 
 function Parser:call()
-	local expr = self:primary()
+	local expr = self:index()
 	local nl = self.nlSensitive
 	self.nlSensitive = true
-	local arglist = self:primary()
+	local arglist = self:index()
 	while arglist do
 		expr = AST.Expr.Call(expr, arglist)
 		self.nlSensitive = true
-		arglist = self:primary()
+		arglist = self:index()
 	end
 	self.nlSensitive = nl
+	return expr
+end
+
+function Parser:index()
+	local expr = self:primary()
+	while self:match {"opening bracket"} do
+		local expression = self:expression()
+		if not expression then Parser.error(self:peek(), "Expected expression") end
+		expr = AST.Expr.Variable(expr, expression)
+		self:consume("closing bracket", "Expected ']'")
+	end
 	return expr
 end
 
@@ -180,8 +191,8 @@ function Parser:primary()
 	elseif self:match {"opening parenthesis"} then
 		self.nlSensitive = false
 		return self:group()
-	elseif self:match {"identifier"} then -- variable
-		return AST.Expr.Variable(self:previous())
+	elseif self:match {"identifier"} then
+		return AST.Expr.Variable(nil, AST.Expr.Literal(self:previous()))
 	end
 end
 

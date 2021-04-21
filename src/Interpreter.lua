@@ -2,24 +2,28 @@ local AST = require "AST"
 
 local fnClock = AST.Expr.Function(
 	AST.Expr.Group {},
-	AST.Expr.Literal {
-		type = "number",
-		lexeme = "<builtin: clock>",
-		literal = os.clock(),
-		line = 1
-	}
+	AST.Expr.Literal.Number(os.clock())
 )
+
 local fnPrint = AST.Expr.Function(
-	AST.Expr.Group {AST.Expr.Variable {type = "identifier", lexeme = "str", line = 1}},
+	AST.Expr.Group {AST.Expr.Variable(nil, AST.Expr.Literal.String("str"))},
 	{evaluate = function(_, env)
 		print(env:get("str"))
 		return nil
 	end}
 )
 
+local globalBlock = AST.Expr.Block {
+	AST.Expr.Assignment(
+		AST.Expr.Variable(nil, AST.Expr.Literal.String("x")),
+		{evaluate = function() return 10 end}
+	)
+}
+
 local function prepareEnvironment(environment)
 	environment:set("clock", fnClock:evaluate(environment))
 	environment:set("print", fnPrint:evaluate(environment))
+	environment:set("block", globalBlock:evaluate(environment))
 end
 
 local Interpreter = {}

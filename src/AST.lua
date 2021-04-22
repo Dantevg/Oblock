@@ -13,7 +13,7 @@ function AST.Environment.new(parent)
 end
 
 function AST.Environment:set(name, value)
-	if self.parent and self.parent:get(name).__name ~= "Nil" then
+	if self.parent and self.parent:get(name) then
 		self.parent:set(name, value)
 	else
 		self.environment[name] = value
@@ -26,7 +26,7 @@ function AST.Environment:get(name)
 	elseif self.parent then
 		return self.parent:get(name)
 	else
-		return AST.Expr.Literal.Nil()
+		return nil
 	end
 end
 

@@ -125,6 +125,17 @@ function Lexer:scanToken()
 		self:number()
 	elseif char:match("[%a_]") then
 		self:identifier()
+	elseif char == "." then
+		local name = "dot"
+		if self:peek() == "." then
+			self:advance()
+			name = name.." dot"
+			if self:peek() == "." then
+				self:advance()
+				name = name.." dot"
+			end
+		end
+		self:addToken(name)
 	else
 		self:error("Unexpected character")
 	end
@@ -138,7 +149,6 @@ Lexer.tokens = {
 	["["] = {Lexer.addToken, "opening bracket"},
 	["]"] = {Lexer.addToken, "closing bracket"},
 	[","] = {Lexer.addToken, "comma"},
-	["."] = {Lexer.addToken, "dot"},
 	["-"] = {Lexer.addToken, "minus"},
 	["+"] = {Lexer.addToken, "plus"},
 	["*"] = {Lexer.addToken, "star"},

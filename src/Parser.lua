@@ -196,6 +196,8 @@ function Parser:primary()
 		return AST.Expr.Literal.True()
 	elseif self:match {"false"} then
 		return AST.Expr.Literal.False()
+	elseif self:match {"dot dot dot"} then
+		return self:list()
 	elseif self:match {"opening parenthesis"} then
 		self.nlSensitive = false
 		return self:group()
@@ -203,6 +205,20 @@ function Parser:primary()
 		local name = self:previous().lexeme
 		return AST.Expr.Variable(nil, AST.Expr.Literal(name, name))
 	end
+end
+
+function Parser:list()
+	self:consume("opening parenthesis", "Expected '('")
+	self.nlSensitive = false
+	local group = self:group()
+	local items = {}
+	for i, expr in ipairs(group.expressions) do
+		table.insert(items, AST.Expr.Assignment(
+			AST.Expr.Variable(nil, AST.Expr.Literal(i, i)),
+			expr
+		))
+	end
+	return AST.Expr.Block(items)
 end
 
 function Parser:group()
@@ -224,6 +240,7 @@ end
 function Parser:block()
 	local statements = {}
 	while not self:match {"closing curly bracket"} do
+		while self:match {"semicolon"} do end -- Skip semicolons
 		local statement = self:statement()
 		if not statement then
 			Parser.error(self:peek(), "Expected statement")

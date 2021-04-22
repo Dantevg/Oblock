@@ -15,7 +15,8 @@ unary		= ('-' | '!') unary
 			| call ;
 call		= index index {index} ;
 index		= [primary] {'[' expression ']' | '.' Identifier} ;
-primary		= Identifier | Number | String | group ;
+primary		= Identifier | Number | String | list | group ;
+list		= '...' group ;
 group		= '(' explist ')' ;
 
 (* Blocks and statements *)

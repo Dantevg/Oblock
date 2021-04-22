@@ -191,7 +191,7 @@ end
 
 function AST.Expr.Variable:__tostring()
 	if self.base then
-		if self.expr.__name == "Literal" then
+		if self.expr.__name == "Literal" and type(self.expr.literal) == "string" then
 			return tostring(self.base).."."..self.expr.literal
 		else
 			return tostring(self.base).."["..tostring(self.expr).."]"

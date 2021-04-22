@@ -13,7 +13,7 @@ function AST.Environment.new(parent)
 end
 
 function AST.Environment:set(name, value)
-	if self.parent and self.parent:get(name) then
+	if self.parent and self.parent:get(name).__name ~= "Nil" then
 		self.parent:set(name, value)
 	else
 		self.environment[name] = value
@@ -172,7 +172,13 @@ function AST.Expr.Variable.new(base, expr)
 end
 
 function AST.Expr.Variable:getBase(env)
-	return self.base and self.base:evaluate(env).environment or env
+	if self.base then
+		local expr = self.base:evaluate(env)
+		if not expr.environment then error("indexing nil value") end
+		return expr.environment
+	else
+		return env
+	end
 end
 
 function AST.Expr.Variable:evaluate(env)
@@ -185,7 +191,11 @@ end
 
 function AST.Expr.Variable:__tostring()
 	if self.base then
-		return tostring(self.base).."["..tostring(self.expr).."]"
+		if self.expr.__name == "Literal" then
+			return tostring(self.base).."."..self.expr.literal
+		else
+			return tostring(self.base).."["..tostring(self.expr).."]"
+		end
 	else
 		return self.expr.__name == "Literal" and self.expr.literal or tostring(self.expr)
 	end

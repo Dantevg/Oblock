@@ -54,10 +54,11 @@ function Parser:match(types)
 end
 
 function Parser:consume(type, message)
-	if self:peek().type == type then
-		return self:advance()
+	local token, n = self:peek()
+	if token.type == type then
+		return self:advance(n)
 	else
-		Parser.error(self:peek(), message)
+		Parser.error(token, message)
 	end
 end
 
@@ -172,11 +173,18 @@ end
 
 function Parser:index()
 	local expr = self:primary()
-	while self:match {"opening bracket"} do
-		local expression = self:expression()
-		if not expression then Parser.error(self:peek(), "Expected expression") end
-		expr = AST.Expr.Variable(expr, expression)
-		self:consume("closing bracket", "Expected ']'")
+	while true do
+		if self:match {"opening bracket"} then
+			local expression = self:expression()
+			if not expression then Parser.error(self:peek(), "Expected expression") end
+			expr = AST.Expr.Variable(expr, expression)
+			self:consume("closing bracket", "Expected ']'")
+		elseif self:match {"dot"} then
+			local name = self:consume("identifier", "Expected identifier").lexeme
+			expr = AST.Expr.Variable(expr, AST.Expr.Literal(name, name))
+		else
+			break
+		end
 	end
 	return expr
 end

@@ -20,7 +20,7 @@ list		= '...' group ;
 group		= '(' explist ')' ;
 
 (* Blocks and statements *)
-block		= '{' {statement} '}';
+block		= '{' {statement | ';'} '}';
 statement	= 'return' expression
 			| 'yield' expression
 			| 'if' expression ':' statement ['else' statement]

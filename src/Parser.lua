@@ -246,6 +246,7 @@ function Parser:block()
 			Parser.error(self:peek(), "Expected statement")
 		end
 		table.insert(statements, statement)
+		while self:match {"semicolon"} do end -- Skip semicolons
 	end
 	return AST.Expr.Block(statements)
 end

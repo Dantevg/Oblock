@@ -67,7 +67,7 @@ function Parser:binary(tokens, next)
 	
 	while self:match(tokens) do
 		local op = self:previous()
-		local right = self:binary(tokens, next)
+		local right = next(self)
 		expr = AST.Expr.Binary(expr, op, right)
 	end
 	

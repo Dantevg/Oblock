@@ -21,19 +21,6 @@ function Lexer.new(source)
 	return setmetatable(self, Lexer)
 end
 
-function Lexer.checkNext(...)
-	local chars = {...}
-	return function(self, type)
-		for _, char in ipairs(chars) do
-			if self:match(char) then
-				self:addToken(type.." "..Lexer.tokens[char][2])
-				return
-			end
-		end
-		self:addToken(type)
-	end
-end
-
 function Lexer:lex()
 	while self.current <= #self.source do
 		self.start = self.current
@@ -77,7 +64,7 @@ function Lexer:sub()
 end
 
 function Lexer:string()
-	while self:peek() ~= '"' and self.current <= #self.source do
+	while self:peek() ~= '"' and self:peek() ~= "'" and self.current <= #self.source do
 		if self:peek() == "\n" then self.line = self.line+1 end
 		self:advance()
 	end
@@ -87,7 +74,7 @@ function Lexer:string()
 		return
 	end
 	
-	self:advance() -- Closing "
+	self:advance() -- Closing " or '
 	self:addToken("string", self.source:sub(self.start+1, self.current-2))
 end
 
@@ -109,60 +96,70 @@ function Lexer:identifier()
 end
 
 function Lexer:whitespace()
+	-- Collapse multiple whitespace characters into single token
 	while self:peek():match("[ \r\t]") do self:advance() end
 	self:addToken("whitespace")
 end
 
 function Lexer:scanToken()
 	local char = self:advance()
-	local token = Lexer.tokens[char]
 	if char == "\n" then
 		self:addToken("newline")
 		self.line = self.line+1
-	elseif token then
-		token[1](self, table.unpack(token, 2))
+	elseif Lexer.tokens[char] then
+		local token = Lexer.tokens[char]
+		local name = token[1]
+		while token[2] do
+			token = Lexer.tokens[self:peek()]
+			if not token or not token[2] then break end
+			self:advance()
+			name = name.." "..token[1]
+		end
+		self:addToken(name)
+	elseif char:match("[ \r\t]") then
+		self:whitespace()
+	elseif char == '"' or char == "'" then
+		self:string()
 	elseif char:match("%d") then
 		self:number()
 	elseif char:match("[%a_]") then
 		self:identifier()
-	elseif char == "." then
-		local name = "dot"
-		if self:peek() == "." then
-			self:advance()
-			name = name.." dot"
-			if self:peek() == "." then
-				self:advance()
-				name = name.." dot"
-			end
-		end
-		self:addToken(name)
 	else
-		self:error("Unexpected character")
+		self:error("Unexpected character: '"..char.."'")
 	end
 end
 
+-- Contains the name and whether to combine the token with other tokens into a single one
 Lexer.tokens = {
-	["("] = {Lexer.addToken, "opening parenthesis"},
-	[")"] = {Lexer.addToken, "closing parenthesis"},
-	["{"] = {Lexer.addToken, "opening curly bracket"},
-	["}"] = {Lexer.addToken, "closing curly bracket"},
-	["["] = {Lexer.addToken, "opening bracket"},
-	["]"] = {Lexer.addToken, "closing bracket"},
-	[","] = {Lexer.addToken, "comma"},
-	["-"] = {Lexer.addToken, "minus"},
-	["+"] = {Lexer.addToken, "plus"},
-	["*"] = {Lexer.addToken, "star"},
-	["/"] = {Lexer.addToken, "slash"},
-	[";"] = {Lexer.addToken, "semicolon"},
-	[":"] = {Lexer.checkNext("="), "colon"},
-	["!"] = {Lexer.checkNext("="), "exclamation"},
-	["="] = {Lexer.checkNext("=", ">"), "equal"},
-	["<"] = {Lexer.checkNext("=", "<"), "less"},
-	[">"] = {Lexer.checkNext("=", ">"), "greater"},
-	['"'] = {Lexer.string, "string"},
-	[" "] = {Lexer.whitespace, "whitespace"},
-	["\r"]= {Lexer.whitespace, "whitespace"},
-	["\t"]= {Lexer.whitespace, "whitespace"},
+	["("] = {"opening parenthesis", false},
+	[")"] = {"closing parenthesis", false},
+	["{"] = {"opening curly bracket", false},
+	["}"] = {"closing curly bracket", false},
+	["["] = {"opening bracket", false},
+	["]"] = {"closing bracket", false},
+	["!"] = {"exclamation", true},
+	["#"] = {"hash", true},
+	["$"] = {"dollar", true},
+	["%"] = {"percent", true},
+	["&"] = {"and", true},
+	["*"] = {"star", true},
+	["+"] = {"plus", true},
+	[","] = {"comma", true},
+	["-"] = {"minus", true},
+	["."] = {"dot", true},
+	["/"] = {"slash", true},
+	[":"] = {"colon", true},
+	[";"] = {"semicolon", true},
+	["<"] = {"less", true},
+	["="] = {"equal", true},
+	[">"] = {"greater", true},
+	["?"] = {"question", true},
+	["@"] = {"at", true},
+	["\\"]= {"backslash", true},
+	["^"] = {"hat", true},
+	["`"] = {"backtick", true},
+	["|"] = {"bar", true},
+	["~"] = {"tilde", true},
 }
 
 Lexer.keywords = {

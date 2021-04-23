@@ -101,21 +101,32 @@ function Lexer:whitespace()
 	self:addToken("whitespace")
 end
 
+local function canCombineWith(token, char)
+	for i = 2, #token do
+		if token[i] == char then return true end
+	end
+	return false
+end
+
+function Lexer:combine(token)
+	local name = token[1]
+	local nextChar = self:peek()
+	while canCombineWith(token, nextChar) do
+		self:advance()
+		token = Lexer.tokens[nextChar]
+		name = name.." "..token[1]
+		nextChar = self:peek()
+	end
+	self:addToken(name)
+end
+
 function Lexer:scanToken()
 	local char = self:advance()
 	if char == "\n" then
 		self:addToken("newline")
 		self.line = self.line+1
 	elseif Lexer.tokens[char] then
-		local token = Lexer.tokens[char]
-		local name = token[1]
-		while token[2] do
-			token = Lexer.tokens[self:peek()]
-			if not token or not token[2] then break end
-			self:advance()
-			name = name.." "..token[1]
-		end
-		self:addToken(name)
+		self:combine(Lexer.tokens[char])
 	elseif char:match("[ \r\t]") then
 		self:whitespace()
 	elseif char == '"' or char == "'" then
@@ -129,37 +140,38 @@ function Lexer:scanToken()
 	end
 end
 
--- Contains the name and whether to combine the token with other tokens into a single one
+-- Contains the name and other characters after this one to combine with
+-- example: "+=" will combine into token with name "plus equal"
 Lexer.tokens = {
-	["("] = {"opening parenthesis", false},
-	[")"] = {"closing parenthesis", false},
-	["{"] = {"opening curly bracket", false},
-	["}"] = {"closing curly bracket", false},
-	["["] = {"opening bracket", false},
-	["]"] = {"closing bracket", false},
-	["!"] = {"exclamation", true},
-	["#"] = {"hash", true},
-	["$"] = {"dollar", true},
-	["%"] = {"percent", true},
-	["&"] = {"and", true},
-	["*"] = {"star", true},
-	["+"] = {"plus", true},
-	[","] = {"comma", true},
-	["-"] = {"minus", true},
-	["."] = {"dot", true},
-	["/"] = {"slash", true},
-	[":"] = {"colon", true},
-	[";"] = {"semicolon", true},
-	["<"] = {"less", true},
-	["="] = {"equal", true},
-	[">"] = {"greater", true},
-	["?"] = {"question", true},
-	["@"] = {"at", true},
-	["\\"]= {"backslash", true},
-	["^"] = {"hat", true},
-	["`"] = {"backtick", true},
-	["|"] = {"bar", true},
-	["~"] = {"tilde", true},
+	["("] = {"opening parenthesis"},
+	[")"] = {"closing parenthesis"},
+	["{"] = {"opening curly bracket"},
+	["}"] = {"closing curly bracket"},
+	["["] = {"opening bracket"},
+	["]"] = {"closing bracket"},
+	["!"] = {"exclamation", '='},
+	["#"] = {"hash", '='},
+	["$"] = {"dollar", '='},
+	["%"] = {"percent", '='},
+	["&"] = {"and", '=', '&'},
+	["*"] = {"star", '='},
+	["+"] = {"plus", '='},
+	[","] = {"comma"},
+	["-"] = {"minus", '='},
+	["."] = {"dot", '.'},
+	["/"] = {"slash", '='},
+	[":"] = {"colon", '='},
+	[";"] = {"semicolon"},
+	["<"] = {"less", '=', '<'},
+	["="] = {"equal", '=', '>'},
+	[">"] = {"greater", '=', '>'},
+	["?"] = {"question", '='},
+	["@"] = {"at", '='},
+	["\\"]= {"backslash"},
+	["^"] = {"hat", '='},
+	["`"] = {"backtick"},
+	["|"] = {"bar", '=', '|'},
+	["~"] = {"tilde", '='},
 }
 
 Lexer.keywords = {

@@ -168,7 +168,7 @@ AST.Expr.Variable.__index = AST.Expr.Variable
 AST.Expr.Variable.__name = "Variable"
 
 -- a  is  Variable(nil, a)
--- b[c][d]  is  (b[c])[d]  is  Variable(Variable(Variable(nil, b), c), d)
+-- b.(c).(d)  is  (b.(c)).(d)  is  Variable(Variable(Variable(nil, b), c), d)
 
 function AST.Expr.Variable.new(base, expr)
 	local self = {}
@@ -196,15 +196,8 @@ function AST.Expr.Variable:evaluateReference()
 end
 
 function AST.Expr.Variable:__tostring()
-	if self.base then
-		if self.expr.__name == "Literal" and type(self.expr.literal) == "string" then
-			return tostring(self.base).."."..self.expr.literal
-		else
-			return tostring(self.base).."["..tostring(self.expr).."]"
-		end
-	else
-		return self.expr.__name == "Literal" and self.expr.literal or tostring(self.expr)
-	end
+	local base = self.base and tostring(self.base).."." or ""
+	return self.expr.__name == "Literal" and base..self.expr.literal or base..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Variable, {

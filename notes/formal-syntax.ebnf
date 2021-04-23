@@ -1,11 +1,10 @@
 program		= expression ;
-expression	= block
-			| assignment ;
+expression	= assignment ;
 
 (* Expressions *)
-assignment	= index {'=' expression}
+assignment	= index {'=' expression | ':=' expression}
 			| function ;
-function	= (Identifier | group) '=>' expression
+function	= (Identifier | '(' paramlist ')') '=>' expression
 			| comparison ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
@@ -14,9 +13,9 @@ muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!') unary
 			| call ;
 call		= index index {index} ;
-index		= [primary] {'[' expression ']' | '.' Identifier} ;
-primary		= Identifier | Number | String | list | group ;
-list		= '...' group ;
+index		= [primary] {'.' (Identifier | group)} ;
+primary		= Identifier | Number | String | group | list | block ;
+list		= '[' explist ']' ;
 group		= '(' explist ')' ;
 
 (* Blocks and statements *)
@@ -28,5 +27,6 @@ statement	= 'return' expression
 			| expression ;
 
 (* Smaller components *)
-arglist		= Identifier {',' Identifier} ;
 explist		= expression {',' expression} ;
+paramlist	= param {',' param} ;
+param		= expression

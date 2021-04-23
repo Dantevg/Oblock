@@ -83,9 +83,7 @@ function Parser:parse()
 end
 
 function Parser:expression()
-	return self:match {"opening curly bracket"}
-		and self:block()
-		or self:assignment()
+	return self:assignment()
 end
 
 function Parser:assignment()
@@ -173,17 +171,15 @@ end
 
 function Parser:index()
 	local expr = self:primary()
-	while true do
-		if self:match {"opening bracket"} then
-			local expression = self:expression()
-			if not expression then Parser.error(self:peek(), "Expected expression") end
+	while self:match {"dot"} do
+		if self:match {"opening parenthesis"} then
+			local expression = self:group()
 			expr = AST.Expr.Variable(expr, expression)
-			self:consume("closing bracket", "Expected ']'")
-		elseif self:match {"dot"} then
-			local name = self:consume("identifier", "Expected identifier").lexeme
+		elseif self:match {"identifier"} then
+			local name = self:previous().lexeme
 			expr = AST.Expr.Variable(expr, AST.Expr.Literal(name, name))
 		else
-			break
+			Parser.error(self:peek(), "Expected identifier or group")
 		end
 	end
 	return expr
@@ -196,23 +192,30 @@ function Parser:primary()
 		return AST.Expr.Literal.True()
 	elseif self:match {"false"} then
 		return AST.Expr.Literal.False()
-	elseif self:match {"dot dot dot"} then
-		return self:list()
 	elseif self:match {"opening parenthesis"} then
 		self.nlSensitive = false
 		return self:group()
+	elseif self:match {"opening bracket"} then
+		self.nlSensitive = false
+		return self:list()
+	elseif self:match {"opening curly bracket"} then
+		self.nlSensitive = false
+		return self:block()
 	elseif self:match {"identifier"} then
 		local name = self:previous().lexeme
 		return AST.Expr.Variable(nil, AST.Expr.Literal(name, name))
 	end
 end
 
+function Parser:group()
+	local expressions = self:explist("closing parenthesis", ")")
+	return AST.Expr.Group(expressions)
+end
+
 function Parser:list()
-	self:consume("opening parenthesis", "Expected '('")
-	self.nlSensitive = false
-	local group = self:group()
+	local expressions = self:explist("closing bracket", "]")
 	local items = {}
-	for i, expr in ipairs(group.expressions) do
+	for i, expr in ipairs(expressions) do
 		table.insert(items, AST.Expr.Assignment(
 			AST.Expr.Variable(nil, AST.Expr.Literal(i, i)),
 			expr
@@ -221,20 +224,20 @@ function Parser:list()
 	return AST.Expr.Block(items)
 end
 
-function Parser:group()
+function Parser:explist(endTokenName, endChar)
 	local expressions = {}
-	while not self:match {"closing parenthesis"} do
+	while not self:match {endTokenName} do
 		local expression = self:expression()
 		if not expression then
 			Parser.error(self:peek(), "Expected expression")
 		end
 		table.insert(expressions, expression)
 		if not self:match {"comma"} then
-			self:consume("closing parenthesis", "Expected ')'")
+			self:consume(endTokenName, "Expected '"..endChar.."'")
 			break
 		end
 	end
-	return AST.Expr.Group(expressions)
+	return expressions
 end
 
 function Parser:block()

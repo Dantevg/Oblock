@@ -112,11 +112,11 @@ function Parser:func()
 		if expr.__name == "Variable" then
 			return AST.Expr.Function(AST.Expr.Group {expr}, body)
 		elseif expr.__name == "Group" then
-			for _, arg in ipairs(expr.expressions) do
-				if arg.__name ~= "Variable" then
-					Parser.error(arrow, "Invalid function argument")
-				end
-			end
+			-- for _, arg in ipairs(expr.expressions) do
+			-- 	if arg.__name ~= "Variable" then
+			-- 		Parser.error(arrow, "Invalid function argument")
+			-- 	end
+			-- end
 			return AST.Expr.Function(expr, body)
 		else
 			Parser.error(arrow, "Invalid function argument")
@@ -146,7 +146,7 @@ function Parser:muldiv()
 end
 
 function Parser:unary()
-	if self:match {"minus", "exclamation"} then
+	if self:match {"minus", "exclamation", "dot dot dot"} then
 		local op = self:previous()
 		local right = self:unary()
 		return AST.Expr.Unary(op, right)

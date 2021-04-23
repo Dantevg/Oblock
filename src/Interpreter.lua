@@ -8,9 +8,9 @@ local fnClock = AST.Expr.Function(
 )
 
 local fnPrint = AST.Expr.Function(
-	AST.Expr.Group {AST.Expr.Variable(nil, AST.Expr.Literal("str", "str"))},
+	AST.Expr.Group {AST.Expr.Unary({type = "dot dot dot"}, AST.Expr.Variable(nil, AST.Expr.Literal("values", "values")))},
 	{evaluate = function(_, env)
-		print(env:get("str"))
+		print(table.unpack(env:get("values").environment.environment))
 		return nil
 	end}
 )

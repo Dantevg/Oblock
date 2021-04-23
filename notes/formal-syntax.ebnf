@@ -10,7 +10,7 @@ comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
-unary		= ('-' | '!') unary
+unary		= ('-' | '!' | '...') unary
 			| call ;
 call		= index index {index} ;
 index		= [primary] {'.' (Identifier | group)} ;

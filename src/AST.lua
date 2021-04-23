@@ -62,6 +62,13 @@ function AST.Expr.Unary:evaluate(env)
 		return -right
 	elseif self.op.type == "exclamation" then
 		return not right
+	elseif self.op.type == "dot dot dot" then
+		if right.__name ~= "Block" then error("spread on non-block") end
+		local values = {}
+		for i = 1, #right.environment.environment do
+			table.insert(values, right.environment.environment[i])
+		end
+		return table.unpack(values)
 	end
 end
 
@@ -180,7 +187,8 @@ end
 function AST.Expr.Variable:getBase(env)
 	if self.base then
 		local expr = self.base:evaluate(env)
-		if not expr.environment then error("indexing nil value") end
+		-- print("index", expr, expr.environment)
+		if not expr.environment then error("indexing non-block value "..expr.__name) end
 		return expr.environment
 	else
 		return env
@@ -263,7 +271,21 @@ end
 
 function AST.Expr.Function:call(arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
-		self.environment:set(parameter:evaluateReference(), arguments[i])
+		local argument = arguments[i]
+		if parameter.__name == "Variable" then
+			self.environment:set(parameter.expr:evaluate(), argument)
+		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
+				and parameter.right.__name == "Variable" then
+			local block = setmetatable({}, {__index = AST.Expr.Block})
+			block.environment = AST.Environment(self.environment)
+			for j = i, #arguments do
+				block.environment:set(j-i+1, arguments[j])
+			end
+			self.environment:set(parameter.right.expr:evaluate(), block)
+			break
+		else
+			error("invalid parameter type")
+		end
 	end
 	
 	local values = {pcall(self.body.evaluate, self.body, self.environment)}

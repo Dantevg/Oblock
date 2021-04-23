@@ -3,9 +3,13 @@
 	{
 		showA = () => {
 			print a
+			print b
 		}
 		showA()
 		a = "block"
+		b = "B"
 		showA()
 	}
+	print a
+	print b
 }

@@ -12,9 +12,15 @@ function AST.Environment.new(parent)
 	return setmetatable(self, AST.Environment)
 end
 
-function AST.Environment:set(name, value)
-	if self.parent and self.parent:get(name) then
-		self.parent:set(name, value)
+function AST.Environment:set(name, value, mutate)
+	if mutate then
+		if self.environment[name] then
+			self.environment[name] = value
+		elseif self.parent and self.parent:get(name) then
+			self.parent:set(name, value, mutate)
+		else
+			error("attempt to mutate non-existent variable")
+		end
 	else
 		self.environment[name] = value
 	end
@@ -322,21 +328,22 @@ AST.Expr.Assignment = {}
 AST.Expr.Assignment.__index = AST.Expr.Assignment
 AST.Expr.Assignment.__name = "Assignment"
 
-function AST.Expr.Assignment.new(target, expr)
+function AST.Expr.Assignment.new(target, expr, mutate)
 	local self = {}
 	self.target = target
 	self.expr = expr
+	self.mutate = mutate
 	return setmetatable(self, AST.Expr.Assignment)
 end
 
 function AST.Expr.Assignment:evaluate(env)
 	local value = self.expr:evaluate(env)
-	self.target:getBase(env):set(self.target.expr:evaluate(env), value)
+	self.target:getBase(env):set(self.target.expr:evaluate(env), value, self.mutate)
 	return value
 end
 
 function AST.Expr.Assignment:__tostring()
-	return tostring(self.target).." = "..tostring(self.expr)
+	return tostring(self.target)..(self.mutate and " := " or " = ")..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Assignment, {

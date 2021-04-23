@@ -91,11 +91,11 @@ end
 function Parser:assignment()
 	local expr = self:func()
 	
-	if self:match {"equal"} then
+	if self:match {"equal"} or self:match {"colon equal"} then
 		local equal = self:previous()
 		local value = self:expression()
 		if expr.__name == "Variable" then
-			return AST.Expr.Assignment(expr, value)
+			return AST.Expr.Assignment(expr, value, equal.type == "colon equal")
 		else
 			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
 		end

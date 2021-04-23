@@ -154,7 +154,7 @@ Lexer.tokens = {
 	["*"] = {Lexer.addToken, "star"},
 	["/"] = {Lexer.addToken, "slash"},
 	[";"] = {Lexer.addToken, "semicolon"},
-	[":"] = {Lexer.addToken, "colon"},
+	[":"] = {Lexer.checkNext("="), "colon"},
 	["!"] = {Lexer.checkNext("="), "exclamation"},
 	["="] = {Lexer.checkNext("=", ">"), "equal"},
 	["<"] = {Lexer.checkNext("=", "<"), "less"},

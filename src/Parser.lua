@@ -172,14 +172,15 @@ end
 function Parser:index()
 	local expr = self:primary()
 	while self:match {"dot"} do
-		if self:match {"opening parenthesis"} then
-			local expression = self:group()
+		if self:match {"opening bracket"} then
+			local expression = self:expression()
+			self:consume("closing bracket", "expected ']'")
 			expr = AST.Expr.Variable(expr, expression)
 		elseif self:match {"identifier"} then
 			local name = self:previous().lexeme
 			expr = AST.Expr.Variable(expr, AST.Expr.Literal(name, name))
 		else
-			Parser.error(self:peek(), "Expected identifier or group")
+			Parser.error(self:peek(), "Expected identifier or []")
 		end
 	end
 	return expr

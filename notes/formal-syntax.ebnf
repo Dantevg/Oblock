@@ -13,7 +13,7 @@ muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!' | '...') unary
 			| call ;
 call		= index index {index} ;
-index		= [primary] {'.' (Identifier | group)} ;
+index		= [primary] {'.' (Identifier | '[' expression ']')} ;
 primary		= Identifier | Number | String | group | list | block ;
 list		= '[' explist ']' ;
 group		= '(' explist ')' ;

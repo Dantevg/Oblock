@@ -63,7 +63,7 @@ function AST.Expr.Unary:evaluate(env)
 	elseif self.op.type == "exclamation" then
 		return not right
 	elseif self.op.type == "dot dot dot" then
-		if right.__name ~= "Block" then error("spread on non-block") end
+		if not right.environment then error("spread on non-block") end
 		local values = {}
 		for i = 1, #right.environment.environment do
 			table.insert(values, right.environment.environment[i])
@@ -241,14 +241,57 @@ end
 
 function AST.Expr.Block:__tostring()
 	local strings = {}
-	for _, statement in ipairs(self.statements) do
-		table.insert(strings, tostring(statement))
+	if self.environment then
+		for key, value in pairs(self.environment.environment) do
+			table.insert(strings, tostring(key).." = "..tostring(value))
+		end
+	else
+		for _, statement in ipairs(self.statements) do
+			table.insert(strings, tostring(statement))
+		end
 	end
 	return "{"..table.concat(strings, "; ").."}"
 end
 
 setmetatable(AST.Expr.Block, {
 	__call = function(_, ...) return AST.Expr.Block.new(...) end,
+})
+
+
+
+AST.Expr.List = {}
+AST.Expr.List.__index = AST.Expr.List
+AST.Expr.List.__name = "List"
+
+function AST.Expr.List.new(expressions)
+	local self = {}
+	self.expressions = expressions
+	return setmetatable(self, AST.Expr.List)
+end
+
+function AST.Expr.List:evaluate(parent)
+	self.environment = AST.Environment(parent)
+	local i = 1
+	for _, expr in ipairs(self.expressions) do
+		local values = {expr:evaluate(self.environment)}
+		for _, result in ipairs(values) do
+			self.environment:set(i, result)
+			i = i+1
+		end
+	end
+	return self
+end
+
+function AST.Expr.List:__tostring()
+	local strings = {}
+	for _, value in ipairs(self.environment.environment) do
+		table.insert(strings, tostring(value))
+	end
+	return "["..table.concat(strings, ", ").."]"
+end
+
+setmetatable(AST.Expr.List, {
+	__call = function(_, ...) return AST.Expr.List.new(...) end,
 })
 
 

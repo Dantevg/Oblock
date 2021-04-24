@@ -2,10 +2,10 @@
 	printList = list => print(...list)
 	
 	a = [10, x = 20, 30]
-	b = [...a]
+	b = [...a, ...a]
 	
 	print a.[2]
 	print a.x
 	print(...a)
-	print(...b)
+	print b
 }

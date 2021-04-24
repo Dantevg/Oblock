@@ -215,14 +215,7 @@ end
 
 function Parser:list()
 	local expressions = self:explist("closing bracket", "]")
-	local items = {}
-	for i, expr in ipairs(expressions) do
-		table.insert(items, AST.Expr.Assignment(
-			AST.Expr.Variable(nil, AST.Expr.Literal(i, i)),
-			expr
-		))
-	end
-	return AST.Expr.Block(items)
+	return AST.Expr.List(expressions)
 end
 
 function Parser:explist(endTokenName, endChar)

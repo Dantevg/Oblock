@@ -2,7 +2,7 @@ program		= expression ;
 expression	= assignment ;
 
 (* Expressions *)
-assignment	= index {'=' expression | ':=' expression}
+assignment	= {modifier} index {'=' expression | ':=' expression}
 			| function ;
 function	= (Identifier | '(' paramlist ')') '=>' expression
 			| comparison ;
@@ -29,4 +29,5 @@ statement	= 'return' expression
 (* Smaller components *)
 explist		= expression {',' expression} ;
 paramlist	= param {',' param} ;
-param		= expression
+param		= expression ;
+modifier	= 'const' | 'instance' ;

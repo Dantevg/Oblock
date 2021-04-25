@@ -1,0 +1,53 @@
+Vector = {
+	static new(x, y) => {
+		this.x, this.y = x, y
+	}
+	
+	add = (that) => {
+		this.x += that.x
+		this.y += that.y
+	}
+	
+	static add = (a, b) => {
+		return Vector(a.x + b.x, a.y + b.y)
+	}
+}
+
+Vector = {
+	this.name = "This is a vector"
+	
+	this.new = (x, y) => {
+		// `this` is `Vector` (current scope)
+		return {
+			x = x
+			y = y
+			proto = Vector
+		}
+	}
+	
+	this.instance.add = (this, that) => {
+		// `this` is Vector instance
+		this.x += that.x
+		this.y += that.y
+	}
+	
+	this.add = (a, b) => {
+		// `this` is `Vector` (current scope)
+		return this.new(a.x + b.x, a.y + b.y)
+	}
+}
+
+vec = Vector(2, 3)
+vec = {
+	x = 2
+	y = 3
+	proto = Vector
+}
+
+vec.add(vec)
+vec.proto.instance.add(vec, vec)
+
+vec.name
+vec.proto.name
+
+v2 = Vector.add(vec, vec)

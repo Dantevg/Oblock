@@ -1,3 +1,10 @@
 {
-	print(block["x"])
+	x = -5
+	a = {
+		x = 20
+	}
+	if x < 10: {
+		x := -x
+	}
+	print x
 }

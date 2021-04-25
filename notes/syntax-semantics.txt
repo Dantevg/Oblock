@@ -113,6 +113,7 @@ Operators and keywords
   - External / foreign? for function definitions that get populated later on by C or as interfaces
 - true, false and nil/null are not keywords, but instances of Bool and Nil/Null classes
 - unary operators: '-', '!' and other custom ones
+  - postfix unary operators? like `a!` for factorial and `1..` for range from 1 to infinity
 - binary operators: '-', '+' and other custom ones
 - wrap operators: '{}', '()', '[]', '""' (n-ary operators)
   - '()' serves multiple purposes, but in different contexts this should be ok:
@@ -252,7 +253,8 @@ Modifiers
 Apply to variables (not values). By default, only `public` is applied implicitly.
 - private and public: variable only accessable (readable/writable) within the same class
 - const (and varying/changing/volatile?): cannot assign other value to variable
-- static (and ??? instance? "dynamic" is weird): variable exists in class, instead of in its instances
+- static (and ??? instance? proto(type)? "dynamic" is weird):
+  variable exists in class, instead of in its instances
 
 - assign to const value: error
 - read private value: yield nil/null?

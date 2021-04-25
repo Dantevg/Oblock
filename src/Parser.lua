@@ -87,12 +87,19 @@ function Parser:expression()
 end
 
 function Parser:assignment()
-	local expr = self:func()
+	local expr
+	local modifiers = {}
+	while self:match {"const", "instance"} do
+		modifiers[self:previous().type] = true
+	end
 	
+	expr = self:func()
+		
 	if self:match {"equal"} or self:match {"colon equal"} then
 		local equal = self:previous()
 		local value = self:expression()
 		if expr.__name == "Variable" then
+			expr.modifiers = modifiers
 			return AST.Expr.Assignment(expr, value, equal.type == "colon equal")
 		else
 			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
@@ -112,11 +119,6 @@ function Parser:func()
 		if expr.__name == "Variable" then
 			return AST.Expr.Function(AST.Expr.Group {expr}, body)
 		elseif expr.__name == "Group" then
-			-- for _, arg in ipairs(expr.expressions) do
-			-- 	if arg.__name ~= "Variable" then
-			-- 		Parser.error(arrow, "Invalid function argument")
-			-- 	end
-			-- end
 			return AST.Expr.Function(expr, body)
 		else
 			Parser.error(arrow, "Invalid function argument")

@@ -10,7 +10,9 @@ local fnClock = AST.Expr.Function(
 local fnPrint = AST.Expr.Function(
 	AST.Expr.Group {AST.Expr.Unary({type = "dot dot dot"}, AST.Expr.Variable(nil, AST.Expr.Literal("values", "values")))},
 	{evaluate = function(_, env)
-		print(table.unpack(env:get("values").environment.environment))
+		local values = env:get("values").environment.environment
+		for i, value in ipairs(values) do values[i] = value.value end
+		print(table.unpack(values))
 		return nil
 	end}
 )

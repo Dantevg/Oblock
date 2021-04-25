@@ -12,23 +12,29 @@ function AST.Environment.new(parent)
 	return setmetatable(self, AST.Environment)
 end
 
-function AST.Environment:set(name, value, mutate)
+function AST.Environment:set(name, value, mutate, modifiers)
 	if mutate then
 		if self.environment[name] then
-			self.environment[name] = value
+			if self.environment[name].modifiers.const then
+				error("Attempt to mutate const variable")
+			end
+			self.environment[name].value = value
 		elseif self.parent and self.parent:get(name) then
-			self.parent:set(name, value, mutate)
+			self.parent:set(name, value, mutate, modifiers)
 		else
 			error("attempt to mutate non-existent variable")
 		end
 	else
-		self.environment[name] = value
+		self.environment[name] = {
+			value = value,
+			modifiers = modifiers
+		}
 	end
 end
 
 function AST.Environment:get(name)
 	if self.environment[name] then
-		return self.environment[name]
+		return self.environment[name].value
 	elseif self.parent then
 		return self.parent:get(name)
 	else
@@ -187,7 +193,6 @@ end
 function AST.Expr.Variable:getBase(env)
 	if self.base then
 		local expr = self.base:evaluate(env)
-		-- print("index", expr, expr.environment)
 		if not expr.environment then error("indexing non-block value "..expr.__name) end
 		return expr.environment
 	else
@@ -199,8 +204,8 @@ function AST.Expr.Variable:evaluate(env)
 	return self:getBase(env):get(self.expr:evaluate(env))
 end
 
-function AST.Expr.Variable:evaluateReference()
-	return self.expr:evaluate()
+function AST.Expr.Variable:assign(env, value, mutate)
+	self:getBase(env):set(self.expr:evaluate(env), value, mutate, self.modifiers)
 end
 
 function AST.Expr.Variable:__tostring()
@@ -396,7 +401,7 @@ end
 
 function AST.Expr.Assignment:evaluate(env)
 	local value = self.expr:evaluate(env)
-	self.target:getBase(env):set(self.target.expr:evaluate(env), value, self.mutate)
+	self.target:assign(env, value, self.mutate)
 	return value
 end
 

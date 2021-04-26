@@ -179,7 +179,6 @@ Lexer.keywords = {
 	["while"] = true, ["for"] = true, ["in"] = true,
 	["return"] = true, ["yield"] = true,
 	["const"] = true, ["instance"] = true,
-	["true"] = true, ["false"] = true, -- TODO: remove, temporary!
 }
 
 return setmetatable(Lexer, {

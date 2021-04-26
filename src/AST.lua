@@ -1,50 +1,8 @@
 -- Inspired by https://craftinginterpreters.com/evaluating-expressions.html
 
+local Interpreter = require "Interpreter"
+
 local AST = {}
-
-AST.Environment = {}
-AST.Environment.__index = AST.Environment
-
-function AST.Environment.new(parent)
-	local self = {}
-	self.parent = parent
-	self.environment = {}
-	return setmetatable(self, AST.Environment)
-end
-
-function AST.Environment:set(name, value, mutate, modifiers)
-	if mutate then
-		if self.environment[name] then
-			if self.environment[name].modifiers.const then
-				error("Attempt to mutate const variable")
-			end
-			self.environment[name].value = value
-		elseif self.parent and self.parent:get(name) then
-			self.parent:set(name, value, mutate, modifiers)
-		else
-			error("attempt to mutate non-existent variable")
-		end
-	else
-		self.environment[name] = {
-			value = value,
-			modifiers = modifiers
-		}
-	end
-end
-
-function AST.Environment:get(name)
-	if self.environment[name] then
-		return self.environment[name].value
-	elseif self.parent then
-		return self.parent:get(name)
-	else
-		return nil
-	end
-end
-
-setmetatable(AST.Environment, {
-	__call = function(_, ...) return AST.Environment.new(...) end,
-})
 
 
 
@@ -62,20 +20,10 @@ function AST.Expr.Unary.new(op, right)
 end
 
 function AST.Expr.Unary:evaluate(env)
-	-- TODO: generalise
 	local right = self.right:evaluate(env)
-	if self.op.type == "minus" then
-		return -right
-	elseif self.op.type == "exclamation" then
-		return not right
-	elseif self.op.type == "dot dot dot" then
-		if not right.environment then error("spread on non-block") end
-		local values = {}
-		for i = 1, #right.environment.environment do
-			table.insert(values, right.environment.environment[i])
-		end
-		return table.unpack(values)
-	end
+	local fn = right:get(self.op.lexeme)
+	if type(fn) ~= "function" then error("no operator instance for '"..self.op.lexeme.."'") end
+	return fn(right, env)
 end
 
 function AST.Expr.Unary:__tostring()
@@ -101,34 +49,11 @@ function AST.Expr.Binary.new(left, op, right)
 end
 
 function AST.Expr.Binary:evaluate(env)
-	-- TODO: generalise
 	local left = self.left:evaluate(env)
 	local right = self.right:evaluate(env)
-	if self.op.type == "equal equal" then
-		return left == right
-	elseif self.op.type == "exclamation equal" then
-		return left ~= right
-	elseif self.op.type == "less" then
-		return left < right
-	elseif self.op.type == "greater" then
-		return left > right
-	elseif self.op.type == "less equal" then
-		return left <= right
-	elseif self.op.type == "greater equal" then
-		return left >= right
-	elseif self.op.type == "plus" then
-		return left + right
-	elseif self.op.type == "minus" then
-		return left - right
-	elseif self.op.type == "star" then
-		return left * right
-	elseif self.op.type == "slash" then
-		return left / right
-	elseif self.op.type == "less less" then
-		return left << right
-	elseif self.op.type == "greater greater" then
-		return left >> right
-	end
+	local fn = left:get(self.op.lexeme)
+	if type(fn) ~= "function" then error("no operator instance for '"..self.op.lexeme.."'") end
+	return fn(left, env, right)
 end
 
 function AST.Expr.Binary:__tostring()
@@ -229,10 +154,10 @@ function AST.Expr.Block.new(statements)
 	return setmetatable(self, AST.Expr.Block)
 end
 
-function AST.Expr.Block:evaluate(parent)
-	self.environment = AST.Environment(parent)
+function AST.Expr.Block:evaluate(env)
+	local block = Interpreter.Block(env)
 	for _, statement in ipairs(self.statements) do
-		local success, err = pcall(statement.evaluate, statement, self.environment)
+		local success, err = pcall(statement.evaluate, statement, block.environment)
 		if not success then
 			if type(err) == "table" and err.__name == "Yield" then
 				return err.value
@@ -241,19 +166,13 @@ function AST.Expr.Block:evaluate(parent)
 			end
 		end
 	end
-	return self
+	return block
 end
 
 function AST.Expr.Block:__tostring()
 	local strings = {}
-	if self.environment then
-		for key, value in pairs(self.environment.environment) do
-			table.insert(strings, tostring(key).." = "..tostring(value))
-		end
-	else
-		for _, statement in ipairs(self.statements) do
-			table.insert(strings, tostring(statement))
-		end
+	for _, statement in ipairs(self.statements) do
+		table.insert(strings, tostring(statement))
 	end
 	return "{"..table.concat(strings, "; ").."}"
 end
@@ -275,16 +194,14 @@ function AST.Expr.List.new(expressions)
 end
 
 function AST.Expr.List:evaluate(parent)
-	self.environment = AST.Environment(parent)
-	local i = 1
+	local list = Interpreter.List(parent)
 	for _, expr in ipairs(self.expressions) do
-		local values = {expr:evaluate(self.environment)}
-		for _, result in ipairs(values) do
-			self.environment:set(i, result)
-			i = i+1
+		local results = {expr:evaluate(list.environment)}
+		for _, result in ipairs(results) do
+			list:push(result)
 		end
 	end
-	return self
+	return list
 end
 
 function AST.Expr.List:__tostring()
@@ -313,7 +230,7 @@ function AST.Expr.Function.new(parameters, body)
 end
 
 function AST.Expr.Function:evaluate(parent)
-	self.environment = AST.Environment(parent)
+	self.environment = Interpreter.Environment(parent)
 	return self
 end
 
@@ -324,12 +241,11 @@ function AST.Expr.Function:call(arguments)
 			self.environment:set(parameter.expr:evaluate(), argument)
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
-			local block = setmetatable({}, {__index = AST.Expr.Block})
-			block.environment = AST.Environment(self.environment)
+			local list = Interpreter.List(self.environment)
 			for j = i, #arguments do
-				block.environment:set(j-i+1, arguments[j])
+				list:push(arguments[j])
 			end
-			self.environment:set(parameter.right.expr:evaluate(), block)
+			self.environment:set(parameter.right.expr:evaluate(), list)
 			break
 		else
 			error("invalid parameter type")
@@ -431,7 +347,13 @@ function AST.Expr.Literal.new(literal, lexeme)
 	return setmetatable(self, AST.Expr.Literal)
 end
 
-function AST.Expr.Literal:evaluate()
+function AST.Expr.Literal:evaluate(env)
+	if type(self.literal) == "number" then
+		return Interpreter.Number(env, self.literal)
+	-- TODO: check
+	-- elseif type(self.literal) == "string" then
+	-- 	return Interpreter.String(env, self.literal)
+	end
 	return self.literal
 end
 
@@ -453,8 +375,8 @@ function AST.Expr.Literal.Nil.new()
 	return setmetatable({}, AST.Expr.Literal.Nil)
 end
 
-function AST.Expr.Literal.Nil:evaluate()
-	return nil
+function AST.Expr.Literal.Nil:evaluate(env)
+	return Interpreter.Nil(env)
 end
 
 function AST.Expr.Literal.Nil:__tostring()
@@ -463,52 +385,6 @@ end
 
 setmetatable(AST.Expr.Literal.Nil, {
 	__call = function(_, ...) return AST.Expr.Literal.Nil.new(...) end,
-	__index = AST.Expr.Literal,
-})
-
-
-
-AST.Expr.Literal.True = {}
-AST.Expr.Literal.True.__index = AST.Expr.Literal.True
-AST.Expr.Literal.True.__name = "True"
-
-function AST.Expr.Literal.True.new()
-	return setmetatable({}, AST.Expr.Literal.True)
-end
-
-function AST.Expr.Literal.True:evaluate()
-	return true
-end
-
-function AST.Expr.Literal.True:__tostring()
-	return "true"
-end
-
-setmetatable(AST.Expr.Literal.True, {
-	__call = function(_, ...) return AST.Expr.Literal.True.new(...) end,
-	__index = AST.Expr.Literal,
-})
-
-
-
-AST.Expr.Literal.False = {}
-AST.Expr.Literal.False.__index = AST.Expr.Literal.False
-AST.Expr.Literal.False.__name = "False"
-
-function AST.Expr.Literal.False.new()
-	return setmetatable({}, AST.Expr.Literal.False)
-end
-
-function AST.Expr.Literal.False:evaluate()
-	return false
-end
-
-function AST.Expr.Literal.False:__tostring()
-	return "false"
-end
-
-setmetatable(AST.Expr.Literal.False, {
-	__call = function(_, ...) return AST.Expr.Literal.False.new(...) end,
 	__index = AST.Expr.Literal,
 })
 

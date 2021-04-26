@@ -1,4 +1,5 @@
 local AST = require "AST"
+local Interpreter = require "Interpreter"
 
 local fnClock = AST.Expr.Function(
 	AST.Expr.Group {},
@@ -15,7 +16,7 @@ local fnPrint = AST.Expr.Function(
 	end}
 )
 
-return function(environment)
-	environment:set("clock", fnClock:evaluate(environment))
-	environment:set("print", fnPrint:evaluate(environment))
+return function(env)
+	env:set("clock", fnClock:evaluate(env))
+	env:set("print", fnPrint:evaluate(env))
 end

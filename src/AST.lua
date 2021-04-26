@@ -350,11 +350,11 @@ end
 function AST.Expr.Literal:evaluate(env)
 	if type(self.literal) == "number" then
 		return Interpreter.Number(env, self.literal)
-	-- TODO: check
-	-- elseif type(self.literal) == "string" then
-	-- 	return Interpreter.String(env, self.literal)
+	elseif type(self.literal) == "string" then
+		return Interpreter.String(env, self.literal)
+	elseif type(self.literal) == "nil" then
+		return Interpreter.Nil(env)
 	end
-	return self.literal
 end
 
 function AST.Expr.Literal:__tostring()
@@ -365,28 +365,9 @@ setmetatable(AST.Expr.Literal, {
 	__call = function(_, ...) return AST.Expr.Literal.new(...) end,
 })
 
-
-
-AST.Expr.Literal.Nil = {}
-AST.Expr.Literal.Nil.__index = AST.Expr.Literal.Nil
-AST.Expr.Literal.Nil.__name = "Nil"
-
-function AST.Expr.Literal.Nil.new()
-	return setmetatable({}, AST.Expr.Literal.Nil)
+function AST.Expr.Literal.Nil()
+	return AST.Expr.Literal(nil, "nil")
 end
-
-function AST.Expr.Literal.Nil:evaluate(env)
-	return Interpreter.Nil(env)
-end
-
-function AST.Expr.Literal.Nil:__tostring()
-	return "nil"
-end
-
-setmetatable(AST.Expr.Literal.Nil, {
-	__call = function(_, ...) return AST.Expr.Literal.Nil.new(...) end,
-	__index = AST.Expr.Literal,
-})
 
 
 
@@ -457,8 +438,7 @@ function AST.Stat.If.new(condition, ifTrue, ifFalse)
 end
 
 function AST.Stat.If:evaluate(env)
-	local value = self.condition:evaluate(env)
-	if value then -- TODO: is truthy
+	if self.condition:evaluate(env):get("value") then
 		self.ifTrue:evaluate(env)
 	elseif self.ifFalse then
 		self.ifFalse:evaluate(env)
@@ -492,7 +472,7 @@ function AST.Stat.While.new(condition, body)
 end
 
 function AST.Stat.While:evaluate(env)
-	while self.condition:evaluate(env) do -- TODO: is truthy
+	while self.condition:evaluate(env):get("value") do
 		self.body:evaluate(env)
 	end
 end

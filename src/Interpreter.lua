@@ -13,33 +13,35 @@ function Interpreter.Environment.new(parent)
 	return setmetatable(self, Interpreter.Environment)
 end
 
-function Interpreter.Environment:set(name, value, mutate, modifiers)
+function Interpreter.Environment:set(key, value, mutate, modifiers)
+	if type(key) == "table" and key:get("value") then key = key:get("value") end
 	if mutate then
-		if self.env[name] then
-			if self.env[name].modifiers.const then
+		if self.env[key] then
+			if self.env[key].modifiers.const then
 				error("Attempt to mutate const variable")
 			end
-			self.env[name].value = value
-		elseif self.parent and self.parent:get(name) then
-			self.parent:set(name, value, mutate, modifiers)
+			self.env[key].value = value
+		elseif self.parent and self.parent:get(key) then
+			self.parent:set(key, value, mutate, modifiers)
 		else
 			error("attempt to mutate non-existent variable")
 		end
 	else
-		self.env[name] = {
+		self.env[key] = {
 			value = value,
 			modifiers = modifiers
 		}
 	end
 end
 
-function Interpreter.Environment:get(name)
-	if self.env[name] then
-		return self.env[name].value
+function Interpreter.Environment:get(key)
+	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	if self.env[key] then
+		return self.env[key].value
 	elseif self.parent then
-		return self.parent:get(name)
+		return self.parent:get(key)
 	else
-		return nil
+		return Interpreter.Nil()
 	end
 end
 
@@ -141,9 +143,8 @@ function Interpreter.Number:not_(env)
 	return Interpreter.Boolean(env, false)
 end
 
-function Interpreter.Number:__tostring()
-	return tostring(self:get("value"))
-end
+Interpreter.Number.__eq = Interpreter.Value.__eq
+Interpreter.Number.__tostring = Interpreter.Value.__tostring
 
 setmetatable(Interpreter.Number, {
 	__call = function(_, ...) return Interpreter.Number.new(...) end,
@@ -170,9 +171,8 @@ function Interpreter.String:not_(env)
 	return Interpreter.Boolean(env, false)
 end
 
-function Interpreter.String:__tostring()
-	return '"'..self:get("value")..'"'
-end
+Interpreter.String.__eq = Interpreter.Value.__eq
+Interpreter.String.__tostring = Interpreter.Value.__tostring
 
 setmetatable(Interpreter.String, {
 	__call = function(_, ...) return Interpreter.String.new(...) end,
@@ -190,13 +190,16 @@ function Interpreter.Boolean.new(parent, value)
 	return setmetatable(self, Interpreter.Boolean)
 end
 
+function Interpreter.Boolean.toBoolean(env, value)
+	return Interpreter.Boolean(env, value:get("value"))
+end
+
 function Interpreter.Boolean:not_(env)
 	return Interpreter.Boolean(env, not self:get("value"))
 end
 
-function Interpreter.Boolean:__tostring()
-	return tostring(self:get("value"))
-end
+Interpreter.Boolean.__eq = Interpreter.Value.__eq
+Interpreter.Boolean.__tostring = Interpreter.Value.__tostring
 
 setmetatable(Interpreter.Boolean, {
 	__call = function(_, ...) return Interpreter.Boolean.new(...) end,
@@ -218,8 +221,10 @@ function Interpreter.Nil:not_(env)
 	return Interpreter.Boolean(env, true)
 end
 
+Interpreter.Nil.__eq = Interpreter.Value.__eq
+
 function Interpreter.Nil:__tostring()
-	return "(nil)"
+	return "nil"
 end
 
 setmetatable(Interpreter.Nil, {

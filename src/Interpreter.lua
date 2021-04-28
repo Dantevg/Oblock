@@ -245,11 +245,13 @@ function Interpreter.List.new(parent, elements)
 	for i = 1, #elements do
 		self:set(i, elements[i])
 	end
+	self:set("length", Interpreter.Number(nil, #elements))
 	return setmetatable(self, Interpreter.List)
 end
 
 function Interpreter.List:push(value)
 	self:set(#self+1, value)
+	self:set("length", Interpreter.Number(nil, #self))
 end
 
 function Interpreter.List:add(env, other)
@@ -260,6 +262,7 @@ function Interpreter.List:add(env, other)
 	for i = 1, #other do
 		table.insert(values, other:get(i))
 	end
+	self:set("length", Interpreter.Number(nil, #self))
 	return self.new(nil, values)
 end
 

@@ -5,7 +5,6 @@ https://wren.io/classes.html
 
 To-Do / roadmap / proposals
 ===========================
-- Newlines and other statement/expression separators
 - Generic types? maybe later, if needed
 - Default parameters?
 - `...` keyword, like in Lua
@@ -179,19 +178,37 @@ Functions
 }
 - callback () => 10
 - callback (x: Int): Int => x + 1
-- Optional types: (x: Int) or (Int x)
-  - C-style:  Int myFunction(Int x) => x + 1 (can only be used in normal definitions)
-  - TS / Kotlin-style: myFunction(x: Int): Int => x + 1 (can also be used in lambda definitions?)
-- for definition: no space allowed between name and arglist, otherwise function application
-- define associativity, which is more useful? `map increment myList` can be
-  - `map(increment)(myList)` (functional style / currying?)
-  - `map(increment(myList))`
-- "Full" definition is syntax sugar for lambda style:
-  - add(x, y) => x + y (definition as statement)
-  - add = (x, y) => x + y (definition by assigning function expression)
+- function calls are left associative (for fp-style currying)
+  - map increment myList  is  map(increment)(myList)
+- function definition statement: syntax sugar, like Lua
+  - For recursive functions, otherwise with `self` or `this`? see semantics
+  - add(x, y) => x + y  is  var add; add = (x, y) => x + y
+  - incr x => x + 1     is  var incr; incr = x => x + 1
 - overloading based on arity, otherwise argument types when present
 - Getters by using argument-less methods, setters?
 - Parentheses can be omitted if only one argument passed on the same line
+
+Optional types
+==============
+- C-style
+  - variable definition:  Int a = 10							var a = 10, a = 10
+  - variable declaration: Int b									var a
+  - function definition:  Int add(Int x, Int y) => x + y
+  - lambda definition:    Int add = (Int x, Int y) => x + y
+    - this might be weird depending on the "type" of a function
+	  (does the function have type Int? no.)
+  - function declaration: Int add(Int x, Int y)					var add(x, y)
+  - lambda declaration:   Int add = (Int x, Int y)
+    - also weird, see lambda definition above
+
+- TS / Kotlin-style
+  - variable definition:  a: Int = 10							a: Any = 10, a: = 10, a = 10
+  - variable declaration: b: Int								b: Any, b:
+  - function definition:  add(x: Int, y: Int): Int => x + y
+  - lambda definition:    add = (x: Int, y: Int): Int => x + y
+  - function declaration: add(x: Int, y: Int): Int				add(x, y): Any, add(x, y):
+  - lambda declaration:   add = (x: Int, y: Int): Int
+  - lambda as callback:   map(x: Int, y: Int): Int => x + y
 
 Example
 =======
@@ -221,6 +238,7 @@ Point = { (Point is a block/class/object, but really an immediately-invoked func
 Self (this?) upvalue (keyword?)
 - Only for instance (non-static) methods
 - Refers to current instance
+- self *and* this with different semantics? (referring to outer block vs current function?)
 
 Static upvalue (keyword?)
 - Refers to current block / class

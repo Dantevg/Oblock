@@ -9,7 +9,6 @@ function Parser.new(tokens)
 	local self = {}
 	self.tokens = tokens
 	self.current = 1
-	self.wsSensitive = false
 	self.nlSensitive = false
 	return setmetatable(self, Parser)
 end
@@ -18,35 +17,29 @@ function Parser.error(token, message)
 	error("["..token.line.."] Error at '"..token.lexeme.."': "..(message or ""), 2)
 end
 
-function Parser:shouldIgnore(token)
-	return (not self.wsSensitive and token.type == "whitespace")
-		or (not self.nlSensitive and token.type == "newline")
+function Parser:nextIndex()
+	return (self.nlSensitive or self.tokens[self.current].type ~= "newline")
+		and self.current or self.current+1
 end
 
-function Parser:peek(n)
-	n = n or 0
-	local token
-	repeat
-		token = self.tokens[self.current+n]
-		n = n+1
-	until self.current+n > #self.tokens or not self:shouldIgnore(token)
-	return token, n-1
+function Parser:peek()
+	return self.tokens[self:nextIndex()]
 end
 
 function Parser:previous()
 	return self.tokens[self.current-1]
 end
 
-function Parser:advance(n)
-	if self:peek(n).type ~= "EOF" then self.current = self.current+1+(n or 0) end
+function Parser:advance()
+	if self:peek().type ~= "EOF" then self.current = self:nextIndex()+1 end
 	return self:previous()
 end
 
 function Parser:match(types)
-	local token, n = self:peek()
+	local token = self:peek()
 	for _, t in ipairs(types) do
 		if token.type == t then
-			self:advance(n)
+			self:advance()
 			return true
 		end
 	end
@@ -54,9 +47,9 @@ function Parser:match(types)
 end
 
 function Parser:consume(type, message)
-	local token, n = self:peek()
+	local token = self:peek()
 	if token.type == type then
-		return self:advance(n)
+		return self:advance()
 	else
 		Parser.error(token, message)
 	end

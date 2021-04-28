@@ -63,8 +63,8 @@ function Lexer:sub()
 	return self.source:sub(self.start, self.current-1)
 end
 
-function Lexer:string()
-	while self:peek() ~= '"' and self:peek() ~= "'" and self.current <= #self.source do
+function Lexer:string(quote)
+	while self:peek() ~= quote and self.current <= #self.source do
 		if self:peek() == "\n" then self.line = self.line+1 end
 		self:advance()
 	end
@@ -95,12 +95,6 @@ function Lexer:identifier()
 	self:addToken(Lexer.keywords[keyword] and keyword or "identifier")
 end
 
-function Lexer:whitespace()
-	-- Collapse multiple whitespace characters into single token
-	while self:peek():match("[ \r\t]") do self:advance() end
-	self:addToken("whitespace")
-end
-
 local function canCombineWith(token, char)
 	for i = 2, #token do
 		if token[i] == char then return true end
@@ -120,17 +114,28 @@ function Lexer:combine(token)
 	self:addToken(name)
 end
 
+function Lexer:whitespace(char)
+	-- Collapse multiple whitespace and newline characters into a single token
+	-- (or no token if no newlines were present)
+	local hasNewline = (char == "\n")
+	if hasNewline then self.line = self.line+1 end
+	while self:peek():match("[ \r\t\n]") do
+		if self:advance() == "\n" then
+			hasNewline = true
+			self.line = self.line+1
+		end
+	end
+	if hasNewline then self:addToken("newline") end
+end
+
 function Lexer:scanToken()
 	local char = self:advance()
-	if char == "\n" then
-		self:addToken("newline")
-		self.line = self.line+1
+	if char:match("[ \r\t\n]") then
+		self:whitespace(char)
 	elseif Lexer.tokens[char] then
 		self:combine(Lexer.tokens[char])
-	elseif char:match("[ \r\t]") then
-		self:whitespace()
 	elseif char == '"' or char == "'" then
-		self:string()
+		self:string(char)
 	elseif char:match("%d") then
 		self:number()
 	elseif char:match("[%a_]") then

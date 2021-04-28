@@ -190,25 +190,32 @@ Functions
 
 Optional types
 ==============
-- C-style
+- C-style (does not work nicely with multiple return values)
   - variable definition:  Int a = 10							var a = 10, a = 10
   - variable declaration: Int b									var a
   - function definition:  Int add(Int x, Int y) => x + y
-  - lambda definition:    Int add = (Int x, Int y) => x + y
+  - function declaration: Int add(Int x, Int y)					var add(x, y)
+  - lambda definition:    add = Int (Int x, Int y) => x + y
     - this might be weird depending on the "type" of a function
 	  (does the function have type Int? no.)
-  - function declaration: Int add(Int x, Int y)					var add(x, y)
-  - lambda declaration:   Int add = (Int x, Int y)
+  - lambda declaration:   add = Int (Int x, Int y)
     - also weird, see lambda definition above
 
 - TS / Kotlin-style
   - variable definition:  a: Int = 10							a: Any = 10, a: = 10, a = 10
   - variable declaration: b: Int								b: Any, b:
-  - function definition:  add(x: Int, y: Int): Int => x + y
-  - lambda definition:    add = (x: Int, y: Int): Int => x + y
-  - function declaration: add(x: Int, y: Int): Int				add(x, y): Any, add(x, y):
-  - lambda declaration:   add = (x: Int, y: Int): Int
-  - lambda as callback:   map(x: Int, y: Int): Int => x + y
+  - function definition:  add(x: Int, y: Int): Int, Int => x + y
+  - function declaration: add(x: Int, y: Int): Int, Int			add(x, y): Any, add(x, y):
+  - lambda definition:    add = (x: Int, y: Int): Int, Int => x + y
+  - lambda declaration:   add = (x: Int, y: Int): Int, Int
+
+- Mix of both:
+  - variable definition:  a: Int = 10									a = 10
+  - variable declaration: a: Int										var a
+  - function definition:  add(x: Int, y: Int): Int, Int => x + y		add(x, y) => x + y
+  - function declaration: add(x: Int, y: Int): Int, Int					var add(x, y)
+  - lambda definition:    add = (x: Int, y: Int): Int, Int => x + y		add = (x, y) => x + y
+  - lambda declaration:   add = (x: Int, y: Int): Int, Int				(???)
 
 Example
 =======

@@ -3,7 +3,7 @@ local Parser = require "Parser"
 local Interpreter = require "Interpreter"
 
 local path = (...)
-local file = io.open(path)
+local file = path and io.open(path) or io.stdin
 local content = file:read("a")
 file:close()
 

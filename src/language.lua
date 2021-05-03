@@ -7,9 +7,11 @@ local file = path and io.open(path) or io.stdin
 local content = file:read("a")
 file:close()
 
-local tokens = Lexer(content):lex()
+local filename = string.match(path or "", "/([^/]+)$") or path
+
+local tokens = Lexer(content, filename):lex()
 if not tokens then return end
-local program = Parser(tokens):parse()
+local program = Parser(tokens, filename):parse()
 if not program then return end
 
 print(Interpreter(program):interpret())

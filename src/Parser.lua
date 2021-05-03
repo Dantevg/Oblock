@@ -5,16 +5,19 @@ local AST = require "AST"
 local Parser = {}
 Parser.__index = Parser
 
-function Parser.new(tokens)
+function Parser.new(tokens, name)
 	local self = {}
 	self.tokens = tokens
+	self.name = name
 	self.current = 1
 	self.nlSensitive = false
 	return setmetatable(self, Parser)
 end
 
-function Parser.error(token, message)
-	error("["..token.line.."] Error at '"..token.lexeme.."': "..(message or ""), 2)
+function Parser:error(token, message)
+	print(string.format("[%s%d] at '%s': %s",
+		self.name and self.name..":" or "", token.line, token.lexeme, message))
+	error()
 end
 
 function Parser:nextIndex()
@@ -51,7 +54,7 @@ function Parser:consume(type, message)
 	if token.type == type then
 		return self:advance()
 	else
-		Parser.error(token, message)
+		self:error(token, message)
 	end
 end
 
@@ -68,11 +71,14 @@ function Parser:binary(tokens, next)
 end
 
 function Parser:parse()
-	local expr = self:expression()
-	if self:peek().type ~= "EOF" then
-		Parser.error(self:peek(), "Expected EOF")
-	end
-	return expr
+	local success, result = pcall(function()
+		local expr = self:expression()
+		if self:peek().type ~= "EOF" then
+			self:error(self:peek(), "Expected EOF")
+		end
+		return expr
+	end)
+	if success then return result end
 end
 
 function Parser:expression()
@@ -83,7 +89,7 @@ function Parser:definition()
 	local modifiers = {}
 	while self:match {"var", "const", "instance"} do
 		local mod = self:previous().type
-		if modifiers[mod] then Parser.error(self:previous(), "duplicate modifier") end
+		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
 		modifiers[mod] = true
 	end
 	
@@ -95,7 +101,7 @@ function Parser:definition()
 			isDefinition = true
 		else
 			if expr.__name ~= "Variable" then
-				Parser.error(self:previous(), "Attempt to assign to non-variable type "..expr.__name)
+				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
 			else
 				return AST.Expr.Definition(expr, nil, modifiers)
 			end
@@ -115,7 +121,7 @@ function Parser:definition()
 				and AST.Expr.Definition(expr, value, modifiers)
 				or AST.Expr.Assignment(expr, value)
 		else
-			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
+			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end
 	end
 	
@@ -134,7 +140,7 @@ function Parser:func()
 		elseif expr.__name == "Group" then
 			return AST.Expr.Function(expr, body)
 		else
-			Parser.error(arrow, "Invalid function argument")
+			self:error(arrow, "Invalid function argument")
 		end
 	end
 	
@@ -195,7 +201,7 @@ function Parser:index()
 			local name = self:previous().lexeme
 			expr = AST.Expr.Variable(expr, AST.Expr.Literal(name, name))
 		else
-			Parser.error(self:peek(), "Expected identifier or []")
+			self:error(self:peek(), "Expected identifier or []")
 		end
 	end
 	return expr
@@ -238,7 +244,7 @@ function Parser:explist(endTokenName, endChar)
 	while not self:match {endTokenName} do
 		local expression = self:expression()
 		if not expression then
-			Parser.error(self:peek(), "Expected expression")
+			self:error(self:peek(), "Expected expression")
 		end
 		table.insert(expressions, expression)
 		if not self:match {"comma"} then
@@ -255,7 +261,7 @@ function Parser:block()
 		while self:match {"semicolon"} do end -- Skip semicolons
 		local statement = self:statement()
 		if not statement then
-			Parser.error(self:peek(), "Expected statement")
+			self:error(self:peek(), "Expected statement")
 		end
 		table.insert(statements, statement)
 		while self:match {"semicolon"} do end -- Skip semicolons
@@ -289,12 +295,12 @@ function Parser:ifStatement()
 	local condition = self:expression()
 	self:consume("colon", "Expected ':'")
 	local ifTrue = self:statement()
-	if not ifTrue then Parser.error(self:peek(), "Expected statement") end
+	if not ifTrue then self:error(self:peek(), "Expected statement") end
 	local ifFalse
 	if self:match {"else"} then
 		ifFalse = self:statement()
 		if not ifFalse then
-			Parser.error(self:peek(), "Expected statement")
+			self:error(self:peek(), "Expected statement")
 		end
 	end
 	return AST.Stat.If(condition, ifTrue, ifFalse)
@@ -304,7 +310,7 @@ function Parser:whileStatement()
 	local condition = self:expression()
 	self:consume("colon", "Expected ':'")
 	local body = self:statement()
-	if not body then Parser.error(self:peek(), "Expected statement") end
+	if not body then self:error(self:peek(), "Expected statement") end
 	return AST.Stat.While(condition, body)
 end
 

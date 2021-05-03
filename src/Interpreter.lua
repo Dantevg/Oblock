@@ -15,7 +15,7 @@ end
 
 function Interpreter.Environment:define(key, value, modifiers)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
-	if self.env[key] then error("Redefinition of variable "..tostring(key)) end
+	if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
 	self.env[key] = {
 		value = value,
 		modifiers = modifiers or {}
@@ -26,13 +26,13 @@ function Interpreter.Environment:assign(key, value)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
 	if self.env[key] then
 		if self.env[key].modifiers.const then
-			error("Attempt to mutate const variable "..tostring(key))
+			error("Attempt to mutate const variable "..tostring(key), 0)
 		end
 		self.env[key].value = value
 	elseif self.parent and self.parent:has(key) then
 		self.parent:assign(key, value)
 	else
-		error("attempt to mutate non-existent variable "..tostring(key))
+		error("attempt to mutate non-existent variable "..tostring(key), 0)
 	end
 end
 
@@ -145,7 +145,7 @@ function Interpreter.Function:call(args)
 		if type(err) == "table" and err.__name == "Return" then
 			return err.value
 		else
-			error(err)
+			error(tostring(err).."\n\tin "..tostring(self), 0)
 		end
 	end
 end
@@ -387,7 +387,13 @@ function Interpreter.new(program)
 end
 
 function Interpreter:interpret()
-	return self.program:evaluate(self.environment)
+	local results = {pcall(self.program.evaluate, self.program, self.environment)}
+	if results[1] then
+		return table.unpack(results, 2)
+	else
+		print(tostring(results[2]).."\n\tin main chunk")
+		error()
+	end
 end
 
 return setmetatable(Interpreter, {

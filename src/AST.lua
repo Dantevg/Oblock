@@ -24,7 +24,7 @@ function AST.Expr.Unary:evaluate(env)
 	local fn = right:get(self.op.lexeme)
 	if type(fn) ~= "function" then
 		error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, right.__name, self.right))
+			self.op.lexeme, right.__name, self.right), 0)
 	end
 	return fn(right, env)
 end
@@ -57,7 +57,7 @@ function AST.Expr.Binary:evaluate(env)
 	local fn = left:get(self.op.lexeme)
 	if type(fn) ~= "function" then
 		error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, left.__name, self.left))
+			self.op.lexeme, left.__name, self.left), 0)
 	end
 	return fn(left, env, right)
 end
@@ -124,7 +124,7 @@ end
 function AST.Expr.Variable:getBase(env)
 	if self.base then
 		local expr = self.base:evaluate(env)
-		if not expr.environment then error("indexing non-block value "..expr.__name) end
+		if not expr.environment then error("indexing non-block value "..expr.__name, 0) end
 		return expr.environment
 	else
 		return env
@@ -172,7 +172,7 @@ function AST.Expr.Block:evaluate(env)
 			if type(err) == "table" and err.__name == "Yield" then
 				return err.value
 			else
-				error(err)
+				error(err, 0)
 			end
 		end
 	end
@@ -261,7 +261,7 @@ function AST.Expr.Function:call(env, arguments)
 			env:define(parameter.right.expr:evaluate(), list)
 			break
 		else
-			error("invalid parameter type")
+			error("invalid parameter type", 0)
 		end
 	end
 	
@@ -291,7 +291,7 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	if not fn or not fn.call then error("Attempt to call non-function") end
+	if not fn or not fn.call then error("Attempt to call non-function", 0) end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
 end
@@ -415,7 +415,7 @@ end
 
 function AST.Stat.Return:evaluate(env)
 	self.value = self.expression and self.expression:evaluate(env)
-	error(self)
+	error(self, 0)
 end
 
 function AST.Stat.Return:__tostring()
@@ -441,7 +441,7 @@ end
 
 function AST.Stat.Yield:evaluate(env)
 	self.value = self.expression and self.expression:evaluate(env)
-	error(self)
+	error(self, 0)
 end
 
 function AST.Stat.Yield:__tostring()

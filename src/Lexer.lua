@@ -12,9 +12,10 @@ end
 local Lexer = {}
 Lexer.__index = Lexer
 
-function Lexer.new(source)
+function Lexer.new(source, name)
 	local self = {}
 	self.source = source
+	self.name = name
 	self.tokens = {}
 	self.start, self.current, self.line = 1, 1, 1
 	self.hasError = false
@@ -37,7 +38,7 @@ end
 
 function Lexer:error(message, where)
 	self.hasError = true
-	print("["..self.line.."] Error"..(where or "")..": "..(message or ""))
+	print("["..(self.name and self.name..":" or "")..self.line.."]"..(where and where..": " or " ")..(message or ""))
 end
 
 function Lexer:advance()

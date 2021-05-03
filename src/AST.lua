@@ -319,7 +319,7 @@ function AST.Expr.Definition.new(target, expr, modifiers)
 end
 
 function AST.Expr.Definition:evaluate(env)
-	local value = self.expr:evaluate(env)
+	local value = self.expr and self.expr:evaluate(env)
 	self.target:define(env, value, self.modifiers)
 	return value
 end

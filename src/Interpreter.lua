@@ -26,13 +26,13 @@ function Interpreter.Environment:assign(key, value)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
 	if self.env[key] then
 		if self.env[key].modifiers.const then
-			error("Attempt to mutate const variable")
+			error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
 	elseif self.parent and self.parent:has(key) then
 		self.parent:assign(key, value)
 	else
-		error("attempt to mutate non-existent variable")
+		error("attempt to mutate non-existent variable "..tostring(key))
 	end
 end
 
@@ -44,7 +44,7 @@ end
 function Interpreter.Environment:get(key)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
 	if self.env[key] then
-		return self.env[key].value
+		return self.env[key].value or Interpreter.Nil()
 	elseif self.parent then
 		return self.parent:get(key)
 	else

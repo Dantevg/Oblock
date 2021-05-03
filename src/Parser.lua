@@ -91,8 +91,15 @@ function Parser:definition()
 	local isDefinition, isAssignment = false, false
 	
 	if modifiers.var or modifiers.const or modifiers.instance then
-		self:consume("equal", "Expected '='")
-		isDefinition = true
+		if self:match {"equal"} then
+			isDefinition = true
+		else
+			if expr.__name ~= "Variable" then
+				Parser.error(self:previous(), "Attempt to assign to non-variable type "..expr.__name)
+			else
+				return AST.Expr.Definition(expr, nil, modifiers)
+			end
+		end
 	elseif self:match {"colon equal"} then
 		isDefinition = true
 	elseif self:match {"equal"} then

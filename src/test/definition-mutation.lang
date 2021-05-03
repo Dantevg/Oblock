@@ -1,9 +1,12 @@
 {
+	var z
 	x := -5
 	a := {x := x + 1}
 	if x < 10: {
 		x = -x
+		z = 1
 	}
 	print x
 	print a.x
+	print z
 }

@@ -288,7 +288,7 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	if not fn or fn.__name ~= "Function" then error("Attempt to call non-function") end
+	if not fn or not fn.call then error("Attempt to call non-function") end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
 end

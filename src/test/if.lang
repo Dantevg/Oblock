@@ -1,17 +1,17 @@
 {
-	isPositive = x => x > 0
-	isZero = x => x == 0
-	a = 0
+	isPositive := x => x > 0
+	isZero := x => x == 0
+	a := 0
 	if isZero(a): print "zero"
 	else if isPositive(a): print "positive"
 	else print "negative"
 	
-	x = -5
+	x := -5
 	a = {
-		x = 20
+		x := 20
 	}
 	if x < 10: {
-		x := -x
+		x = -x
 	}
 	print x
 }

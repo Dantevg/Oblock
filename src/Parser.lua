@@ -76,24 +76,37 @@ function Parser:parse()
 end
 
 function Parser:expression()
-	return self:assignment()
+	return self:definition()
 end
 
-function Parser:assignment()
-	local expr
+function Parser:definition()
 	local modifiers = {}
-	while self:match {"const", "instance"} do
-		modifiers[self:previous().type] = true
+	while self:match {"var", "const", "instance"} do
+		local mod = self:previous().type
+		if modifiers[mod] then Parser.error(self:previous(), "duplicate modifier") end
+		modifiers[mod] = true
 	end
 	
-	expr = self:func()
-		
-	if self:match {"equal"} or self:match {"colon equal"} then
+	local expr = self:func()
+	local isDefinition, isAssignment = false, false
+	
+	if modifiers.var or modifiers.const or modifiers.instance then
+		self:consume("equal", "Expected '='")
+		isDefinition = true
+	elseif self:match {"colon equal"} then
+		isDefinition = true
+	elseif self:match {"equal"} then
+		isAssignment = true
+	end
+	
+	if isDefinition or isAssignment then
 		local equal = self:previous()
 		local value = self:expression()
 		if expr.__name == "Variable" then
-			expr.modifiers = modifiers
-			return AST.Expr.Assignment(expr, value, equal.type == "colon equal")
+			modifiers.var = nil
+			return isDefinition
+				and AST.Expr.Definition(expr, value, modifiers)
+				or AST.Expr.Assignment(expr, value)
 		else
 			Parser.error(equal, "Attempt to assign to non-variable type "..expr.__name)
 		end

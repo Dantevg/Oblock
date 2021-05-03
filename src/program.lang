@@ -1,4 +1,4 @@
 {
-	f = (...list) => list
+	const f = (...list) => list
 	print(10, clock(), 20)
 }

@@ -1,8 +1,11 @@
 program		= expression ;
-expression	= assignment ;
+expression	= definition ;
 
 (* Expressions *)
-assignment	= {modifier} index {'=' expression | ':=' expression}
+definition	= ('var' | modifier {modifier}) index ['=' expression]
+			| index ':=' expression
+			| assignment ;
+assignment	= index '=' expression
 			| function ;
 function	= (Identifier | '(' paramlist ')') '=>' expression
 			| comparison ;

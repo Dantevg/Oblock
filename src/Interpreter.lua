@@ -13,25 +13,32 @@ function Interpreter.Environment.new(parent)
 	return setmetatable(self, Interpreter.Environment)
 end
 
-function Interpreter.Environment:set(key, value, mutate, modifiers)
+function Interpreter.Environment:define(key, value, modifiers)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
-	if mutate then
-		if self.env[key] then
-			if self.env[key].modifiers.const then
-				error("Attempt to mutate const variable")
-			end
-			self.env[key].value = value
-		elseif self.parent and self.parent:get(key) then
-			self.parent:set(key, value, mutate, modifiers)
-		else
-			error("attempt to mutate non-existent variable")
+	if self.env[key] then error("Redefinition of variable "..tostring(key)) end
+	self.env[key] = {
+		value = value,
+		modifiers = modifiers or {}
+	}
+end
+
+function Interpreter.Environment:assign(key, value)
+	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	if self.env[key] then
+		if self.env[key].modifiers.const then
+			error("Attempt to mutate const variable")
 		end
+		self.env[key].value = value
+	elseif self.parent and self.parent:has(key) then
+		self.parent:assign(key, value)
 	else
-		self.env[key] = {
-			value = value,
-			modifiers = modifiers
-		}
+		error("attempt to mutate non-existent variable")
 	end
+end
+
+function Interpreter.Environment:has(key)
+	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	return self.env[key] or (self.parent and self.parent:has(key))
 end
 
 function Interpreter.Environment:get(key)
@@ -53,6 +60,7 @@ setmetatable(Interpreter.Environment, {
 
 Interpreter.Block = {}
 Interpreter.Block.__index = Interpreter.Block
+Interpreter.Block.__name = "Block"
 
 function Interpreter.Block.new(parent)
 	local self = {}
@@ -60,12 +68,20 @@ function Interpreter.Block.new(parent)
 	return setmetatable(self, Interpreter.Block)
 end
 
+function Interpreter.Block:has(key)
+	return self.environment:has(key)
+end
+
 function Interpreter.Block:get(key)
 	return self.environment:get(key)
 end
 
-function Interpreter.Block:set(key, value, mutate, modifiers)
-	return self.environment:set(key, value, mutate, modifiers)
+function Interpreter.Block:define(key, value, modifiers)
+	return self.environment:define(key, value, modifiers)
+end
+
+function Interpreter.Block:assign(key, value)
+	return self.environment:assign(key, value)
 end
 
 function Interpreter.Block:__tostring()
@@ -82,12 +98,76 @@ setmetatable(Interpreter.Block, {
 
 
 
+Interpreter.NativeFunction = {}
+Interpreter.NativeFunction.__index = Interpreter.NativeFunction
+Interpreter.NativeFunction.__name = "NativeFunction"
+
+function Interpreter.NativeFunction.new(parent, body)
+	local self = Interpreter.Block(parent)
+	self.body = body
+	self:define("()", Interpreter.NativeFunction.call)
+	return setmetatable(self, Interpreter.NativeFunction)
+end
+
+function Interpreter.NativeFunction:call(args)
+	self.body(table.unpack(args))
+end
+
+function Interpreter.NativeFunction:__tostring()
+	return "<native function>"
+end
+
+setmetatable(Interpreter.NativeFunction, {
+	__call = function(_, ...) return Interpreter.NativeFunction.new(...) end,
+	__index = Interpreter.Block,
+})
+
+
+
+Interpreter.Function = {}
+Interpreter.Function.__index = Interpreter.Function
+Interpreter.Function.__name = "Function"
+
+function Interpreter.Function.new(parent, body)
+	local self = Interpreter.Block(parent)
+	self.body = body
+	self:define("()", Interpreter.Function.call)
+	return setmetatable(self, Interpreter.Function)
+end
+
+function Interpreter.Function:call(args)
+	local environment = Interpreter.Environment(self.environment)
+	local values = {pcall(self.body, environment, args)}
+	if values[1] then
+		return table.unpack(values, 2)
+	else
+		local err = values[2]
+		if type(err) == "table" and err.__name == "Return" then
+			return err.value
+		else
+			error(err)
+		end
+	end
+end
+
+function Interpreter.Function:__tostring()
+	return self.__tostring and self.__tostring() or "<function>"
+end
+
+setmetatable(Interpreter.Function, {
+	__call = function(_, ...) return Interpreter.Function.new(...) end,
+	__index = Interpreter.Block,
+})
+
+
+
 Interpreter.Value = {}
 Interpreter.Value.__index = Interpreter.Value
+Interpreter.Value.__name = "Value"
 
 function Interpreter.Value.new(parent, value)
 	local self = Interpreter.Block(parent)
-	self:set("value", value, false, {const = true})
+	self:define("value", value, {const = true})
 	return setmetatable(self, Interpreter.Value)
 end
 
@@ -108,14 +188,15 @@ setmetatable(Interpreter.Value, {
 
 Interpreter.Number = {}
 Interpreter.Number.__index = Interpreter.Number
+Interpreter.Number.__name = "Number"
 
 function Interpreter.Number.new(parent, value)
 	local self = Interpreter.Value(parent, tonumber(value))
-	self:set("==", Interpreter.Number.add)
-	self:set("<", Interpreter.Number.lt)
-	self:set("+", Interpreter.Number.add)
-	self:set("-", Interpreter.Number.sub)
-	self:set("!", Interpreter.Number.not_)
+	self:define("==", Interpreter.Number.add)
+	self:define("<", Interpreter.Number.lt)
+	self:define("+", Interpreter.Number.add)
+	self:define("-", Interpreter.Number.sub)
+	self:define("!", Interpreter.Number.not_)
 	return setmetatable(self, Interpreter.Number)
 end
 
@@ -155,11 +236,12 @@ setmetatable(Interpreter.Number, {
 
 Interpreter.String = {}
 Interpreter.String.__index = Interpreter.String
+Interpreter.String.__name = "String"
 
 function Interpreter.String.new(parent, value)
 	local self = Interpreter.Value(parent, tostring(value))
-	self:set("+", Interpreter.String.add)
-	self:set("!", Interpreter.String.not_)
+	self:define("+", Interpreter.String.add)
+	self:define("!", Interpreter.String.not_)
 	return setmetatable(self, Interpreter.String)
 end
 
@@ -183,10 +265,11 @@ setmetatable(Interpreter.String, {
 
 Interpreter.Boolean = {}
 Interpreter.Boolean.__index = Interpreter.Boolean
+Interpreter.Boolean.__name = "Boolean"
 
 function Interpreter.Boolean.new(parent, value)
 	local self = Interpreter.Value(parent, not not value)
-	self:set("!", Interpreter.Boolean.not_)
+	self:define("!", Interpreter.Boolean.not_)
 	return setmetatable(self, Interpreter.Boolean)
 end
 
@@ -210,10 +293,11 @@ setmetatable(Interpreter.Boolean, {
 
 Interpreter.Nil = {}
 Interpreter.Nil.__index = Interpreter.Nil
+Interpreter.Nil.__name = "Nil"
 
 function Interpreter.Nil.new(parent)
 	local self = Interpreter.Value(parent, nil)
-	self:set("!", Interpreter.Nil.not_)
+	self:define("!", Interpreter.Nil.not_)
 	return setmetatable(self, Interpreter.Nil)
 end
 
@@ -236,22 +320,23 @@ setmetatable(Interpreter.Nil, {
 
 Interpreter.List = {}
 Interpreter.List.__index = Interpreter.List
+Interpreter.List.__name = "List"
 
 function Interpreter.List.new(parent, elements)
 	local self = Interpreter.Block(parent)
-	self:set("+", Interpreter.List.add)
-	self:set("...", Interpreter.List.spread)
+	self:define("+", Interpreter.List.add)
+	self:define("...", Interpreter.List.spread)
 	elements = elements or {}
 	for i = 1, #elements do
-		self:set(i, elements[i])
+		self:define(i, elements[i])
 	end
-	self:set("length", Interpreter.Number(nil, #elements))
+	self:define("length", Interpreter.Number(nil, #elements))
 	return setmetatable(self, Interpreter.List)
 end
 
 function Interpreter.List:push(value)
-	self:set(#self+1, value)
-	self:set("length", Interpreter.Number(nil, #self))
+	self:define(#self+1, value)
+	self:assign("length", Interpreter.Number(nil, #self))
 end
 
 function Interpreter.List:add(env, other)
@@ -262,7 +347,7 @@ function Interpreter.List:add(env, other)
 	for i = 1, #other do
 		table.insert(values, other:get(i))
 	end
-	self:set("length", Interpreter.Number(nil, #self))
+	self:assign("length", Interpreter.Number(nil, #self))
 	return self.new(nil, values)
 end
 

@@ -180,10 +180,10 @@ Lexer.tokens = {
 }
 
 Lexer.keywords = {
-	["if"] = true, ["elseif"] = true, ["else"] = true,
+	["if"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
 	["return"] = true, ["yield"] = true,
-	["const"] = true, ["instance"] = true,
+	["var"] = true, ["const"] = true, ["instance"] = true,
 }
 
 return setmetatable(Lexer, {

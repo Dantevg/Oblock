@@ -22,7 +22,10 @@ end
 function AST.Expr.Unary:evaluate(env)
 	local right = self.right:evaluate(env)
 	local fn = right:get(self.op.lexeme)
-	if type(fn) ~= "function" then error("no operator instance for '"..self.op.lexeme.."'") end
+	if type(fn) ~= "function" then
+		error(string.format("no operator instance '%s' on %s value '%s'",
+			self.op.lexeme, right.__name, self.right))
+	end
 	return fn(right, env)
 end
 
@@ -52,7 +55,10 @@ function AST.Expr.Binary:evaluate(env)
 	local left = self.left:evaluate(env)
 	local right = self.right:evaluate(env)
 	local fn = left:get(self.op.lexeme)
-	if type(fn) ~= "function" then error("no operator instance for '"..self.op.lexeme.."'") end
+	if type(fn) ~= "function" then
+		error(string.format("no operator instance '%s' on %s value '%s'",
+			self.op.lexeme, left.__name, self.left))
+	end
 	return fn(left, env, right)
 end
 
@@ -129,8 +135,12 @@ function AST.Expr.Variable:evaluate(env)
 	return self:getBase(env):get(self.expr:evaluate(env))
 end
 
-function AST.Expr.Variable:assign(env, value, mutate)
-	self:getBase(env):set(self.expr:evaluate(env), value, mutate, self.modifiers)
+function AST.Expr.Variable:define(env, value, modifiers)
+	self:getBase(env):define(self.expr:evaluate(env), value, modifiers)
+end
+
+function AST.Expr.Variable:assign(env, value)
+	self:getBase(env):assign(self.expr:evaluate(env), value)
 end
 
 function AST.Expr.Variable:__tostring()
@@ -229,40 +239,33 @@ function AST.Expr.Function.new(parameters, body)
 	return setmetatable(self, AST.Expr.Function)
 end
 
-function AST.Expr.Function:evaluate(parent)
-	self.environment = Interpreter.Environment(parent)
-	return self
+function AST.Expr.Function:evaluate(env)
+	local fn = Interpreter.Function(env, function(environment, args)
+		return self:call(environment, args)
+	end)
+	function fn.__tostring() return self:__tostring() end
+	return fn
 end
 
-function AST.Expr.Function:call(arguments)
+function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			self.environment:set(parameter.expr:evaluate(), argument)
+			env:define(parameter.expr:evaluate(), argument)
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
-			local list = Interpreter.List(self.environment)
+			local list = Interpreter.List(env)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
-			self.environment:set(parameter.right.expr:evaluate(), list)
+			env:define(parameter.right.expr:evaluate(), list)
 			break
 		else
 			error("invalid parameter type")
 		end
 	end
 	
-	local values = {pcall(self.body.evaluate, self.body, self.environment)}
-	if values[1] then
-		return table.unpack(values, 2)
-	else
-		local err = values[2]
-		if type(err) == "table" and err.__name == "Return" then
-			return err.value
-		else
-			error(err)
-		end
-	end
+	return self.body:evaluate(env)
 end
 
 function AST.Expr.Function:__tostring()
@@ -303,26 +306,53 @@ setmetatable(AST.Expr.Call, {
 
 
 
+AST.Expr.Definition = {}
+AST.Expr.Definition.__index = AST.Expr.Definition
+AST.Expr.Definition.__name = "Definition"
+
+function AST.Expr.Definition.new(target, expr, modifiers)
+	local self = {}
+	self.target = target
+	self.expr = expr
+	self.modifiers = modifiers
+	return setmetatable(self, AST.Expr.Definition)
+end
+
+function AST.Expr.Definition:evaluate(env)
+	local value = self.expr:evaluate(env)
+	self.target:define(env, value, self.modifiers)
+	return value
+end
+
+function AST.Expr.Definition:__tostring()
+	return "var "..tostring(self.target).." = "..tostring(self.expr)
+end
+
+setmetatable(AST.Expr.Definition, {
+	__call = function(_, ...) return AST.Expr.Definition.new(...) end,
+})
+
+
+
 AST.Expr.Assignment = {}
 AST.Expr.Assignment.__index = AST.Expr.Assignment
 AST.Expr.Assignment.__name = "Assignment"
 
-function AST.Expr.Assignment.new(target, expr, mutate)
+function AST.Expr.Assignment.new(target, expr)
 	local self = {}
 	self.target = target
 	self.expr = expr
-	self.mutate = mutate
 	return setmetatable(self, AST.Expr.Assignment)
 end
 
 function AST.Expr.Assignment:evaluate(env)
 	local value = self.expr:evaluate(env)
-	self.target:assign(env, value, self.mutate)
+	self.target:assign(env, value)
 	return value
 end
 
 function AST.Expr.Assignment:__tostring()
-	return tostring(self.target)..(self.mutate and " := " or " = ")..tostring(self.expr)
+	return tostring(self.target).." = "..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Assignment, {

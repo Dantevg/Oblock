@@ -1,15 +1,11 @@
 {
-	a = "global"
+	a := "global"
 	{
-		showA = () => {
-			print a
-			print b
-		}
-		showA()
-		a = "block"
-		b = "B"
-		showA()
+		show := () => print(a, b)
+		show()
+		a := "block"
+		b := "B"
+		show()
 	}
-	print a
-	print b
+	print(a, b)
 }

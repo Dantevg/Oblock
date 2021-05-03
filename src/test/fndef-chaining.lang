@@ -1,5 +1,5 @@
 {
-	add = a => b => (a + b, a - b)
+	add := a => b => (a + b, a - b)
 	print(add(10)(20))
 	yield add(20)(50)
 }

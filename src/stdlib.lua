@@ -1,13 +1,12 @@
+local Interpreter = require "Interpreter"
+
 local fn = {}
 
 fn.clock = os.clock
-
 fn.print = print
 
 return function(env)
 	for name, f in pairs(fn) do
-		env:set(name, {call = function(_, args)
-			return f(table.unpack(args))
-		end})
+		env:define(name, Interpreter.NativeFunction(env, f))
 	end
 end

@@ -164,7 +164,7 @@ function AST.Expr.Variable:resolve(scope)
 	else
 		local level = 0
 		while scope do
-			if scope[self.expr.lexeme] ~= nil then self.level = level return end
+			if scope[self.expr.lexeme] then self.level = level return end
 			scope, level = scope.parent, level+1
 		end
 		if not self.level then error("unresolved variable "..self.expr.lexeme, 0) end
@@ -388,16 +388,11 @@ function AST.Expr.Definition:evaluate(env)
 end
 
 function AST.Expr.Definition:resolve(scope)
-	if scope[self.target.expr.lexeme] ~= nil then
+	if scope[self.target.expr.lexeme] then
 		error("redefinition of "..self.target.expr.lexeme, 0)
 	end
-	if self.expr then
-		self.expr:resolve(scope)
-		scope[self.target.expr.lexeme] = true
-	else
-		scope[self.target.expr.lexeme] = false -- not defined yet
-	end
-	self.target:resolve(scope)
+	if self.expr then self.expr:resolve(scope) end
+	scope[self.target.expr.lexeme] = true
 end
 
 function AST.Expr.Definition:__tostring()

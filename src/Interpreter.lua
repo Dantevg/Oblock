@@ -192,16 +192,18 @@ Interpreter.Number.__name = "Number"
 
 function Interpreter.Number.new(parent, value)
 	local self = Interpreter.Value(parent, tonumber(value))
-	self:define("==", Interpreter.Number.add)
+	self:define("==", Interpreter.Number.eq)
 	self:define("<", Interpreter.Number.lt)
 	self:define("+", Interpreter.Number.add)
 	self:define("-", Interpreter.Number.sub)
+	self:define("*", Interpreter.Number.mul)
 	self:define("!", Interpreter.Number.not_)
 	return setmetatable(self, Interpreter.Number)
 end
 
 function Interpreter.Number:eq(env, other)
-	return self.new(env, tonumber(self:get("value")) == tonumber(other:get("value")))
+	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
+	return Interpreter.Boolean(env, a == b)
 end
 
 function Interpreter.Number:lt(env, other)
@@ -212,6 +214,12 @@ function Interpreter.Number:add(env, other)
 	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
 	if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
 	return self.new(env, a + b)
+end
+
+function Interpreter.Number:mul(env, other)
+	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
+	if type(b) ~= "number" then error("cannot perform '*' on "..other.__name, 0) end
+	return self.new(env, a * b)
 end
 
 function Interpreter.Number:sub(env, other)

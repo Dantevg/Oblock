@@ -373,11 +373,12 @@ AST.Expr.Definition = {}
 AST.Expr.Definition.__index = AST.Expr.Definition
 AST.Expr.Definition.__name = "Definition"
 
-function AST.Expr.Definition.new(target, expr, modifiers)
+function AST.Expr.Definition.new(target, expr, modifiers, fndef)
 	local self = {}
 	self.target = target
 	self.expr = expr
 	self.modifiers = modifiers
+	self.fndef = fndef
 	return setmetatable(self, AST.Expr.Definition)
 end
 
@@ -391,12 +392,14 @@ function AST.Expr.Definition:resolve(scope)
 	if scope[self.target.expr.lexeme] then
 		error("redefinition of "..self.target.expr.lexeme, 0)
 	end
+	if self.fndef then scope[self.target.expr.lexeme] = true end
 	if self.expr then self.expr:resolve(scope) end
 	scope[self.target.expr.lexeme] = true
 end
 
 function AST.Expr.Definition:__tostring()
-	return "var "..tostring(self.target).." = "..tostring(self.expr)
+	return "var "..(self.fndef and tostring(self.target).."; " or "")
+		..tostring(self.target).." = "..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Definition, {

@@ -3,12 +3,12 @@ expression	= definition ;
 
 (* Expressions *)
 definition	= ('var' | modifier {modifier}) index ['=' expression]
+			| ('var' | modifier {modifier}) index fn
 			| index ':=' expression
 			| assignment ;
 assignment	= index '=' expression
 			| function ;
-function	= (Identifier | '(' paramlist ')') '=>' expression
-			| comparison ;
+function	= fn | comparison ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
@@ -30,6 +30,7 @@ statement	= 'return' expression
 			| expression ;
 
 (* Smaller components *)
+fn			= (Identifier | '(' paramlist ')') '=>' expression ;
 explist		= expression {',' expression} ;
 paramlist	= param {',' param} ;
 param		= expression ;

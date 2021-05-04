@@ -94,11 +94,13 @@ function Parser:definition()
 	end
 	
 	local expr = self:func()
-	local isDefinition, isAssignment = false, false
+	local isDefinition, isAssignment, isFunction = false, false, false
 	
 	if modifiers.var or modifiers.const or modifiers.instance then
 		if self:match {"equal"} then
 			isDefinition = true
+		elseif self:match {"equal greater"} then
+			isFunction = true
 		else
 			if expr.__name ~= "Variable" then
 				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
@@ -110,16 +112,26 @@ function Parser:definition()
 		isDefinition = true
 	elseif self:match {"equal"} then
 		isAssignment = true
+	elseif self:match {"equal greater"} then
+		isFunction = true
 	end
 	
-	if isDefinition or isAssignment then
+	if isDefinition or isAssignment or isFunction then
 		local equal = self:previous()
 		local value = self:expression()
-		if expr.__name == "Variable" then
-			modifiers.var = nil
+		modifiers.var = nil
+		if expr.__name == "Variable" and (isDefinition or isAssignment) then
 			return isDefinition
 				and AST.Expr.Definition(expr, value, modifiers)
 				or AST.Expr.Assignment(expr, value)
+		elseif expr.__name == "Call" and isFunction then
+			local name, parameters = expr.expression, expr.arglist
+			if parameters.__name == "Variable" then -- name arg => body
+				parameters = AST.Expr.Group {parameters}
+			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
+				self:error(equal, "Invalid function argument: "..parameters.__name)
+			end
+			return AST.Expr.Definition(name, AST.Expr.Function(parameters, value), modifiers, true)
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end
@@ -131,18 +143,19 @@ end
 function Parser:func()
 	local expr = self:comparison()
 	
-	if self:match {"equal greater"} then
+	if expr.__name ~= "Call" and self:match {"equal greater"} then
 		local arrow = self:previous()
 		local body = self:expression()
 		-- Check if expression is variable or group of variables
-		if expr.__name == "Variable" then
+		if expr.__name == "Variable" then -- arg => body
 			return AST.Expr.Function(AST.Expr.Group {expr}, body)
-		elseif expr.__name == "Group" then
+		elseif expr.__name == "Group" then -- (arg, arg) => body
 			return AST.Expr.Function(expr, body)
 		else
-			self:error(arrow, "Invalid function argument")
+			self:error(arrow, "Invalid function argument: "..expr.__name)
 		end
 	end
+	-- other case: name arg => body  or  name(arg, arg) => body
 	
 	return expr
 end

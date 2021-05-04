@@ -17,7 +17,7 @@ end
 function Parser:error(token, message)
 	print(string.format("[%s%d] at '%s': %s",
 		self.name and self.name..":" or "", token.line, token.lexeme, message))
-	error()
+	error(true)
 end
 
 function Parser:nextIndex()
@@ -78,7 +78,11 @@ function Parser:parse()
 		end
 		return expr
 	end)
-	if success then return result end
+	if success then
+		return result
+	elseif result ~= true then
+		error(result)
+	end
 end
 
 function Parser:expression()
@@ -141,9 +145,9 @@ function Parser:definition()
 end
 
 function Parser:func()
-	local expr = self:comparison()
+	local expr = self:disjunction()
 	
-	if expr.__name ~= "Call" and self:match {"equal greater"} then
+	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
 		local arrow = self:previous()
 		local body = self:expression()
 		-- Check if expression is variable or group of variables
@@ -158,6 +162,14 @@ function Parser:func()
 	-- other case: name arg => body  or  name(arg, arg) => body
 	
 	return expr
+end
+
+function Parser:disjunction()
+	return self:binary({"bar bar"}, Parser.conjunction)
+end
+
+function Parser:conjunction()
+	return self:binary({"and and"}, Parser.comparison)
 end
 
 function Parser:comparison()

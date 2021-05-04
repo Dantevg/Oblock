@@ -57,13 +57,21 @@ end
 
 function AST.Expr.Binary:evaluate(env)
 	local left = self.left:evaluate(env)
-	local right = self.right:evaluate(env)
-	local fn = left:get(self.op.lexeme)
-	if type(fn) ~= "function" then
-		error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, left.__name, self.left), 0)
+	if self.op.lexeme == "||" then
+		return Interpreter.Boolean.toBoolean(env, left):get("value")
+			and left or self.right:evaluate(env)
+	elseif self.op.lexeme == "&&" then
+		return Interpreter.Boolean.toBoolean(env, left):get("value")
+			and self.right:evaluate(env) or left
+	else
+		local right = self.right:evaluate(env)
+		local fn = left:get(self.op.lexeme)
+		if type(fn) ~= "function" then
+			error(string.format("no operator instance '%s' on %s value '%s'",
+				self.op.lexeme, left.__name, self.left), 0)
+		end
+		return fn(left, env, right)
 	end
-	return fn(left, env, right)
 end
 
 function AST.Expr.Binary:resolve(scope)
@@ -373,12 +381,12 @@ AST.Expr.Definition = {}
 AST.Expr.Definition.__index = AST.Expr.Definition
 AST.Expr.Definition.__name = "Definition"
 
-function AST.Expr.Definition.new(target, expr, modifiers, fndef)
+function AST.Expr.Definition.new(target, expr, modifiers, predef)
 	local self = {}
 	self.target = target
 	self.expr = expr
 	self.modifiers = modifiers
-	self.fndef = fndef
+	self.predef = predef
 	return setmetatable(self, AST.Expr.Definition)
 end
 
@@ -392,13 +400,13 @@ function AST.Expr.Definition:resolve(scope)
 	if scope[self.target.expr.lexeme] then
 		error("redefinition of "..self.target.expr.lexeme, 0)
 	end
-	if self.fndef then scope[self.target.expr.lexeme] = true end
+	if self.predef then scope[self.target.expr.lexeme] = true end
 	if self.expr then self.expr:resolve(scope) end
 	scope[self.target.expr.lexeme] = true
 end
 
 function AST.Expr.Definition:__tostring()
-	return "var "..(self.fndef and tostring(self.target).."; " or "")
+	return "var "..(self.predef and tostring(self.target).."; " or "")
 		..tostring(self.target).." = "..tostring(self.expr)
 end
 

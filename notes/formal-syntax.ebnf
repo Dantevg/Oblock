@@ -8,7 +8,9 @@ definition	= ('var' | modifier {modifier}) index ['=' expression]
 			| assignment ;
 assignment	= index '=' expression
 			| function ;
-function	= fn | comparison ;
+function	= fn | disjunction ;
+disjunction = conjunction {'||' conjunction} ;
+conjunction	= comparison {'&&' comparison} ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;

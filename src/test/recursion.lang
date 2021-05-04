@@ -1,8 +1,11 @@
 {
-	fac n => {
+	fac1 n => {
 		if n == 0: return 1
-		else return n * fac(n-1)
+		else return n * fac1(n-1)
 	}
 	
-	print(fac 5)
+	fac2 n => n == 0 && 1 || n * fac2(n-1)
+	
+	print(fac1 5)
+	print(fac2 5)
 }

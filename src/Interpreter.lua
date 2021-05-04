@@ -44,7 +44,7 @@ end
 function Interpreter.Environment:get(key)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
 	if self.env[key] then
-		return self.env[key].value or Interpreter.Nil()
+		return self.env[key].value
 	elseif self.parent then
 		return self.parent:get(key)
 	else
@@ -143,7 +143,7 @@ function Interpreter.Function:call(args)
 	else
 		local err = values[2]
 		if type(err) == "table" and err.__name == "Return" then
-			return err.value
+			return table.unpack(err.values)
 		else
 			error(tostring(err).."\n\tin "..tostring(self), 0)
 		end
@@ -209,14 +209,19 @@ function Interpreter.Number:lt(env, other)
 end
 
 function Interpreter.Number:add(env, other)
-	return self.new(env, tonumber(self:get("value")) + tonumber(other:get("value")))
+	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
+	if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
+	return self.new(env, a + b)
 end
 
 function Interpreter.Number:sub(env, other)
+	local a = tonumber(self:get("value"))
 	if other then
-		return self.new(env, tonumber(self:get("value")) - tonumber(other:get("value")))
+		local b = tonumber(other:get("value"))
+		if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
+		return self.new(env, a - b)
 	else
-		return self.new(env, -tonumber(self:get("value")))
+		return self.new(env, -a)
 	end
 end
 
@@ -246,7 +251,9 @@ function Interpreter.String.new(parent, value)
 end
 
 function Interpreter.String:add(env, other)
-	return self.new(env, tostring(self:get("value")) .. tostring(other:get("value")))
+	local a, b = tostring(self:get("value")), tostring(other:get("value"))
+	if type(b) ~= "string" then error("cannot perform '+' on "..other.__name, 0) end
+	return self.new(env, a..b)
 end
 
 function Interpreter.String:not_(env)

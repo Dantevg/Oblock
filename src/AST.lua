@@ -170,7 +170,7 @@ function AST.Expr.Block:evaluate(env)
 		local success, err = pcall(statement.evaluate, statement, block.environment)
 		if not success then
 			if type(err) == "table" and err.__name == "Yield" then
-				return err.value
+				return table.unpack(err.values)
 			else
 				error(err, 0)
 			end
@@ -410,11 +410,12 @@ AST.Stat.Return.__name = "Return"
 function AST.Stat.Return.new(expression)
 	local self = {}
 	self.expression = expression
+	self.values = {}
 	return setmetatable(self, AST.Stat.Return)
 end
 
 function AST.Stat.Return:evaluate(env)
-	self.value = self.expression and self.expression:evaluate(env)
+	self.values = self.expression and {self.expression:evaluate(env)}
 	error(self, 0)
 end
 
@@ -436,11 +437,12 @@ AST.Stat.Yield.__name = "Yield"
 function AST.Stat.Yield.new(expression)
 	local self = {}
 	self.expression = expression
+	self.values = {}
 	return setmetatable(self, AST.Stat.Yield)
 end
 
 function AST.Stat.Yield:evaluate(env)
-	self.value = self.expression and self.expression:evaluate(env)
+	self.values = self.expression and {self.expression:evaluate(env)}
 	error(self, 0)
 end
 

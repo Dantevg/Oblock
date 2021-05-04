@@ -29,6 +29,10 @@ function AST.Expr.Unary:evaluate(env)
 	return fn(right, env)
 end
 
+function AST.Expr.Unary:resolve(scope)
+	self.right:resolve(scope)
+end
+
 function AST.Expr.Unary:__tostring()
 	return string.format("(%s%s)", self.op.lexeme, self.right)
 end
@@ -62,6 +66,11 @@ function AST.Expr.Binary:evaluate(env)
 	return fn(left, env, right)
 end
 
+function AST.Expr.Binary:resolve(scope)
+	self.left:resolve(scope)
+	self.right:resolve(scope)
+end
+
 function AST.Expr.Binary:__tostring()
 	return string.format("(%s %s %s)", self.left, self.op.lexeme, self.right)
 end
@@ -91,6 +100,12 @@ function AST.Expr.Group:evaluate(env)
 		end
 	end
 	return table.unpack(results)
+end
+
+function AST.Expr.Group:resolve(scope)
+	for _, expr in ipairs(self.expressions) do
+		expr:resolve(scope)
+	end
 end
 
 function AST.Expr.Group:__tostring()
@@ -132,7 +147,7 @@ function AST.Expr.Variable:getBase(env)
 end
 
 function AST.Expr.Variable:evaluate(env)
-	return self:getBase(env):get(self.expr:evaluate(env))
+	return self:getBase(env):get(self.expr:evaluate(env), self.level)
 end
 
 function AST.Expr.Variable:define(env, value, modifiers)
@@ -140,7 +155,20 @@ function AST.Expr.Variable:define(env, value, modifiers)
 end
 
 function AST.Expr.Variable:assign(env, value)
-	self:getBase(env):assign(self.expr:evaluate(env), value)
+	self:getBase(env):assign(self.expr:evaluate(env), value, self.level)
+end
+
+function AST.Expr.Variable:resolve(scope)
+	if self.base then
+		self.base:resolve(scope)
+	else
+		local level = 0
+		while scope do
+			if scope[self.expr.lexeme] ~= nil then self.level = level return end
+			scope, level = scope.parent, level+1
+		end
+		if not self.level then error("unresolved variable "..self.expr.lexeme, 0) end
+	end
 end
 
 function AST.Expr.Variable:__tostring()
@@ -179,6 +207,13 @@ function AST.Expr.Block:evaluate(env)
 	return block
 end
 
+function AST.Expr.Block:resolve(scope)
+	local childScope = {parent = scope}
+	for i = 1, #self.statements do
+		self.statements[i]:resolve(childScope)
+	end
+end
+
 function AST.Expr.Block:__tostring()
 	local strings = {}
 	for _, statement in ipairs(self.statements) do
@@ -212,6 +247,13 @@ function AST.Expr.List:evaluate(parent)
 		end
 	end
 	return list
+end
+
+function AST.Expr.List:resolve(scope)
+	local childScope = {parent = scope}
+	for i = 1, #self.expressions do
+		self.expressions[i]:resolve(childScope)
+	end
 end
 
 function AST.Expr.List:__tostring()
@@ -268,6 +310,22 @@ function AST.Expr.Function:call(env, arguments)
 	return self.body:evaluate(env)
 end
 
+function AST.Expr.Function:resolve(scope)
+	local childScope = {parent = {parent = scope}}
+	for _, parameter in ipairs(self.parameters.expressions) do
+		if parameter.__name == "Variable" then
+			childScope[parameter.expr.lexeme] = true
+		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
+				and parameter.right.__name == "Variable" then
+			childScope[parameter.right.expr.lexeme] = true
+			break
+		else
+			error("invalid parameter type", 0)
+		end
+	end
+	self.body:resolve(childScope)
+end
+
 function AST.Expr.Function:__tostring()
 	return string.format("%s => %s", self.parameters, self.body)
 end
@@ -296,6 +354,11 @@ function AST.Expr.Call:evaluate(env)
 	return fn:call(arguments)
 end
 
+function AST.Expr.Call:resolve(scope)
+	self.expression:resolve(scope)
+	self.arglist:resolve(scope)
+end
+
 function AST.Expr.Call:__tostring()
 	return string.format("%s %s", self.expression, self.arglist)
 end
@@ -319,9 +382,22 @@ function AST.Expr.Definition.new(target, expr, modifiers)
 end
 
 function AST.Expr.Definition:evaluate(env)
-	local value = self.expr and self.expr:evaluate(env)
+	local value = self.expr and self.expr:evaluate(env) or AST.Expr.Literal.Nil()
 	self.target:define(env, value, self.modifiers)
 	return value
+end
+
+function AST.Expr.Definition:resolve(scope)
+	if scope[self.target.expr.lexeme] ~= nil then
+		error("redefinition of "..self.target.expr.lexeme, 0)
+	end
+	if self.expr then
+		self.expr:resolve(scope)
+		scope[self.target.expr.lexeme] = true
+	else
+		scope[self.target.expr.lexeme] = false -- not defined yet
+	end
+	self.target:resolve(scope)
 end
 
 function AST.Expr.Definition:__tostring()
@@ -349,6 +425,11 @@ function AST.Expr.Assignment:evaluate(env)
 	local value = self.expr:evaluate(env)
 	self.target:assign(env, value)
 	return value
+end
+
+function AST.Expr.Assignment:resolve(scope)
+	self.expr:resolve(scope)
+	self.target:resolve(scope)
 end
 
 function AST.Expr.Assignment:__tostring()
@@ -387,6 +468,8 @@ function AST.Expr.Literal:evaluate(env)
 	end
 end
 
+function AST.Expr.Literal.resolve() end
+
 function AST.Expr.Literal:__tostring()
 	return self.lexeme
 end
@@ -410,13 +493,16 @@ AST.Stat.Return.__name = "Return"
 function AST.Stat.Return.new(expression)
 	local self = {}
 	self.expression = expression
-	self.values = {}
 	return setmetatable(self, AST.Stat.Return)
 end
 
 function AST.Stat.Return:evaluate(env)
-	self.values = self.expression and {self.expression:evaluate(env)}
+	self.values = self.expression and {self.expression:evaluate(env)} or {}
 	error(self, 0)
+end
+
+function AST.Stat.Return:resolve(scope)
+	if self.expression then self.expression:resolve(scope) end
 end
 
 function AST.Stat.Return:__tostring()
@@ -437,13 +523,16 @@ AST.Stat.Yield.__name = "Yield"
 function AST.Stat.Yield.new(expression)
 	local self = {}
 	self.expression = expression
-	self.values = {}
 	return setmetatable(self, AST.Stat.Yield)
 end
 
 function AST.Stat.Yield:evaluate(env)
-	self.values = self.expression and {self.expression:evaluate(env)}
+	self.values = self.expression and {self.expression:evaluate(env)} or {}
 	error(self, 0)
+end
+
+function AST.Stat.Yield:resolve(scope)
+	if self.expression then self.expression:resolve(scope) end
 end
 
 function AST.Stat.Yield:__tostring()
@@ -477,6 +566,12 @@ function AST.Stat.If:evaluate(env)
 	end
 end
 
+function AST.Stat.If:resolve(scope)
+	self.condition:resolve(scope)
+	self.ifTrue:resolve(scope)
+	if self.ifFalse then self.ifFalse:resolve(scope) end
+end
+
 function AST.Stat.If:__tostring()
 	if self.ifFalse then
 		return string.format("if %s: %s else %s", self.condition, self.ifTrue, self.ifFalse)
@@ -507,6 +602,11 @@ function AST.Stat.While:evaluate(env)
 	while self.condition:evaluate(env):get("value") do
 		self.body:evaluate(env)
 	end
+end
+
+function AST.Stat.While:resolve(scope)
+	self.condition:resolve(scope)
+	self.body:resolve(scope)
 end
 
 function AST.Stat.While:__tostring()

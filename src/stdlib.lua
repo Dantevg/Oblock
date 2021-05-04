@@ -9,4 +9,5 @@ return function(env)
 	for name, f in pairs(fn) do
 		env:define(name, Interpreter.NativeFunction(env, f))
 	end
+	env:define("nil", Interpreter.Nil(env))
 end

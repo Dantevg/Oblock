@@ -22,14 +22,14 @@ function Interpreter.Environment:define(key, value, modifiers)
 	}
 end
 
-function Interpreter.Environment:assign(key, value)
+function Interpreter.Environment:assign(key, value, level)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
-	if self.env[key] then
+	if self.env[key] and (not level or level == 0) then
 		if self.env[key].modifiers.const then
 			error("Attempt to mutate const variable "..tostring(key), 0)
 		end
 		self.env[key].value = value
-	elseif self.parent and self.parent:has(key) then
+	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
 		self.parent:assign(key, value)
 	else
 		error("attempt to mutate non-existent variable "..tostring(key), 0)
@@ -41,12 +41,12 @@ function Interpreter.Environment:has(key)
 	return self.env[key] or (self.parent and self.parent:has(key))
 end
 
-function Interpreter.Environment:get(key)
+function Interpreter.Environment:get(key, level)
 	if type(key) == "table" and key:get("value") then key = key:get("value") end
-	if self.env[key] then
+	if self.env[key] and (not level or level == 0) then
 		return self.env[key].value
-	elseif self.parent then
-		return self.parent:get(key)
+	elseif self.parent and (not level or level > 0) then
+		return self.parent:get(key, level and level-1)
 	else
 		return Interpreter.Nil()
 	end
@@ -110,7 +110,7 @@ function Interpreter.NativeFunction.new(parent, body)
 end
 
 function Interpreter.NativeFunction:call(args)
-	self.body(table.unpack(args))
+	return self.body(table.unpack(args))
 end
 
 function Interpreter.NativeFunction:__tostring()
@@ -394,6 +394,15 @@ function Interpreter.new(program)
 end
 
 function Interpreter:interpret()
+	-- Resolve
+	local globalScope = {}
+	for k in pairs(self.environment.env) do
+		globalScope[k] = true
+	end
+	local success, err = pcall(self.program.resolve, self.program, globalScope)
+	if not success then print(err) return end
+	
+	-- Run
 	local results = {pcall(self.program.evaluate, self.program, self.environment)}
 	if results[1] then
 		return table.unpack(results, 2)

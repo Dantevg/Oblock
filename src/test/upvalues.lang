@@ -1,11 +1,14 @@
 {
 	a := "global"
+	var b
 	{
 		show := () => print(a, b)
 		show()
+		print(a, b)
 		a := "block"
 		b := "B"
 		show()
+		print(a, b)
 	}
 	print(a, b)
 }

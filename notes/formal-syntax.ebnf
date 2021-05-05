@@ -2,11 +2,11 @@ program		= expression ;
 expression	= definition ;
 
 (* Expressions *)
-definition	= ('var' | modifier {modifier}) index ['=' expression]
+definition	= ('var' | modifier {modifier}) index ['=' function]
 			| ('var' | modifier {modifier}) index fn
-			| index ':=' expression
+			| index ':=' function
 			| assignment ;
-assignment	= index '=' expression
+assignment	= index '=' function
 			| function ;
 function	= fn | disjunction ;
 disjunction = conjunction {'||' conjunction} ;
@@ -29,6 +29,7 @@ statement	= 'return' expression
 			| 'yield' expression
 			| 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
+			| 'for' Identifier 'in' expression ':' statement
 			| expression ;
 
 (* Smaller components *)

@@ -100,6 +100,8 @@ function Parser:definition()
 	local expr = self:func()
 	local isDefinition, isAssignment, isFunction = false, false, false
 	
+	if not expr then self:error(self:previous(), "Expected non-assignment expression", 0) end
+	
 	if modifiers.var or modifiers.const or modifiers.instance then
 		if self:match {"equal"} then
 			isDefinition = true
@@ -122,7 +124,7 @@ function Parser:definition()
 	
 	if isDefinition or isAssignment or isFunction then
 		local equal = self:previous()
-		local value = self:expression()
+		local value = self:func()
 		modifiers.var = nil
 		if expr.__name == "Variable" and (isDefinition or isAssignment) then
 			return isDefinition

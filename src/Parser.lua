@@ -249,8 +249,7 @@ function Parser:primary()
 		self.nlSensitive = false
 		return self:block()
 	elseif self:match {"identifier"} then
-		local name = self:previous().lexeme
-		return AST.Expr.Variable(nil, AST.Expr.Literal(name, name))
+		return AST.Expr.Variable(nil, AST.Expr.Literal(self:previous()))
 	end
 end
 
@@ -303,6 +302,8 @@ function Parser:statement()
 		return self:ifStatement()
 	elseif self:match {"while"} then
 		return self:whileStatement()
+	elseif self:match {"for"} then
+		return self:forStatement()
 	else
 		return self:expression()
 	end
@@ -337,6 +338,62 @@ function Parser:whileStatement()
 	local body = self:statement()
 	if not body then self:error(self:peek(), "Expected statement") end
 	return AST.Stat.While(condition, body)
+end
+
+--[[
+	transform
+		for <x (identifier)> in <expr (expression)> : <body (statement)>
+	into
+		{                                                             \
+			var <x> = <expr>.iterate()                                |
+			while <x> != nil: {                     \                 |
+				<body>                 \ whileBody  | whileStatement  | forStatement
+				<x> = <expr>.iterate() /            |                 |
+			}                                       /                 |
+		}                                                             /
+]]--
+function Parser:forStatement()
+	local variable = AST.Expr.Literal(self:consume("identifier", "Expected identifier"))
+	self:consume("in", "Expected 'in'")
+	local expr = self:expression()
+	self:consume("colon", "Expected ':'")
+	local body = self:statement()
+	if not body then self:error(self:peek(), "Expected statement") end
+	
+	-- whileBody: { <body>; <x> = <expr>.iterate() }
+	local whileBody = AST.Expr.Block {
+		body,
+		AST.Expr.Assignment(
+			AST.Expr.Variable(nil, variable),
+			AST.Expr.Call(
+				AST.Expr.Variable(AST.Expr.Variable(expr.base, expr.expr), AST.Expr.Literal("iterate", "iterate")),
+				AST.Expr.Group {}
+			)
+		)
+	}
+	
+	-- whileStatement: while <x> ~= nil: <whileBody>
+	local whileStatement = AST.Stat.While(
+		AST.Expr.Binary(
+			AST.Expr.Variable(nil, variable),
+			AST.Expr.Literal("!=", "!="),
+			AST.Expr.Variable(nil, AST.Expr.Literal("nil", "nil"))),
+		whileBody
+	)
+	
+	-- forStatement: { var <x> = <expr>.iterate(); <whileStatement> }
+	local forStatement = AST.Expr.Block {
+		AST.Expr.Definition(
+			AST.Expr.Variable(nil, variable),
+			AST.Expr.Call(
+				AST.Expr.Variable(AST.Expr.Variable(expr.base, expr.expr), AST.Expr.Literal("iterate", "iterate")),
+				AST.Expr.Group {}
+			)
+		),
+		whileStatement
+	}
+	
+	return forStatement
 end
 
 return setmetatable(Parser, {

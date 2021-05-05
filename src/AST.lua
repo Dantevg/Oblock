@@ -154,19 +154,24 @@ function AST.Expr.Variable:getBase(env)
 	end
 end
 
+function AST.Expr.Variable:getName(env)
+	return self.expr.__name == "Literal" and self.expr.lexeme or self.expr:evaluate(env)
+end
+
 function AST.Expr.Variable:evaluate(env)
-	return self:getBase(env):get(self.expr:evaluate(env), self.level)
+	return self:getBase(env):get(self:getName(), self.level)
 end
 
 function AST.Expr.Variable:define(env, value, modifiers)
-	self:getBase(env):define(self.expr:evaluate(env), value, modifiers)
+	self:getBase(env):define(self:getName(), value, modifiers)
 end
 
 function AST.Expr.Variable:assign(env, value)
-	self:getBase(env):assign(self.expr:evaluate(env), value, self.level)
+	self:getBase(env):assign(self:getName(), value, self.level)
 end
 
 function AST.Expr.Variable:resolve(scope)
+	if self.level then error("resolving already-resolved variable", 0) end
 	if self.base then
 		self.base:resolve(scope)
 	else
@@ -181,7 +186,7 @@ end
 
 function AST.Expr.Variable:__tostring()
 	local base = self.base and tostring(self.base).."." or ""
-	return self.expr.__name == "Literal" and base..self.expr.literal or base..tostring(self.expr)
+	return self.expr.__name == "Literal" and base..self.expr.lexeme or base..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Variable, {
@@ -357,7 +362,9 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	if not fn or not fn.call then error("Attempt to call non-function", 0) end
+	if not fn or not fn.call then
+		error("Attempt to call non-function "..tostring(self.expression), 0)
+		end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
 end

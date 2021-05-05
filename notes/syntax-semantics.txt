@@ -304,3 +304,8 @@ Blocks serve many purposes at once:
 
 "Class" (block) constructors are static call operator methods
 Prototype-based classes (seem more generic) with class-based syntax
+
+For-loops
+=========
+`for x in fn` calls fn.iterate to get a generator function, repeatedly executes
+the loop with x set to the return value of the generator, until it returns nil.

@@ -193,6 +193,7 @@ Interpreter.Number.__name = "Number"
 function Interpreter.Number.new(parent, value)
 	local self = Interpreter.Value(parent, tonumber(value))
 	self:define("==", Interpreter.Number.eq)
+	self:define("!=", Interpreter.Number.neq)
 	self:define("<", Interpreter.Number.lt)
 	self:define("+", Interpreter.Number.add)
 	self:define("-", Interpreter.Number.sub)
@@ -204,6 +205,10 @@ end
 function Interpreter.Number:eq(env, other)
 	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
 	return Interpreter.Boolean(env, a == b)
+end
+
+function Interpreter.Number:neq(env, other)
+	return Interpreter.Boolean(env, not self:eq(env, other):get("value"))
 end
 
 function Interpreter.Number:lt(env, other)
@@ -312,8 +317,18 @@ Interpreter.Nil.__name = "Nil"
 
 function Interpreter.Nil.new(parent)
 	local self = Interpreter.Value(parent, nil)
+	self:define("==", Interpreter.Nil.eq)
+	self:define("!=", Interpreter.Nil.neq)
 	self:define("!", Interpreter.Nil.not_)
 	return setmetatable(self, Interpreter.Nil)
+end
+
+function Interpreter.Nil:eq(env, other)
+	return Interpreter.Boolean(env, other.__name == "Nil")
+end
+
+function Interpreter.Nil:neq(env, other)
+	return Interpreter.Boolean(env, other.__name ~= "Nil")
 end
 
 function Interpreter.Nil:not_(env)

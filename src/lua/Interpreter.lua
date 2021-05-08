@@ -356,6 +356,9 @@ function Interpreter.List.new(parent, elements)
 	local self = Interpreter.Block(parent)
 	self:define("+", Interpreter.List.add)
 	self:define("...", Interpreter.List.spread)
+	self:define("iterate", Interpreter.NativeFunction(parent, function(env)
+		return self:iterate(env)
+	end))
 	elements = elements or {}
 	for i = 1, #elements do
 		self:define(i, elements[i])
@@ -387,6 +390,14 @@ function Interpreter.List:spread()
 		table.insert(values, self:get(i))
 	end
 	return table.unpack(values)
+end
+
+function Interpreter.List:iterate(env)
+	local i = 0
+	return Interpreter.NativeFunction(env, function()
+		i = i+1
+		return self:get(i)
+	end)
 end
 
 function Interpreter.List:__len()
@@ -435,10 +446,8 @@ function Interpreter:interpret()
 	end
 end
 
-function Interpreter.assertCallable(fn)
-	if not fn or not fn.call then
-		error("Attempt to call non-callable type "..(fn.__name or "Nil"), 0)
-	end
+function Interpreter.isCallable(fn)
+	return fn and type(fn) == "table" and fn.call
 end
 
 return setmetatable(Interpreter, {

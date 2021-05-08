@@ -10,4 +10,9 @@
 	}
 	
 	for x in iterable: print x
+	
+	list := [10, y := 20, 30]
+	for x in list: print x
+	
+	for x in [1,2,3,4]: print x
 }

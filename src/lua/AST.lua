@@ -362,7 +362,9 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	Interpreter.assertCallable(fn)
+	if not Interpreter.isCallable(fn) then
+		error("Attempt to call non-callable type "..fn.__name, 0)
+	end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
 end
@@ -646,9 +648,13 @@ end
 function AST.Stat.For:evaluate(env)
 	-- Get iterator from expr
 	local iteratorSource = self.expr:evaluate(env):get("iterate")
-	Interpreter.assertCallable(iteratorSource)
+	if not Interpreter.isCallable(iteratorSource) then
+		error("no callable instance 'iterate' on '"..tostring(self.expr).."'", 0)
+	end
 	local iterator = iteratorSource:call(env)
-	Interpreter.assertCallable(iterator)
+	if not Interpreter.isCallable(iterator) then
+		error("'iterate' does not return callable", 0)
+	end
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
 	local block = Interpreter.Block(env)

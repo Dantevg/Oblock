@@ -435,6 +435,12 @@ function Interpreter:interpret()
 	end
 end
 
+function Interpreter.assertCallable(fn)
+	if not fn or not fn.call then
+		error("Attempt to call non-callable type "..(fn.__name or "Nil"), 0)
+	end
+end
+
 return setmetatable(Interpreter, {
 	__call = function(_, ...) return Interpreter.new(...) end,
 })

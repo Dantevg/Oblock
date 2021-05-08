@@ -362,9 +362,7 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	if not fn or not fn.call then
-		error("Attempt to call non-function "..tostring(self.expression), 0)
-		end
+	Interpreter.assertCallable(fn)
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
 end
@@ -628,6 +626,54 @@ end
 
 setmetatable(AST.Stat.While, {
 	__call = function(_, ...) return AST.Stat.While.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Stat.For = {}
+AST.Stat.For.__index = AST.Stat.For
+AST.Stat.For.__name = "For"
+
+function AST.Stat.For.new(variable, expr, body)
+	local self = {}
+	self.variable = variable
+	self.expr = expr
+	self.body = body
+	return setmetatable(self, AST.Stat.For)
+end
+
+function AST.Stat.For:evaluate(env)
+	-- Get iterator from expr
+	local iteratorSource = self.expr:evaluate(env):get("iterate")
+	Interpreter.assertCallable(iteratorSource)
+	local iterator = iteratorSource:call(env)
+	Interpreter.assertCallable(iterator)
+	
+	-- Loop: set variable to iterator result, run body if result was non-nil
+	local block = Interpreter.Block(env)
+	local value = iterator:call(block)
+	self.variable:define(block)
+	while value and value.__name ~= "Nil" do
+		self.variable:assign(block, value)
+		self.body:evaluate(block)
+		value = iterator:call(block)
+	end
+end
+
+function AST.Stat.For:resolve(scope)
+	self.expr:resolve(scope)
+	local childScope = {parent = scope}
+	childScope[self.variable.expr.lexeme] = true
+	self.body:resolve(childScope)
+end
+
+function AST.Stat.For:__tostring()
+	return string.format("for %s in %s: %s", self.variable, self.expr, self.body)
+end
+
+setmetatable(AST.Stat.For, {
+	__call = function(_, ...) return AST.Stat.For.new(...) end,
 	__index = AST.Expr.Literal,
 })
 

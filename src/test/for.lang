@@ -1,9 +1,11 @@
 {
 	iterable := {
-		i := 0
 		iterate := () => {
-			i = i+1
-			return i < 5 && i || nil
+			i := 0
+			return () => {
+				i = i+1
+				return i < 5 && i || nil
+			}
 		}
 	}
 	

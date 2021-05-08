@@ -342,60 +342,16 @@ function Parser:whileStatement()
 	return AST.Stat.While(condition, body)
 end
 
---[[
-	transform
-		for <x (identifier)> in <expr (expression)> : <body (statement)>
-	into
-		{                                                             \
-			var <x> = <expr>.iterate()                                |
-			while <x> != nil: {                     \                 |
-				<body>                 \ whileBody  | whileStatement  | forStatement
-				<x> = <expr>.iterate() /            |                 |
-			}                                       /                 |
-		}                                                             /
-]]--
 function Parser:forStatement()
-	local variable = AST.Expr.Literal(self:consume("identifier", "Expected identifier"))
+	local variable = AST.Expr.Variable(nil,
+		AST.Expr.Literal(self:consume("identifier", "Expected identifier")))
 	self:consume("in", "Expected 'in'")
 	local expr = self:expression()
 	self:consume("colon", "Expected ':'")
 	local body = self:statement()
 	if not body then self:error(self:peek(), "Expected statement") end
 	
-	-- whileBody: { <body>; <x> = <expr>.iterate() }
-	local whileBody = AST.Expr.Block {
-		body,
-		AST.Expr.Assignment(
-			AST.Expr.Variable(nil, variable),
-			AST.Expr.Call(
-				AST.Expr.Variable(AST.Expr.Variable(expr.base, expr.expr), AST.Expr.Literal("iterate", "iterate")),
-				AST.Expr.Group {}
-			)
-		)
-	}
-	
-	-- whileStatement: while <x> ~= nil: <whileBody>
-	local whileStatement = AST.Stat.While(
-		AST.Expr.Binary(
-			AST.Expr.Variable(nil, variable),
-			AST.Expr.Literal("!=", "!="),
-			AST.Expr.Variable(nil, AST.Expr.Literal("nil", "nil"))),
-		whileBody
-	)
-	
-	-- forStatement: { var <x> = <expr>.iterate(); <whileStatement> }
-	local forStatement = AST.Expr.Block {
-		AST.Expr.Definition(
-			AST.Expr.Variable(nil, variable),
-			AST.Expr.Call(
-				AST.Expr.Variable(AST.Expr.Variable(expr.base, expr.expr), AST.Expr.Literal("iterate", "iterate")),
-				AST.Expr.Group {}
-			)
-		),
-		whileStatement
-	}
-	
-	return forStatement
+	return AST.Stat.For(variable, expr, body)
 end
 
 return setmetatable(Parser, {

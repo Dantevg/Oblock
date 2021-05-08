@@ -155,7 +155,8 @@ function AST.Expr.Variable:getBase(env)
 end
 
 function AST.Expr.Variable:getName(env)
-	return self.expr.__name == "Literal" and self.expr.lexeme or self.expr:evaluate(env)
+	return (self.expr.__name == "Literal" and not self.expr.literal)
+		and self.expr.lexeme or self.expr:evaluate(env)
 end
 
 function AST.Expr.Variable:evaluate(env)
@@ -306,14 +307,14 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:define(parameter.expr:evaluate(), argument)
+			env:define(parameter:getName(), argument)
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
 			local list = Interpreter.List(env)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
-			env:define(parameter.right.expr:evaluate(), list)
+			env:define(parameter.right:getName(), list)
 			break
 		else
 			error("invalid parameter type", 0)
@@ -647,9 +648,11 @@ end
 
 function AST.Stat.For:evaluate(env)
 	-- Get iterator from expr
-	local iteratorSource = self.expr:evaluate(env):get("iterate")
+	local container = self.expr:evaluate(env)
+	local iteratorSource = container:get("iterate")
 	if not Interpreter.isCallable(iteratorSource) then
-		error("no callable instance 'iterate' on '"..tostring(self.expr).."'", 0)
+		error(string.format("no callable instance 'iterate' on %s value '%s'",
+			container.__name, self.expr), 0)
 	end
 	local iterator = iteratorSource:call(env)
 	if not Interpreter.isCallable(iterator) then

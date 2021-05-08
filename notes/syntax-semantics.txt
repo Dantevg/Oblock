@@ -305,6 +305,16 @@ Blocks serve many purposes at once:
 "Class" (block) constructors are static call operator methods
 Prototype-based classes (seem more generic) with class-based syntax
 
+Control flow
+============
+- functions: return
+- blocks / coroutines?: yield
+- blocks: catch?
+- coroutines: do? resume? dispatch? continue? calls function as coroutine, catches yields
+  - maybe as method on functions .resume()?
+- coroutines: async?
+- defer?
+
 For-loops
 =========
 `for x in fn` calls fn.iterate to get a generator function, repeatedly executes

@@ -17,7 +17,7 @@ Special type coding for integers? Con: implementation becomes less generic
 Datatypes / values
 ==================
 
-2 (3?) basic datatypes
+2 (3? 4?) basic datatypes
 - Nothing?
 - Block / instance / class / prototype
   - Variable-length code for class?
@@ -26,6 +26,8 @@ Datatypes / values
 - Function
   - list of parameters (with names and default values) and return values
   - class
+- Native / Internal blob?
+  - for Function fn.["()"] and Number n.value
 
 Variables / fields
 ==================
@@ -34,6 +36,9 @@ Some way to not have to allocate for simple types (numbers)!
 - modifiers: private, const, static
 - type? possible data duplication, type is also stored in value
 - data or pointer, plus something to indicate which of the two
+  - idea: allocate object members directly after object header,
+    relative pointers would improve locality and allow for smaller header size
+	(relative offset can be int or even short, in steps of base size = 2*long?)
 
 
 
@@ -41,6 +46,11 @@ Some way to not have to allocate for simple types (numbers)!
                                 Interpreter / VM
 ================================================================================
 https://craftinginterpreters.com/contents.html
+
+Ideas
+=====
+- For functions returning closures, somehow store the returned function inside
+  the outer function to prevent re-creating functions every time
 
 
 

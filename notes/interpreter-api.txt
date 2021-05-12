@@ -17,7 +17,7 @@ Special type coding for integers? Con: implementation becomes less generic
 Datatypes / values
 ==================
 
-2 (3? 4?) basic datatypes
+2 (3?) basic datatypes
 - Nothing?
 - Block / instance / class / prototype
   - Variable-length code for class?
@@ -26,8 +26,17 @@ Datatypes / values
 - Function
   - list of parameters (with names and default values) and return values
   - class
-- Native / Internal blob?
-  - for Function fn.["()"] and Number n.value
+
+What to do for values of native types (fn.["()"] and number.value)?
+- make them return themself? fn.["()"] == fn and number.value == number?
+  - would make sure every value is of "Block" / "Object" basic datatype,
+    no datatype storage needed (saves a couple bits, don't know if necessary)
+  - store actual value in some kind of metadata?
+- extra (3rd?) basic type: native/internal blob, storing value?
+  - con: possibly extra indirection
+- no number.value, fn.["()"] is other (native) function with ["()"] set
+  to itself, like javascript function.call: fn.["()"].["()"] == fn.["()"]
+  - store actual value in some kind of metadata / userdata?
 
 Variables / fields
 ==================

@@ -14,7 +14,7 @@ function Interpreter.Environment.new(parent)
 end
 
 function Interpreter.Environment:define(key, value, modifiers)
-	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	if type(key) == "table" then key = key.value end
 	if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
 	self.env[key] = {
 		value = value,
@@ -23,7 +23,7 @@ function Interpreter.Environment:define(key, value, modifiers)
 end
 
 function Interpreter.Environment:assign(key, value, level)
-	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	if type(key) == "table" then key = key.value end
 	if self.env[key] and (not level or level == 0) then
 		if self.env[key].modifiers.const then
 			error("Attempt to mutate const variable "..tostring(key), 0)
@@ -37,12 +37,12 @@ function Interpreter.Environment:assign(key, value, level)
 end
 
 function Interpreter.Environment:has(key)
-	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	if type(key) == "table" then key = key.value end
 	return self.env[key] or (self.parent and self.parent:has(key))
 end
 
 function Interpreter.Environment:get(key, level)
-	if type(key) == "table" and key:get("value") then key = key:get("value") end
+	if type(key) == "table" then key = key.value end
 	if self.env[key] and (not level or level == 0) then
 		return self.env[key].value
 	elseif self.parent and (not level or level > 0) then
@@ -167,16 +167,16 @@ Interpreter.Value.__name = "Value"
 
 function Interpreter.Value.new(parent, value)
 	local self = Interpreter.Block(parent)
-	self:define("value", value, {const = true})
+	self.value = value
 	return setmetatable(self, Interpreter.Value)
 end
 
 function Interpreter.Value:__eq(other)
-	return self:get("value") == other:get("value")
+	return self.value == other.value
 end
 
 function Interpreter.Value:__tostring()
-	return tostring(self:get("value"))
+	return tostring(self.value)
 end
 
 setmetatable(Interpreter.Value, {
@@ -203,34 +203,35 @@ function Interpreter.Number.new(parent, value)
 end
 
 function Interpreter.Number:eq(env, other)
-	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
+	local a, b = tonumber(self.value), tonumber(other.value)
 	return Interpreter.Boolean(env, a == b)
 end
 
 function Interpreter.Number:neq(env, other)
-	return Interpreter.Boolean(env, not self:eq(env, other):get("value"))
+	return Interpreter.Boolean(env, not self:eq(env, other).value)
 end
 
 function Interpreter.Number:lt(env, other)
-	return Interpreter.Boolean(env, tonumber(self:get("value")) < tonumber(other:get("value")))
+	local a, b = tonumber(self.value), tonumber(other.value)
+	return Interpreter.Boolean(env, a < b)
 end
 
 function Interpreter.Number:add(env, other)
-	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
+	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
 	return self.new(env, a + b)
 end
 
 function Interpreter.Number:mul(env, other)
-	local a, b = tonumber(self:get("value")), tonumber(other:get("value"))
+	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then error("cannot perform '*' on "..other.__name, 0) end
 	return self.new(env, a * b)
 end
 
 function Interpreter.Number:sub(env, other)
-	local a = tonumber(self:get("value"))
+	local a = tonumber(self.value)
 	if other then
-		local b = tonumber(other:get("value"))
+		local b = tonumber(other.value)
 		if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
 		return self.new(env, a - b)
 	else
@@ -264,7 +265,7 @@ function Interpreter.String.new(parent, value)
 end
 
 function Interpreter.String:add(env, other)
-	local a, b = tostring(self:get("value")), tostring(other:get("value"))
+	local a, b = tostring(self.value), tostring(other.value)
 	if type(b) ~= "string" then error("cannot perform '+' on "..other.__name, 0) end
 	return self.new(env, a..b)
 end
@@ -294,11 +295,11 @@ function Interpreter.Boolean.new(parent, value)
 end
 
 function Interpreter.Boolean.toBoolean(env, value)
-	return Interpreter.Boolean(env, value:get("value"))
+	return Interpreter.Boolean(env, value.value)
 end
 
 function Interpreter.Boolean:not_(env)
-	return Interpreter.Boolean(env, not self:get("value"))
+	return Interpreter.Boolean(env, not self.value)
 end
 
 Interpreter.Boolean.__eq = Interpreter.Value.__eq

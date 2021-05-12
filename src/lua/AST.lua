@@ -58,10 +58,10 @@ end
 function AST.Expr.Binary:evaluate(env)
 	local left = self.left:evaluate(env)
 	if self.op.lexeme == "||" then
-		return Interpreter.Boolean.toBoolean(env, left):get("value")
+		return Interpreter.Boolean.toBoolean(env, left).value
 			and left or self.right:evaluate(env)
 	elseif self.op.lexeme == "&&" then
-		return Interpreter.Boolean.toBoolean(env, left):get("value")
+		return Interpreter.Boolean.toBoolean(env, left).value
 			and self.right:evaluate(env) or left
 	else
 		local right = self.right:evaluate(env)
@@ -573,7 +573,7 @@ function AST.Stat.If.new(condition, ifTrue, ifFalse)
 end
 
 function AST.Stat.If:evaluate(env)
-	if self.condition:evaluate(env):get("value") then
+	if self.condition:evaluate(env).value then
 		self.ifTrue:evaluate(env)
 	elseif self.ifFalse then
 		self.ifFalse:evaluate(env)
@@ -613,7 +613,7 @@ function AST.Stat.While.new(condition, body)
 end
 
 function AST.Stat.While:evaluate(env)
-	while self.condition:evaluate(env):get("value") do
+	while self.condition:evaluate(env).value do
 		self.body:evaluate(env)
 	end
 end

@@ -185,6 +185,12 @@ Functions
   - add(x, y) => x + y  is  var add; add = (x, y) => x + y
   - incr x => x + 1     is  var incr; incr = x => x + 1
 - overloading based on arity, otherwise argument types when present
+  - problem: same index (function name) refers to multiple functions
+  - possible solution: enhance function definition statement syntax
+    and store the different functions inside the function Block
+    (this means no overloading with lambda/fn-expression syntax)
+    - with fn(x) and fn(x,y), calling fn(10,20) will be equal to calling
+      fn.[[Block,Block]](10,20), indexed with lists of argument types
 - Getters by using argument-less methods, setters?
 - Parentheses can be omitted if only one argument passed on the same line
 

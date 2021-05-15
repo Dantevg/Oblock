@@ -256,43 +256,29 @@ function Parser:primary()
 end
 
 function Parser:group()
-	local expressions = self:explist("closing parenthesis", ")")
-	return AST.Expr.Group(expressions)
+	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "expression"))
 end
 
 function Parser:list()
-	local expressions = self:explist("closing bracket", "]")
-	return AST.Expr.List(expressions)
-end
-
-function Parser:explist(endTokenName, endChar)
-	local expressions = {}
-	while not self:match {endTokenName} do
-		local expression = self:expression()
-		if not expression then
-			self:error(self:peek(), "Expected expression")
-		end
-		table.insert(expressions, expression)
-		if not self:match {"comma"} then
-			self:consume(endTokenName, "Expected '"..endChar.."'")
-			break
-		end
-	end
-	return expressions
+	return AST.Expr.List(self:anylist("closing bracket", "comma", "expression"))
 end
 
 function Parser:block()
-	local statements = {}
-	while not self:match {"closing curly bracket"} do
-		while self:match {"semicolon"} do end -- Skip semicolons
-		local statement = self:statement()
-		if not statement then
-			self:error(self:peek(), "Expected statement")
+	return AST.Expr.Block(self:anylist("closing curly bracket", "semicolon", "statement"))
+end
+
+function Parser:anylist(endTokenName, separator, type)
+	local elements = {}
+	while not self:match {endTokenName} do
+		while self:match {separator} do end -- Skip separators
+		local element = self[type](self)
+		if not element then
+			self:error(self:peek(), "Expected "..type)
 		end
-		table.insert(statements, statement)
-		while self:match {"semicolon"} do end -- Skip semicolons
+		table.insert(elements, element)
+		while self:match {separator} do end -- Skip separators
 	end
-	return AST.Expr.Block(statements)
+	return elements
 end
 
 function Parser:statement()

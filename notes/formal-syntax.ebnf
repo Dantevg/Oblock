@@ -20,11 +20,11 @@ unary		= ('-' | '!' | '...') unary
 call		= index index {index} ;
 index		= [primary] {'.' (Identifier | '[' expression ']')} ;
 primary		= Identifier | Number | String | group | list | block ;
-list		= '[' explist ']' ;
 group		= '(' explist ')' ;
+list		= '[' explist ']' ;
+block		= '{' statlist '}' ;
 
-(* Blocks and statements *)
-block		= '{' {statement | ';'} '}';
+(* Statements *)
 statement	= 'return' expression
 			| 'yield' expression
 			| 'if' expression ':' statement ['else' statement]
@@ -34,7 +34,8 @@ statement	= 'return' expression
 
 (* Smaller components *)
 fn			= (Identifier | '(' paramlist ')') '=>' expression ;
-explist		= expression {',' expression} ;
+explist		= {expression | ','} ;
+statlist	= {statement | ';'} ;
 paramlist	= param {',' param} ;
-param		= expression ;
+param		= ['...'] Identifier ;
 modifier	= 'const' | 'instance' ;

@@ -5,9 +5,8 @@ https://wren.io/classes.html
 
 To-Do / roadmap / proposals
 ===========================
-- Generic types? maybe later, if needed
-- Default parameters?
-- `...` keyword, like in Lua
+(*roughly* in order of importance)
+- Default parameters
 - Named parameters by (<arg> = <exp>)
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
@@ -19,7 +18,14 @@ To-Do / roadmap / proposals
   - Problem: what to do when you want to pass a single block parameter? (syntax)
   - Solution: maybe use list/array syntax (which may use '()' already, how convenient!)
   - Problem again: list syntax is syntax sugar for block extending List, still same problem
-- Compound assignment operators?
+- Pattern matching
+  - useful for switch/match case and function parameters
+  - match against types, lists, blocks, number of values?, ...
+- Destructuring with `in` or `from`
+  - maybe renaming with `as`?
+  - x, z as y from { x := 10; y := 20; z := 30 }
+    x == 10 && y == 30
+- Compound assignment operators
 - Statements as expressions?
   - New style: var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"
   - In Lua style: var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")
@@ -30,6 +36,27 @@ To-Do / roadmap / proposals
     - Pro: terse `a = b = c` (needs to be right-associative for this: `a = (b = c)`)
     - Con: cryptic "code-golf" things
     - Con: possible mistakes like `while x = 1`
+- Lists using block syntax again?
+  - block saves expressions separated by comma or newline until semicolon or expression
+  - in the following examples, results of fn1 and fn2 are stored, of fn3 and fn4 not
+  - function calls as expression statements: (not stored in list)
+    {; fn3(); fn4() }
+  - function calls as expressions: (stored in list)
+    { fn1(), fn2() }
+  - both expressions and statements, separated by semicolon:
+    { fn1(), fn2(); fn3(); fn4() }
+  - both, separated by statement present:
+    {
+    	fn1()
+    	fn2()
+    	x := 10
+    	fn3()
+    }
+  - not stored again:
+    {;
+    	fn3()
+    	fn4()
+    }
 - Keyword for binary actual data layout in const classes like Int (8 bytes for long long)?
   - Maybe define class instance size in bytes for const classes: sizeof(struct MyClass) in C?
     - should you need to define size for foreign/external classes *within* the language?
@@ -44,6 +71,8 @@ To-Do / roadmap / proposals
   - Maybe like Java?
   - Enum instance (true, false, colours) is const instance with no values,
     enum "class" itself should be const as well (but do not enforce)
+- Coroutines
+- Generic types? maybe later, if needed
 - Ternary operator? Don't think, I like lua's and-or method
 - Type cast operator? to let nil/null and false both evaluate falsy
   - No type casting, but instead .toInt, .toBoolean methods or use Int(), Bool() constructors
@@ -52,7 +81,6 @@ To-Do / roadmap / proposals
   - Type casting with 'as' keyword: `5.2 as Int`
   - Problem: should not be able to make custom types falsy.
 - Pure functions as optimisation?
-- Less generalised than hoped: language syntax needs literals for numbers and strings
 - allow custom wrap operators? like '<>' would be nice, or '||'
   - disallow defining of predefined wrap operators as unary or binary operators!
   - problem: interfering with allowing single-param function call without parentheses:
@@ -90,9 +118,9 @@ Formal syntax
 - varlist ::= {modifier} var {sep {modifier} var}
 - explist ::= exp {sep exp}
 - op ::= '+' | '-' | '*' | '/' | '^' | '%'
-	   | '!' | '||' | '&&' | '<' | '>' | '==' | '!=' | '<=' | '>='
+       | '!' | '||' | '&&' | '<' | '>' | '==' | '!=' | '<=' | '>='
        | '~' | '|' | '&' | '<<' | '>>'
-	   | '@' | '#' | '$' | '\' | '?' | ':' | '..' | '...'
+       | '@' | '#' | '$' | '\' | '?' | ':' | '..' | '...'
 - sep ::= ';' | ','
 
 Operators and keywords
@@ -203,7 +231,7 @@ Optional types
   - function declaration: Int add(Int x, Int y)					var add(x, y)
   - lambda definition:    add = Int (Int x, Int y) => x + y
     - this might be weird depending on the "type" of a function
-	  (does the function have type Int? no.)
+      (does the function have type Int? no.)
   - lambda declaration:   add = Int (Int x, Int y)
     - also weird, see lambda definition above
 

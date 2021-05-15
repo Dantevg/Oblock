@@ -56,22 +56,13 @@ function AST.Expr.Binary.new(left, op, right)
 end
 
 function AST.Expr.Binary:evaluate(env)
-	local left = self.left:evaluate(env)
-	if self.op.lexeme == "||" then
-		return Interpreter.Boolean.toBoolean(env, left).value
-			and left or self.right:evaluate(env)
-	elseif self.op.lexeme == "&&" then
-		return Interpreter.Boolean.toBoolean(env, left).value
-			and self.right:evaluate(env) or left
-	else
-		local right = self.right:evaluate(env)
-		local fn = left:get(self.op.lexeme)
-		if type(fn) ~= "function" then
-			error(string.format("no operator instance '%s' on %s value '%s'",
-				self.op.lexeme, left.__name, self.left), 0)
-		end
-		return fn(left, env, right)
+	local left, right = self.left:evaluate(env), self.right:evaluate(env)
+	local fn = left:get(self.op.lexeme)
+	if type(fn) ~= "function" then
+		error(string.format("no operator instance '%s' on %s value '%s'",
+			self.op.lexeme, left.__name, self.left), 0)
 	end
+	return fn(left, env, right)
 end
 
 function AST.Expr.Binary:resolve(scope)
@@ -85,6 +76,33 @@ end
 
 setmetatable(AST.Expr.Binary, {
 	__call = function(_, ...) return AST.Expr.Binary.new(...) end,
+})
+
+
+
+AST.Expr.Logical = {}
+AST.Expr.Logical.__index = AST.Expr.Logical
+AST.Expr.Logical.__name = "Logical"
+
+function AST.Expr.Logical.new(left, op, right)
+	local self = AST.Expr.Binary(left, op, right)
+	return setmetatable(self, AST.Expr.Logical)
+end
+
+function AST.Expr.Logical:evaluate(env)
+	local left = self.left:evaluate(env)
+	if self.op.lexeme == "||" then
+		return Interpreter.Boolean.toBoolean(env, left).value
+			and left or self.right:evaluate(env)
+	elseif self.op.lexeme == "&&" then
+		return Interpreter.Boolean.toBoolean(env, left).value
+			and self.right:evaluate(env) or left
+	end
+end
+
+setmetatable(AST.Expr.Logical, {
+	__call = function(_, ...) return AST.Expr.Logical.new(...) end,
+	__index = AST.Expr.Binary
 })
 
 
@@ -401,7 +419,8 @@ end
 function AST.Expr.Definition:evaluate(env)
 	local value = self.expr and self.expr:evaluate(env) or AST.Expr.Literal.Nil()
 	self.target:define(env, value, self.modifiers)
-	return value
+	return value -- TODO: should definition be treated as expression and return its value?
+	-- important for within lists
 end
 
 function AST.Expr.Definition:resolve(scope)

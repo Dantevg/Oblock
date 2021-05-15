@@ -58,13 +58,13 @@ function Parser:consume(type, message)
 	end
 end
 
-function Parser:binary(tokens, next)
+function Parser:binary(tokens, next, fn)
 	local expr = next(self)
 	
 	while self:match(tokens) do
 		local op = self:previous()
 		local right = next(self)
-		expr = AST.Expr.Binary(expr, op, right)
+		expr = (fn or AST.Expr.Binary)(expr, op, right)
 	end
 	
 	return expr
@@ -167,11 +167,11 @@ function Parser:func()
 end
 
 function Parser:disjunction()
-	return self:binary({"bar bar"}, Parser.conjunction)
+	return self:binary({"bar bar"}, Parser.conjunction, AST.Expr.Logical)
 end
 
 function Parser:conjunction()
-	return self:binary({"and and"}, Parser.comparison)
+	return self:binary({"and and"}, Parser.comparison, AST.Expr.Logical)
 end
 
 function Parser:comparison()

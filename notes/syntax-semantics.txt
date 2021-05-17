@@ -6,11 +6,6 @@ https://wren.io/classes.html
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
-- Definition as statement?
-  - Could allow lists and function arguments (and thus also groups) to work the same way:
-    - start accepting a sequence of expressions, separated by commas or newlines
-    - at the end, also accept "named arguments" or definition statements,
-      separated by semicolons or newlines
 - Default parameters
 - Named parameters by (<arg> = <exp>)
   - Following C# valid-ness, valid when one of:

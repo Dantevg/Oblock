@@ -2,6 +2,16 @@
 
 local Interpreter = require "Interpreter"
 
+local function evaluateAll(expressions, env)
+	local values = {}
+	for _, expr in ipairs(expressions) do
+		for _, value in ipairs({expr:evaluate(env)}) do
+			table.insert(values, value)
+		end
+	end
+	return values
+end
+
 local AST = {}
 
 
@@ -118,14 +128,7 @@ function AST.Expr.Group.new(expressions)
 end
 
 function AST.Expr.Group:evaluate(env)
-	local results = {}
-	for _, expr in ipairs(self.expressions) do
-		local values = {expr:evaluate(env)}
-		for _, result in ipairs(values) do
-			table.insert(results, result)
-		end
-	end
-	return table.unpack(results)
+	return table.unpack(evaluateAll(self.expressions, env))
 end
 
 function AST.Expr.Group:define(env, values, modifiers)
@@ -285,12 +288,8 @@ end
 
 function AST.Expr.List:evaluate(parent)
 	local list = Interpreter.List(parent)
-	for _, expr in ipairs(self.expressions) do
-		local results = {expr:evaluate(list.environment)}
-		for _, result in ipairs(results) do
-			list:push(result)
-		end
-	end
+	local values = evaluateAll(self.expressions, list.environment)
+	for _, value in ipairs(values) do list:push(value) end
 	return list
 end
 
@@ -652,54 +651,50 @@ AST.Stat.Definition = {}
 AST.Stat.Definition.__index = AST.Stat.Definition
 AST.Stat.Definition.__name = "Definition"
 
-function AST.Stat.Definition.new(target, expr, modifiers, predef)
+function AST.Stat.Definition.new(targets, expressions, modifiers, predef)
 	local self = {}
-	self.target = target
-	self.expr = expr
+	self.targets = targets
+	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
 	return setmetatable(self, AST.Stat.Definition)
 end
 
 function AST.Stat.Definition:evaluate(env)
-	local values = self.expr and {self.expr:evaluate(env)} or {AST.Expr.Literal.Nil()}
-	if self.target.__name == "Group" then
-		self.target:define(env, values, self.modifiers)
-	else
-		self.target:define(env, values[1], self.modifiers)
+	local values = evaluateAll(self.expressions, env)
+	
+	for i, target in ipairs(self.targets) do
+		target:define(env, values[i] or AST.Expr.Literal.Nil(), self.modifiers)
 	end
 end
 
 function AST.Stat.Definition:resolve(scope)
-	if self.target.__name == "Group" then
-		for _, expr in ipairs(self.target.expressions) do
-			if scope[expr.expr.lexeme] then
-				error("redefinition of "..expr.expr.lexeme, 0)
-			end
-			if self.predef then scope[expr.expr.lexeme] = true end
+	for _, target in ipairs(self.targets) do
+		if scope[target.expr.lexeme] then
+			error("redefinition of "..target.expr.lexeme, 0)
 		end
-	else
-		if scope[self.target.expr.lexeme] then
-			error("redefinition of "..self.target.expr.lexeme, 0)
-		end
-		if self.predef then scope[self.target.expr.lexeme] = true end
+		if self.predef then scope[target.expr.lexeme] = true end
 	end
 	
-	if self.expr then self.expr:resolve(scope) end
-	
-	if self.target.__name == "Group" then
-		for _, expr in ipairs(self.target.expressions) do
-			scope[expr.expr.lexeme] = true
-		end
-	else
-		scope[self.target.expr.lexeme] = true
+	for _, expr in ipairs(self.expressions) do
+		expr:resolve(scope)
 	end
 	
+	for _, target in ipairs(self.targets) do
+		scope[target.expr.lexeme] = true
+	end
 end
 
 function AST.Stat.Definition:__tostring()
-	return "var "..(self.predef and tostring(self.target).."; " or "")
-		..tostring(self.target).." = "..tostring(self.expr)
+	local targets, expressions = {}, {}
+	for _, target in ipairs(self.targets) do
+		table.insert(targets, tostring(target))
+	end
+	for _, expr in ipairs(self.expressions) do
+		table.insert(expressions, tostring(expr))
+	end
+	return "var "..(self.predef and table.concat(targets, ", ").."; " or "")
+		..table.concat(targets, ", ").." = "..table.concat(expressions, ", ")
 end
 
 setmetatable(AST.Stat.Definition, {
@@ -712,25 +707,24 @@ AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(target, expr)
+function AST.Stat.Assignment.new(targets, expressions)
 	local self = {}
-	self.target = target
-	self.expr = expr
+	self.targets = targets
+	self.expressions = expressions
 	return setmetatable(self, AST.Stat.Assignment)
 end
 
 function AST.Stat.Assignment:evaluate(env)
-	local values = {self.expr:evaluate(env)}
-	if self.target.__name == "Group" then
-		self.target:assign(env, values)
-	else
-		self.target:assign(env, values[1])
+	local values = evaluateAll(self.expressions, env)
+	
+	for i, target in ipairs(self.targets) do
+		target:assign(env, values[i] or AST.Expr.Literal.Nil())
 	end
 end
 
 function AST.Stat.Assignment:resolve(scope)
-	self.expr:resolve(scope)
-	self.target:resolve(scope)
+	for _, expr in ipairs(self.expressions) do expr:resolve(scope) end
+	for _, target in ipairs(self.targets) do target:resolve(scope) end
 end
 
 function AST.Stat.Assignment:__tostring()

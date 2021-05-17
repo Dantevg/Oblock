@@ -97,7 +97,7 @@ function Parser:defExpr()
 		local equal = self:previous()
 		local value = self:func()
 		if expr.__name == "Variable" or expr.__name == "Group" then
-			expr = AST.Stat.Definition(expr, value, {})
+			expr = AST.Stat.Definition({expr}, {value}, {})
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end
@@ -216,18 +216,18 @@ function Parser:primary()
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "expression"))
+	return AST.Expr.Group(self:sequence("closing parenthesis", "comma", "expression"))
 end
 
 function Parser:list()
-	return AST.Expr.List(self:anylist("closing bracket", "comma", "expression"))
+	return AST.Expr.List(self:sequence("closing bracket", "comma", "expression"))
 end
 
 function Parser:block()
-	return AST.Expr.Block(self:anylist("closing curly bracket", "semicolon", "statement"))
+	return AST.Expr.Block(self:sequence("closing curly bracket", "semicolon", "statement"))
 end
 
-function Parser:anylist(endTokenName, separator, type)
+function Parser:sequence(endTokenName, separator, type)
 	local elements = {}
 	while not self:match {endTokenName} do
 		while self:match {separator} do end -- Skip separators
@@ -237,6 +237,21 @@ function Parser:anylist(endTokenName, separator, type)
 		end
 		table.insert(elements, element)
 		while self:match {separator} do end -- Skip separators
+	end
+	return elements
+end
+
+function Parser:anylist(type)
+	local expr = self:expression()
+	if not expr then self:error(self:previous(), "Expected expression", 0) end
+	local elements = {expr}
+	while self:match {"comma"} do
+		local element = self[type](self)
+		if element then
+			table.insert(elements, element)
+		else
+			self:error(self:previous(), "Expected "..type)
+		end
 	end
 	return elements
 end
@@ -302,16 +317,15 @@ end
 
 function Parser:defStatement()
 	local modifiers = {}
+	local isDefinition, isAssignment, isFunction = false, false, false
 	while self:match {"var", "const", "instance"} do
 		local mod = self:previous().type
 		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
 		modifiers[mod] = true
 	end
 	
-	local expr = self:expression()
-	local isDefinition, isAssignment, isFunction = false, false, false
-	
-	if not expr then self:error(self:previous(), "Expected non-assignment expression", 0) end
+	local variables = self:anylist("variable")
+	local expr = variables[1]
 	
 	if modifiers.var or modifiers.const or modifiers.instance then
 		if self:match {"equal"} then
@@ -322,7 +336,7 @@ function Parser:defStatement()
 			if expr.__name ~= "Variable" and expr.__name ~= "Group" then
 				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
 			else
-				return AST.Stat.Definition(expr, nil, modifiers)
+				return AST.Stat.Definition(variables, {}, modifiers)
 			end
 		end
 	elseif self:match {"colon equal"} then
@@ -335,20 +349,20 @@ function Parser:defStatement()
 	
 	if isDefinition or isAssignment or isFunction then
 		local equal = self:previous()
-		local value = self:expression()
+		local values = self:anylist("expression")
 		modifiers.var = nil
 		if (expr.__name == "Variable" or expr.__name == "Group") and (isDefinition or isAssignment) then
 			return isDefinition
-				and AST.Stat.Definition(expr, value, modifiers)
-				or AST.Stat.Assignment(expr, value)
-		elseif expr.__name == "Call" and isFunction then
+				and AST.Stat.Definition(variables, values, modifiers)
+				or AST.Stat.Assignment(variables, values)
+		elseif expr.__name == "Call" and isFunction and #variables == 1 then
 			local name, parameters = expr.expression, expr.arglist
 			if parameters.__name == "Variable" then -- name arg => body
 				parameters = AST.Expr.Group {parameters}
 			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
 				self:error(equal, "Invalid function argument: "..parameters.__name)
 			end
-			return AST.Stat.Definition(name, AST.Expr.Function(parameters, value), modifiers, true)
+			return AST.Stat.Definition({name}, {AST.Expr.Function(parameters, values[1])}, modifiers, true)
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end

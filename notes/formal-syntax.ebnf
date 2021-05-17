@@ -17,9 +17,9 @@ call		= variable variable {variable}
 variable	= (primary | index) {index} ;
 index		= '.' (Identifier | '[' expression ']') ;
 primary		= Identifier | Number | String | group | list | block ;
-group		= '(' explist ')' ;
-list		= '[' explist ']' ;
-block		= '{' statlist '}' ;
+group		= '(' expseq ')' ;
+list		= '[' expseq ']' ;
+block		= '{' statseq '}' ;
 
 (* Statements *)
 statement	= 'return' expression
@@ -28,15 +28,17 @@ statement	= 'return' expression
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement
 			| definition ;
-definition	= ('var' | modifier {modifier}) variable ['=' expression | fn]
-			| variable ':=' expression
+definition	= ('var' | modifier {modifier}) varlist ['=' explist | fn]
+			| varlist ':=' explist
 			| assignment ;
-assignment	= variable '=' expression
+assignment	= varlist '=' explist
 			| expression ;
 
 (* Smaller components *)
 fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
-explist		= {expression | ','} ;
-statlist	= {statement | ';'} ;
+expseq		= {expression | ','} ;
+statseq		= {statement | ';'} ;
+varlist		= variable {',' variable} ;
+explist		= expression {',' expression} ;
 param		= ['...'] Identifier ;
 modifier	= 'const' | 'instance' ;

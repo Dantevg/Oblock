@@ -30,7 +30,7 @@ function Interpreter.Environment:assign(key, value, level)
 		end
 		self.env[key].value = value
 	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
-		self.parent:assign(key, value)
+		self.parent:assign(key, value, level and level-1)
 	else
 		error("attempt to mutate non-existent variable "..tostring(key), 0)
 	end

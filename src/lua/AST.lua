@@ -205,6 +205,7 @@ function AST.Expr.Variable:resolve(scope)
 	if self.level then error("resolving already-resolved variable", 0) end
 	if self.base then
 		self.base:resolve(scope)
+		self.level = 0
 	else
 		local level = 0
 		while scope do

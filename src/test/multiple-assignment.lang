@@ -1,0 +1,6 @@
+{
+	var (a, b, c)
+	(a, b) = 10
+	(a, b, c) = (a, nil, 30)
+	print(a, b, c)
+}

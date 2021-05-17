@@ -199,7 +199,7 @@ function Parser:primary()
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "defStatement"))
+	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "expression"))
 end
 
 function Parser:list()
@@ -302,7 +302,7 @@ function Parser:defStatement()
 		elseif self:match {"equal greater"} then
 			isFunction = true
 		else
-			if expr.__name ~= "Variable" then
+			if expr.__name ~= "Variable" and expr.__name ~= "Group" then
 				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
 			else
 				return AST.Stat.Definition(expr, nil, modifiers)
@@ -320,7 +320,7 @@ function Parser:defStatement()
 		local equal = self:previous()
 		local value = self:expression()
 		modifiers.var = nil
-		if expr.__name == "Variable" and (isDefinition or isAssignment) then
+		if (expr.__name == "Variable" or expr.__name == "Group") and (isDefinition or isAssignment) then
 			return isDefinition
 				and AST.Stat.Definition(expr, value, modifiers)
 				or AST.Stat.Assignment(expr, value)

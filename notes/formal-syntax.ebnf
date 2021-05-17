@@ -14,9 +14,9 @@ unary		= ('-' | '!' | '...') unary
 call		= index index {index} ;
 index		= [primary] {'.' (Identifier | '[' expression ']')} ;
 primary		= Identifier | Number | String | group | list | block ;
-group		= '(' explist ')' ;
-list		= '[' explist ']' ;
-block		= '{' statlist '}' ;
+group		= '(' {expression | ','} ')' ;
+list		= '[' {expression | definition | ','} ']' ;
+block		= '{' {statement | ';'} '}' ;
 
 (* Statements *)
 statement	= 'return' expression
@@ -32,9 +32,6 @@ assignment	= index '=' function
 			| expression ;
 
 (* Smaller components *)
-fn			= (Identifier | '(' paramlist ')') '=>' expression ;
-explist		= {expression | definition | ','} ;
-statlist	= {statement | ';'} ;
-paramlist	= param {',' param} ;
+fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
 param		= ['...'] Identifier ;
 modifier	= 'const' | 'instance' ;

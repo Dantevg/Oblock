@@ -128,6 +128,18 @@ function AST.Expr.Group:evaluate(env)
 	return table.unpack(results)
 end
 
+function AST.Expr.Group:define(env, values, modifiers)
+	for i, expr in ipairs(self.expressions) do
+		expr:define(env, values[i], modifiers)
+	end
+end
+
+function AST.Expr.Group:assign(env, values)
+	for i, expr in ipairs(self.expressions) do
+		expr:assign(env, values[i])
+	end
+end
+
 function AST.Expr.Group:resolve(scope)
 	for _, expr in ipairs(self.expressions) do
 		expr:resolve(scope)
@@ -649,17 +661,39 @@ function AST.Stat.Definition.new(target, expr, modifiers, predef)
 end
 
 function AST.Stat.Definition:evaluate(env)
-	local value = self.expr and self.expr:evaluate(env) or AST.Expr.Literal.Nil()
-	self.target:define(env, value, self.modifiers)
+	local values = self.expr and {self.expr:evaluate(env)} or {AST.Expr.Literal.Nil()}
+	if self.target.__name == "Group" then
+		self.target:define(env, values, self.modifiers)
+	else
+		self.target:define(env, values[1], self.modifiers)
+	end
 end
 
 function AST.Stat.Definition:resolve(scope)
-	if scope[self.target.expr.lexeme] then
-		error("redefinition of "..self.target.expr.lexeme, 0)
+	if self.target.__name == "Group" then
+		for _, expr in ipairs(self.target.expressions) do
+			if scope[expr.expr.lexeme] then
+				error("redefinition of "..expr.expr.lexeme, 0)
+			end
+			if self.predef then scope[expr.expr.lexeme] = true end
+		end
+	else
+		if scope[self.target.expr.lexeme] then
+			error("redefinition of "..self.target.expr.lexeme, 0)
+		end
+		if self.predef then scope[self.target.expr.lexeme] = true end
 	end
-	if self.predef then scope[self.target.expr.lexeme] = true end
+	
 	if self.expr then self.expr:resolve(scope) end
-	scope[self.target.expr.lexeme] = true
+	
+	if self.target.__name == "Group" then
+		for _, expr in ipairs(self.target.expressions) do
+			scope[expr.expr.lexeme] = true
+		end
+	else
+		scope[self.target.expr.lexeme] = true
+	end
+	
 end
 
 function AST.Stat.Definition:__tostring()
@@ -685,7 +719,12 @@ function AST.Stat.Assignment.new(target, expr)
 end
 
 function AST.Stat.Assignment:evaluate(env)
-	self.target:assign(env, self.expr:evaluate(env))
+	local values = {self.expr:evaluate(env)}
+	if self.target.__name == "Group" then
+		self.target:assign(env, values)
+	else
+		self.target:assign(env, values[1])
+	end
 end
 
 function AST.Stat.Assignment:resolve(scope)

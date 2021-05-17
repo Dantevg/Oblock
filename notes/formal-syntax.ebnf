@@ -1,7 +1,8 @@
 program		= expression ;
-expression	= function ;
+expression	= defexpr ;
 
 (* Expressions *)
+defexpr		= variable ':=' function ;
 function	= fn | disjunction ;
 disjunction = conjunction {'||' conjunction} ;
 conjunction	= comparison {'&&' comparison} ;
@@ -11,11 +12,13 @@ addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!' | '...') unary
 			| call ;
-call		= variable variable {variable} ;
-variable	= [primary] {'.' (Identifier | '[' expression ']')} ;
+call		= variable variable {variable}
+			| variable ;
+variable	= (primary | index) {index} ;
+index		= '.' (Identifier | '[' expression ']') ;
 primary		= Identifier | Number | String | group | list | block ;
-group		= '(' expdeflist ')' ;
-list		= '[' expdeflist ']' ;
+group		= '(' explist ')' ;
+list		= '[' explist ']' ;
 block		= '{' statlist '}' ;
 
 (* Statements *)
@@ -33,7 +36,7 @@ assignment	= variable '=' expression
 
 (* Smaller components *)
 fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
-expdeflist	= {definition | ','} ;
+explist		= {expression | ','} ;
 statlist	= {statement | ';'} ;
 param		= ['...'] Identifier ;
 modifier	= 'const' | 'instance' ;

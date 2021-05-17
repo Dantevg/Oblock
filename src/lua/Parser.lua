@@ -86,7 +86,24 @@ function Parser:parse()
 end
 
 function Parser:expression()
-	return self:func()
+	return self:defExpr()
+end
+
+function Parser:defExpr()
+	local expr = self:func()
+	if not expr then return end
+	
+	if self:match {"colon equal"} then
+		local equal = self:previous()
+		local value = self:func()
+		if expr.__name == "Variable" or expr.__name == "Group" then
+			expr = AST.Stat.Definition(expr, value, {})
+		else
+			self:error(equal, "Invalid assignment target: "..expr.__name)
+		end
+	end
+	
+	return expr
 end
 
 function Parser:func()
@@ -147,20 +164,20 @@ function Parser:unary()
 end
 
 function Parser:call()
-	local expr = self:index()
+	local expr = self:variable()
 	local nl = self.nlSensitive
 	self.nlSensitive = true
-	local arglist = self:index()
+	local arglist = self:variable()
 	while arglist do
 		expr = AST.Expr.Call(expr, arglist)
 		self.nlSensitive = true
-		arglist = self:index()
+		arglist = self:variable()
 	end
 	self.nlSensitive = nl
 	return expr
 end
 
-function Parser:index()
+function Parser:variable()
 	local expr = self:primary()
 	while self:match {"dot"} do
 		if self:match {"opening bracket"} then
@@ -199,11 +216,11 @@ function Parser:primary()
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "defStatement"))
+	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "expression"))
 end
 
 function Parser:list()
-	return AST.Expr.List(self:anylist("closing bracket", "comma", "defStatement"))
+	return AST.Expr.List(self:anylist("closing bracket", "comma", "expression"))
 end
 
 function Parser:block()

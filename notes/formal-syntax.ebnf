@@ -11,12 +11,12 @@ addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
 unary		= ('-' | '!' | '...') unary
 			| call ;
-call		= index index {index} ;
-index		= [primary] {'.' (Identifier | '[' expression ']')} ;
+call		= variable variable {variable} ;
+variable	= [primary] {'.' (Identifier | '[' expression ']')} ;
 primary		= Identifier | Number | String | group | list | block ;
-group		= '(' {expression | ','} ')' ;
-list		= '[' {expression | definition | ','} ']' ;
-block		= '{' {statement | ';'} '}' ;
+group		= '(' expdeflist ')' ;
+list		= '[' expdeflist ']' ;
+block		= '{' statlist '}' ;
 
 (* Statements *)
 statement	= 'return' expression
@@ -25,13 +25,15 @@ statement	= 'return' expression
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement
 			| definition ;
-definition	= ('var' | modifier {modifier}) index ['=' function | fn]
-			| index ':=' function
+definition	= ('var' | modifier {modifier}) variable ['=' expression | fn]
+			| variable ':=' expression
 			| assignment ;
-assignment	= index '=' function
+assignment	= variable '=' expression
 			| expression ;
 
 (* Smaller components *)
 fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
+expdeflist	= {definition | ','} ;
+statlist	= {statement | ';'} ;
 param		= ['...'] Identifier ;
 modifier	= 'const' | 'instance' ;

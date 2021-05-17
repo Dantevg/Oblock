@@ -199,7 +199,7 @@ function Parser:primary()
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "expression"))
+	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "defStatement"))
 end
 
 function Parser:list()

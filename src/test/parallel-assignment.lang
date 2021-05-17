@@ -3,4 +3,6 @@
 	(a, b) = 10
 	(a, b, c) = (a, nil, 30)
 	print(a, b, c)
+	(a, b) = (b, a)
+	print(a, b, c)
 }

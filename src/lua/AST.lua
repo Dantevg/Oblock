@@ -403,78 +403,6 @@ setmetatable(AST.Expr.Call, {
 
 
 
-AST.Expr.Definition = {}
-AST.Expr.Definition.__index = AST.Expr.Definition
-AST.Expr.Definition.__name = "Definition"
-
-function AST.Expr.Definition.new(target, expr, modifiers, predef)
-	local self = {}
-	self.target = target
-	self.expr = expr
-	self.modifiers = modifiers
-	self.predef = predef
-	return setmetatable(self, AST.Expr.Definition)
-end
-
-function AST.Expr.Definition:evaluate(env)
-	local value = self.expr and self.expr:evaluate(env) or AST.Expr.Literal.Nil()
-	self.target:define(env, value, self.modifiers)
-	return value -- TODO: should definition be treated as expression and return its value?
-	-- important for within lists
-end
-
-function AST.Expr.Definition:resolve(scope)
-	if scope[self.target.expr.lexeme] then
-		error("redefinition of "..self.target.expr.lexeme, 0)
-	end
-	if self.predef then scope[self.target.expr.lexeme] = true end
-	if self.expr then self.expr:resolve(scope) end
-	scope[self.target.expr.lexeme] = true
-end
-
-function AST.Expr.Definition:__tostring()
-	return "var "..(self.predef and tostring(self.target).."; " or "")
-		..tostring(self.target).." = "..tostring(self.expr)
-end
-
-setmetatable(AST.Expr.Definition, {
-	__call = function(_, ...) return AST.Expr.Definition.new(...) end,
-})
-
-
-
-AST.Expr.Assignment = {}
-AST.Expr.Assignment.__index = AST.Expr.Assignment
-AST.Expr.Assignment.__name = "Assignment"
-
-function AST.Expr.Assignment.new(target, expr)
-	local self = {}
-	self.target = target
-	self.expr = expr
-	return setmetatable(self, AST.Expr.Assignment)
-end
-
-function AST.Expr.Assignment:evaluate(env)
-	local value = self.expr:evaluate(env)
-	self.target:assign(env, value)
-	return value
-end
-
-function AST.Expr.Assignment:resolve(scope)
-	self.expr:resolve(scope)
-	self.target:resolve(scope)
-end
-
-function AST.Expr.Assignment:__tostring()
-	return tostring(self.target).." = "..tostring(self.expr)
-end
-
-setmetatable(AST.Expr.Assignment, {
-	__call = function(_, ...) return AST.Expr.Assignment.new(...) end,
-})
-
-
-
 AST.Expr.Literal = {}
 AST.Expr.Literal.__index = AST.Expr.Literal
 AST.Expr.Literal.__name = "Literal"
@@ -703,6 +631,74 @@ end
 setmetatable(AST.Stat.For, {
 	__call = function(_, ...) return AST.Stat.For.new(...) end,
 	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Stat.Definition = {}
+AST.Stat.Definition.__index = AST.Stat.Definition
+AST.Stat.Definition.__name = "Definition"
+
+function AST.Stat.Definition.new(target, expr, modifiers, predef)
+	local self = {}
+	self.target = target
+	self.expr = expr
+	self.modifiers = modifiers
+	self.predef = predef
+	return setmetatable(self, AST.Stat.Definition)
+end
+
+function AST.Stat.Definition:evaluate(env)
+	local value = self.expr and self.expr:evaluate(env) or AST.Expr.Literal.Nil()
+	self.target:define(env, value, self.modifiers)
+end
+
+function AST.Stat.Definition:resolve(scope)
+	if scope[self.target.expr.lexeme] then
+		error("redefinition of "..self.target.expr.lexeme, 0)
+	end
+	if self.predef then scope[self.target.expr.lexeme] = true end
+	if self.expr then self.expr:resolve(scope) end
+	scope[self.target.expr.lexeme] = true
+end
+
+function AST.Stat.Definition:__tostring()
+	return "var "..(self.predef and tostring(self.target).."; " or "")
+		..tostring(self.target).." = "..tostring(self.expr)
+end
+
+setmetatable(AST.Stat.Definition, {
+	__call = function(_, ...) return AST.Stat.Definition.new(...) end,
+})
+
+
+
+AST.Stat.Assignment = {}
+AST.Stat.Assignment.__index = AST.Stat.Assignment
+AST.Stat.Assignment.__name = "Assignment"
+
+function AST.Stat.Assignment.new(target, expr)
+	local self = {}
+	self.target = target
+	self.expr = expr
+	return setmetatable(self, AST.Stat.Assignment)
+end
+
+function AST.Stat.Assignment:evaluate(env)
+	self.target:assign(env, self.expr:evaluate(env))
+end
+
+function AST.Stat.Assignment:resolve(scope)
+	self.expr:resolve(scope)
+	self.target:resolve(scope)
+end
+
+function AST.Stat.Assignment:__tostring()
+	return tostring(self.target).." = "..tostring(self.expr)
+end
+
+setmetatable(AST.Stat.Assignment, {
+	__call = function(_, ...) return AST.Stat.Assignment.new(...) end,
 })
 
 

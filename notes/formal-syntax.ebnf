@@ -1,13 +1,7 @@
 program		= expression ;
-expression	= definition ;
+expression	= function ;
 
 (* Expressions *)
-definition	= ('var' | modifier {modifier}) index ['=' function]
-			| ('var' | modifier {modifier}) index fn
-			| index ':=' function
-			| assignment ;
-assignment	= index '=' function
-			| function ;
 function	= fn | disjunction ;
 disjunction = conjunction {'||' conjunction} ;
 conjunction	= comparison {'&&' comparison} ;
@@ -30,11 +24,16 @@ statement	= 'return' expression
 			| 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement
+			| definition ;
+definition	= ('var' | modifier {modifier}) index ['=' function | fn]
+			| index ':=' function
+			| assignment ;
+assignment	= index '=' function
 			| expression ;
 
 (* Smaller components *)
 fn			= (Identifier | '(' paramlist ')') '=>' expression ;
-explist		= {expression | ','} ;
+explist		= {expression | definition | ','} ;
 statlist	= {statement | ';'} ;
 paramlist	= param {',' param} ;
 param		= ['...'] Identifier ;

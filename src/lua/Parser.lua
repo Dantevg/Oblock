@@ -86,64 +86,7 @@ function Parser:parse()
 end
 
 function Parser:expression()
-	return self:definition()
-end
-
-function Parser:definition()
-	local modifiers = {}
-	while self:match {"var", "const", "instance"} do
-		local mod = self:previous().type
-		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
-		modifiers[mod] = true
-	end
-	
-	local expr = self:func()
-	local isDefinition, isAssignment, isFunction = false, false, false
-	
-	if not expr then self:error(self:previous(), "Expected non-assignment expression", 0) end
-	
-	if modifiers.var or modifiers.const or modifiers.instance then
-		if self:match {"equal"} then
-			isDefinition = true
-		elseif self:match {"equal greater"} then
-			isFunction = true
-		else
-			if expr.__name ~= "Variable" then
-				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
-			else
-				return AST.Expr.Definition(expr, nil, modifiers)
-			end
-		end
-	elseif self:match {"colon equal"} then
-		isDefinition = true
-	elseif self:match {"equal"} then
-		isAssignment = true
-	elseif self:match {"equal greater"} then
-		isFunction = true
-	end
-	
-	if isDefinition or isAssignment or isFunction then
-		local equal = self:previous()
-		local value = self:func()
-		modifiers.var = nil
-		if expr.__name == "Variable" and (isDefinition or isAssignment) then
-			return isDefinition
-				and AST.Expr.Definition(expr, value, modifiers)
-				or AST.Expr.Assignment(expr, value)
-		elseif expr.__name == "Call" and isFunction then
-			local name, parameters = expr.expression, expr.arglist
-			if parameters.__name == "Variable" then -- name arg => body
-				parameters = AST.Expr.Group {parameters}
-			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
-				self:error(equal, "Invalid function argument: "..parameters.__name)
-			end
-			return AST.Expr.Definition(name, AST.Expr.Function(parameters, value), modifiers, true)
-		else
-			self:error(equal, "Invalid assignment target: "..expr.__name)
-		end
-	end
-	
-	return expr
+	return self:func()
 end
 
 function Parser:func()
@@ -256,11 +199,11 @@ function Parser:primary()
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "expression"))
+	return AST.Expr.Group(self:anylist("closing parenthesis", "comma", "defStatement"))
 end
 
 function Parser:list()
-	return AST.Expr.List(self:anylist("closing bracket", "comma", "expression"))
+	return AST.Expr.List(self:anylist("closing bracket", "comma", "defStatement"))
 end
 
 function Parser:block()
@@ -293,7 +236,7 @@ function Parser:statement()
 	elseif self:match {"for"} then
 		return self:forStatement()
 	else
-		return self:expression()
+		return self:defStatement()
 	end
 end
 
@@ -339,6 +282,64 @@ function Parser:forStatement()
 	
 	return AST.Stat.For(variable, expr, body)
 end
+
+function Parser:defStatement()
+	local modifiers = {}
+	while self:match {"var", "const", "instance"} do
+		local mod = self:previous().type
+		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
+		modifiers[mod] = true
+	end
+	
+	local expr = self:expression()
+	local isDefinition, isAssignment, isFunction = false, false, false
+	
+	if not expr then self:error(self:previous(), "Expected non-assignment expression", 0) end
+	
+	if modifiers.var or modifiers.const or modifiers.instance then
+		if self:match {"equal"} then
+			isDefinition = true
+		elseif self:match {"equal greater"} then
+			isFunction = true
+		else
+			if expr.__name ~= "Variable" then
+				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
+			else
+				return AST.Stat.Definition(expr, nil, modifiers)
+			end
+		end
+	elseif self:match {"colon equal"} then
+		isDefinition = true
+	elseif self:match {"equal"} then
+		isAssignment = true
+	elseif self:match {"equal greater"} then
+		isFunction = true
+	end
+	
+	if isDefinition or isAssignment or isFunction then
+		local equal = self:previous()
+		local value = self:expression()
+		modifiers.var = nil
+		if expr.__name == "Variable" and (isDefinition or isAssignment) then
+			return isDefinition
+				and AST.Stat.Definition(expr, value, modifiers)
+				or AST.Stat.Assignment(expr, value)
+		elseif expr.__name == "Call" and isFunction then
+			local name, parameters = expr.expression, expr.arglist
+			if parameters.__name == "Variable" then -- name arg => body
+				parameters = AST.Expr.Group {parameters}
+			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
+				self:error(equal, "Invalid function argument: "..parameters.__name)
+			end
+			return AST.Stat.Definition(name, AST.Expr.Function(parameters, value), modifiers, true)
+		else
+			self:error(equal, "Invalid assignment target: "..expr.__name)
+		end
+	end
+	
+	return expr
+end
+
 
 return setmetatable(Parser, {
 	__call = function(_, ...) return Parser.new(...) end,

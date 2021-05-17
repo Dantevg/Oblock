@@ -6,6 +6,11 @@ https://wren.io/classes.html
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
+- Definition as statement?
+  - Could allow lists and function arguments (and thus also groups) to work the same way:
+    - start accepting a sequence of expressions, separated by commas or newlines
+    - at the end, also accept "named arguments" or definition statements,
+      separated by semicolons or newlines
 - Default parameters
 - Named parameters by (<arg> = <exp>)
   - Following C# valid-ness, valid when one of:
@@ -30,6 +35,7 @@ To-Do / roadmap / proposals
   - New style: var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"
   - In Lua style: var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")
   - https://news.ycombinator.com/item?id=8827843
+  - https://news.ycombinator.com/item?id=8828230
   - I think not for all statements, because waste of memory if return value
     is not used (loops create lists?)
   - Maybe make assignment an expression

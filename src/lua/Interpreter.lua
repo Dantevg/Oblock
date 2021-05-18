@@ -47,9 +47,8 @@ function Interpreter.Environment:get(key, level)
 		return self.env[key].value
 	elseif self.parent and (not level or level > 0) then
 		return self.parent:get(key, level and level-1)
-	else
-		return Interpreter.Nil()
 	end
+	-- Not found, don't return anything (not a value of Nil) to allow inheritance
 end
 
 setmetatable(Interpreter.Environment, {
@@ -73,7 +72,13 @@ function Interpreter.Block:has(key)
 end
 
 function Interpreter.Block:get(key)
-	return self.environment:get(key)
+	-- TODO: should accept `level` argument?
+	local value = self.environment:get(key)
+	if not value then
+		local proto = self.environment:get("_Proto", 0)
+		value = proto and proto:get(key)
+	end
+	return value or Interpreter.Nil()
 end
 
 function Interpreter.Block:define(key, value, modifiers)

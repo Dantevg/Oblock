@@ -178,13 +178,7 @@ function AST.Expr.Variable.new(base, expr)
 end
 
 function AST.Expr.Variable:getBase(env)
-	if self.base then
-		local expr = self.base:evaluate(env)
-		if not expr.environment then error("indexing non-block value "..expr.__name, 0) end
-		return expr.environment
-	else
-		return env
-	end
+	return self.base and self.base:evaluate(env) or env
 end
 
 function AST.Expr.Variable:getName(env)

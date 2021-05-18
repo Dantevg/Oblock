@@ -1,0 +1,7 @@
+{
+	a := {x := 10}
+	b := {_Proto := a}
+	print b
+	print b._Proto
+	print b.x
+}

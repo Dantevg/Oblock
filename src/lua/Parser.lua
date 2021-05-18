@@ -241,16 +241,15 @@ function Parser:sequence(endTokenName, separator, type)
 	return elements
 end
 
-function Parser:anylist(type)
-	local expr = self:expression()
-	if not expr then self:error(self:previous(), "Expected expression", 0) end
-	local elements = {expr}
+function Parser:anylist(first, next, typename)
+	local elements = {first}
+	if not first then self:error(self:previous(), "Expected "..typename, 0) end
 	while self:match {"comma"} do
-		local element = self[type](self)
+		local element = next(self)
 		if element then
 			table.insert(elements, element)
 		else
-			self:error(self:previous(), "Expected "..type)
+			self:error(self:previous(), "Expected "..typename)
 		end
 	end
 	return elements
@@ -324,7 +323,7 @@ function Parser:defStatement()
 		modifiers[mod] = true
 	end
 	
-	local variables = self:anylist("variable")
+	local variables = self:anylist(self:expression(), self.variable, "variable")
 	local expr = variables[1]
 	
 	if modifiers.var or modifiers.const or modifiers.instance then
@@ -349,7 +348,7 @@ function Parser:defStatement()
 	
 	if isDefinition or isAssignment or isFunction then
 		local equal = self:previous()
-		local values = self:anylist("expression")
+		local values = self:anylist(self:func(), self.func, "non-assignment expression")
 		modifiers.var = nil
 		if (expr.__name == "Variable" or expr.__name == "Group") and (isDefinition or isAssignment) then
 			return isDefinition

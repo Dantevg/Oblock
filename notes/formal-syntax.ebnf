@@ -39,6 +39,6 @@ fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
 expseq		= {expression | ','} ;
 statseq		= {statement | ';'} ;
 varlist		= variable {',' variable} ;
-explist		= expression {',' expression} ;
+explist		= function {',' function} ;
 param		= ['...'] Identifier ;
 modifier	= 'const' | 'instance' ;

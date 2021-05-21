@@ -57,7 +57,8 @@ for test in lfs.dir(basePath.."/test/") do
 			correct, output, print = check(file)
 		end
 		
-		run(path)
+		local success, err = pcall(run, path)
+		if not success then print(err) end
 		
 		if output then
 			output = table.concat(output)

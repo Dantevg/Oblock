@@ -180,16 +180,7 @@ end
 function Parser:variable()
 	local expr = self:primary()
 	while self:match {"dot"} do
-		if self:match {"opening bracket"} then
-			local expression = self:expression()
-			self:consume("closing bracket", "expected ']'")
-			expr = AST.Expr.Variable(expr, expression)
-		elseif self:match {"identifier"} then
-			local name = self:previous().lexeme
-			expr = AST.Expr.Variable(expr, AST.Expr.Literal(name, name))
-		else
-			self:error(self:peek(), "Expected identifier or []")
-		end
+		expr = AST.Expr.Index(expr, self:primary())
 	end
 	return expr
 end
@@ -211,7 +202,7 @@ function Parser:primary()
 		self.nlSensitive = false
 		return self:block()
 	elseif self:match {"identifier"} then
-		return AST.Expr.Variable(nil, AST.Expr.Literal(self:previous()))
+		return AST.Expr.Variable(self:previous())
 	end
 end
 
@@ -303,8 +294,9 @@ function Parser:whileStatement()
 end
 
 function Parser:forStatement()
-	local variable = AST.Expr.Variable(nil,
-		AST.Expr.Literal(self:consume("identifier", "Expected identifier")))
+	local variable = AST.Expr.Variable(
+		AST.Expr.Literal(self:consume("identifier", "Expected identifier"))
+	)
 	self:consume("in", "Expected 'in'")
 	local expr = self:expression()
 	self:consume("colon", "Expected ':'")
@@ -333,7 +325,7 @@ function Parser:defStatement()
 			isFunction = true
 		else
 			if expr.__name ~= "Variable" and expr.__name ~= "Group" then
-				self:error(self:previous(), "Invalid assignment target: "..expr.__name)
+				self:error(self:previous(), "Expected identifier")
 			else
 				return AST.Stat.Definition(variables, {}, modifiers)
 			end
@@ -350,7 +342,8 @@ function Parser:defStatement()
 		local equal = self:previous()
 		local values = self:anylist(self:func(), self.func, "non-assignment expression")
 		modifiers.var = nil
-		if (expr.__name == "Variable" or expr.__name == "Group") and (isDefinition or isAssignment) then
+		if (expr.__name == "Variable" or expr.__name == "Group")
+				and (isDefinition or isAssignment) then
 			return isDefinition
 				and AST.Stat.Definition(variables, values, modifiers)
 				or AST.Stat.Assignment(variables, values)

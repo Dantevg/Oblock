@@ -167,59 +167,87 @@ AST.Expr.Variable = {}
 AST.Expr.Variable.__index = AST.Expr.Variable
 AST.Expr.Variable.__name = "Variable"
 
--- a  is  Variable(nil, a)
--- b.(c).(d)  is  (b.(c)).(d)  is  Variable(Variable(Variable(nil, b), c), d)
-
-function AST.Expr.Variable.new(base, expr)
+function AST.Expr.Variable.new(token)
 	local self = {}
-	self.base = base
-	self.expr = expr
+	self.token = token
 	return setmetatable(self, AST.Expr.Variable)
 end
 
-function AST.Expr.Variable:getBase(env)
-	return self.base and self.base:evaluate(env) or env
-end
-
-function AST.Expr.Variable:getName(env)
-	return (self.expr.__name == "Literal" and not self.expr.literal)
-		and self.expr.lexeme or self.expr:evaluate(env)
-end
-
 function AST.Expr.Variable:evaluate(env)
-	return self:getBase(env):get(self:getName(), self.level)
+	return env:get(self.token.lexeme, self.level)
 end
 
 function AST.Expr.Variable:define(env, value, modifiers)
-	self:getBase(env):define(self:getName(), value, modifiers)
+	env:define(self.token.lexeme, value, modifiers)
 end
 
 function AST.Expr.Variable:assign(env, value)
-	self:getBase(env):assign(self:getName(), value, self.level)
+	env:assign(self.token.lexeme, value, self.level)
 end
 
 function AST.Expr.Variable:resolve(scope)
 	if self.level then error("resolving already-resolved variable", 0) end
-	if self.base then
-		self.base:resolve(scope)
-		self.level = 0
-	else
-		local level = 0
-		while scope do
-			if scope[self.expr.lexeme] then self.level = level return end
-			scope, level = scope.parent, level+1
-		end
-		if not self.level then error("unresolved variable "..self.expr.lexeme, 0) end
+	local level = 0
+	while scope do
+		if scope[self.token.lexeme] then self.level = level return end
+		scope, level = scope.parent, level+1
 	end
+	if not self.level then error("unresolved variable "..self.token.lexeme, 0) end
 end
 
 function AST.Expr.Variable:__tostring()
-	local base = self.base and tostring(self.base).."." or ""
-	return self.expr.__name == "Literal" and base..self.expr.lexeme or base..tostring(self.expr)
+	return self.token.lexeme
 end
 
 setmetatable(AST.Expr.Variable, {
 	__call = function(_, ...) return AST.Expr.Variable.new(...) end,
+})
+
+
+
+AST.Expr.Index = {}
+AST.Expr.Index.__index = AST.Expr.Index
+AST.Expr.Index.__name = "Index"
+
+-- b.(c).(d)  is  (b.(c)).(d)  is  Index(Index(Index(nil, b), c), d)
+
+function AST.Expr.Index.new(base, expr)
+	local self = {}
+	self.base = base
+	self.expr = expr
+	return setmetatable(self, AST.Expr.Index)
+end
+
+local function ref(value, env)
+	return value.__name == "Variable" and value.token.lexeme or value:evaluate(env)
+end
+
+function AST.Expr.Index:evaluate(env)
+	return self.base:evaluate(env):get(ref(self.expr, env), self.level)
+end
+
+function AST.Expr.Index:define(env, value, modifiers)
+	self.base:evaluate(env):define(ref(self.expr, env), value, modifiers)
+end
+
+function AST.Expr.Index:assign(env, value)
+	self.base:evaluate(env):assign(ref(self.expr, env), value, self.level)
+end
+
+function AST.Expr.Index:resolve(scope)
+	if self.level then error("resolving already-resolved variable", 0) end
+	self.base:resolve(scope)
+	if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
+	self.level = 0
+end
+
+function AST.Expr.Index:__tostring()
+	local base = tostring(self.base).."."
+	return self.expr.__name == "Literal" and base..self.expr.lexeme or base..tostring(self.expr)
+end
+
+setmetatable(AST.Expr.Index, {
+	__call = function(_, ...) return AST.Expr.Index.new(...) end,
 })
 
 
@@ -331,14 +359,14 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:define(parameter:getName(), argument)
+			env:define(parameter.token.lexeme, argument)
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
 			local list = Interpreter.List(env)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
-			env:define(parameter.right:getName(), list)
+			env:define(parameter.right.token.lexeme, list)
 			break
 		else
 			error("invalid parameter type", 0)
@@ -352,10 +380,10 @@ function AST.Expr.Function:resolve(scope)
 	local childScope = {parent = {parent = scope}}
 	for _, parameter in ipairs(self.parameters.expressions) do
 		if parameter.__name == "Variable" then
-			childScope[parameter.expr.lexeme] = true
+			childScope[parameter.token.lexeme] = true
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
-			childScope[parameter.right.expr.lexeme] = true
+			childScope[parameter.right.token.lexeme] = true
 			break
 		else
 			error("invalid parameter type", 0)
@@ -626,7 +654,7 @@ end
 function AST.Stat.For:resolve(scope)
 	self.expr:resolve(scope)
 	local childScope = {parent = scope}
-	childScope[self.variable.expr.lexeme] = true
+	childScope[self.variable.token.lexeme] = true
 	self.body:resolve(childScope)
 end
 
@@ -664,10 +692,10 @@ end
 
 function AST.Stat.Definition:resolve(scope)
 	for _, target in ipairs(self.targets) do
-		if scope[target.expr.lexeme] then
-			error("redefinition of "..target.expr.lexeme, 0)
+		if scope[target.token.lexeme] then
+			error("redefinition of "..target.token.lexeme, 0)
 		end
-		if self.predef then scope[target.expr.lexeme] = true end
+		if self.predef then scope[target.token.lexeme] = true end
 	end
 	
 	for _, expr in ipairs(self.expressions) do
@@ -675,7 +703,7 @@ function AST.Stat.Definition:resolve(scope)
 	end
 	
 	for _, target in ipairs(self.targets) do
-		scope[target.expr.lexeme] = true
+		scope[target.token.lexeme] = true
 	end
 end
 

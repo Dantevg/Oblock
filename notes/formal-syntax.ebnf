@@ -14,8 +14,7 @@ unary		= ('-' | '!' | '...') unary
 			| call ;
 call		= variable variable {variable}
 			| variable ;
-variable	= (primary | index) {index} ;
-index		= '.' (Identifier | '[' expression ']') ;
+variable	= primary {'.' primary} ;
 primary		= Identifier | Number | String | group | list | block ;
 group		= '(' expseq ')' ;
 list		= '[' expseq ']' ;

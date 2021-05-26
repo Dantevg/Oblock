@@ -11,6 +11,12 @@ To-Do / roadmap / proposals
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
     - Named parameters in correct place?
+- Shorthand field names
+  - {a, b}  is  {a := a; b := b}
+  - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer#property_definitions
+  - Use comma or semicolon? Probably semicolon
+  - Clashes with expression-as-statement
+    - Solution: only allow for identifiers as other types are not really interesting anyway
 - Passing single block as parameter
   - "Immediately-invoked function"
   - Allows positional arguments and named arguments
@@ -312,7 +318,7 @@ Modifiers
 =========
 Apply to variables (not values). By default, only `public` is applied implicitly.
 - private and public: variable only accessable (readable/writable) within the same class
-- const (and varying/changing/volatile?): cannot assign other value to variable
+- const (and var/variable/varying/changing/volatile?): cannot assign other value to variable
 - static (and ??? instance? proto(type)? "dynamic" is weird):
   variable exists in class, instead of in its instances
 

@@ -11,6 +11,29 @@ To-Do / roadmap / proposals
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
     - Named parameters in correct place?
+- Multiple values for nothing-ness: nil, null, unit, void, nothing, none?
+  - Usage: empty indices in lists while iterating (atm iteration stops at nil)
+  - Usage: removing variables from objects (setting to nil does not remove atm)
+  - One *value* instance of singleton class
+    - set to this value: variable has this value
+    - behaves just like value, is kept in lists
+      [10, nil, 20].length == 3,  for x in () => { yield 10; yield nil; yield 20 } loops 3 times
+  - One *keyword* with no corresponding value
+    - set to this keyword: remove reference
+    - behave like nothing was present, removed in lists, stops iteration
+      [10, nil, 20] == [10, 20],  for x in () => { yield 10; yield nil; yield 20 } loops once
+  - Attempting to use keyword kind as value yields value kind (keyword kind == value kind is true)
+- Indexing and setting to index as methods _Get and _Set?
+- Blocks as ordered associative arrays?
+  - keys are sorted by their addition time
+- Modifiers as single characters?
+  - private `-x := 42`
+  - public `+x := 42`
+  - var and const? static and proto/instance?
+  - Problem: clash with operators
+    print a
+    +x := 10
+    is print(a+x) := 10
 - Shorthand field names
   - {a, b}  is  {a := a; b := b}
   - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer#property_definitions
@@ -32,6 +55,8 @@ To-Do / roadmap / proposals
   - x, z as y from { x := 10; y := 20; z := 30 }
     x == 10 && y == 30
 - Compound assignment operators
+- Nullary operators? doubt usefullness
+  - ??? like in scala (is it an operator or expression?)
 - Statements as expressions?
   - New style: var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"
   - In Lua style: var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")
@@ -231,6 +256,7 @@ Functions
 
 Optional types
 ==============
+https://en.wikipedia.org/wiki/Gradual_typing
 - C-style (does not work nicely with multiple return values)
   - variable definition:  Int a = 10							var a = 10, a = 10
   - variable declaration: Int b									var a
@@ -283,6 +309,8 @@ Point = { (Point is a block/class/object, but really an immediately-invoked func
 ================================================================================
                                    Semantics
 ================================================================================
+Pure object oriented languages: smalltalk, ruby, scala
+
 Self (this?) upvalue (keyword?)
 - Only for instance (non-static) methods
 - Refers to current instance

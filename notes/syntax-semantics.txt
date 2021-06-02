@@ -374,6 +374,14 @@ Blocks serve many purposes at once:
 "Class" (block) constructors are static call operator methods
 Prototype-based classes (seem more generic) with class-based syntax
 
+What to do with mutating/defining properties on objects/blocks?
+- Should work differently than normal scope: mutation/definition in one
+  because you don't always know whether a property is already present
+- Option: only use mutation syntax
+  - Problem: cannot set const properties (like in javascript), also not static/instance
+  - Solution: allow modifiers also for mutation syntax?
+  - Solution: different syntax for assigning/defining to index (nah, is less general)
+
 Control flow
 ============
 - functions: return

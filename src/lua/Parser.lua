@@ -96,7 +96,7 @@ function Parser:defExpr()
 	if self:match {"colon equal"} then
 		local equal = self:previous()
 		local value = self:func()
-		if expr.__name == "Variable" or expr.__name == "Group" then
+		if expr.__name == "Variable" then
 			expr = AST.Stat.Definition({expr}, {value}, {})
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
@@ -324,7 +324,7 @@ function Parser:defStatement()
 		elseif self:match {"equal greater"} then
 			isFunction = true
 		else
-			if expr.__name ~= "Variable" and expr.__name ~= "Group" then
+			if expr.__name ~= "Variable" then
 				self:error(self:previous(), "Expected identifier")
 			else
 				return AST.Stat.Definition(variables, {}, modifiers)
@@ -342,7 +342,7 @@ function Parser:defStatement()
 		local equal = self:previous()
 		local values = self:anylist(self:func(), self.func, "non-assignment expression")
 		modifiers.var = nil
-		if (expr.__name == "Variable" or expr.__name == "Group")
+		if expr.__name == "Variable"
 				and (isDefinition or isAssignment) then
 			return isDefinition
 				and AST.Stat.Definition(variables, values, modifiers)

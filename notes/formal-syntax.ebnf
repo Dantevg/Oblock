@@ -5,7 +5,8 @@ expression	= defexpr ;
 defexpr		= variable ':=' function ;
 function	= fn | disjunction ;
 disjunction = conjunction {'||' conjunction} ;
-conjunction	= comparison {'&&' comparison} ;
+conjunction	= application {'&&' application} ;
+application	= comparison {'|>' comparison} ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
@@ -21,8 +22,8 @@ list		= '[' expseq ']' ;
 block		= '{' statseq '}' ;
 
 (* Statements *)
-statement	= 'return' expression
-			| 'yield' expression
+statement	= 'return' explist
+			| 'yield' explist
 			| 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement

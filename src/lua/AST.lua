@@ -485,23 +485,29 @@ AST.Stat.Return = {}
 AST.Stat.Return.__index = AST.Stat.Return
 AST.Stat.Return.__name = "Return"
 
-function AST.Stat.Return.new(expression)
+function AST.Stat.Return.new(expressions)
 	local self = {}
-	self.expression = expression
+	self.expressions = expressions or {}
 	return setmetatable(self, AST.Stat.Return)
 end
 
 function AST.Stat.Return:evaluate(env)
-	self.values = self.expression and {self.expression:evaluate(env)} or {}
+	self.values = evaluateAll(self.expressions, env)
 	error(self, 0)
 end
 
 function AST.Stat.Return:resolve(scope)
-	if self.expression then self.expression:resolve(scope) end
+	for _, expr in ipairs(self.expressions) do
+		expr:resolve(scope)
+	end
 end
 
 function AST.Stat.Return:__tostring()
-	return "return "..tostring(self.expression)
+	local expressions = {}
+	for _, expr in ipairs(self.expressions) do
+		table.insert(expressions, tostring(expr))
+	end
+	return "return "..table.concat(expressions, ", ")
 end
 
 setmetatable(AST.Stat.Return, {
@@ -515,23 +521,29 @@ AST.Stat.Yield = {}
 AST.Stat.Yield.__index = AST.Stat.Yield
 AST.Stat.Yield.__name = "Yield"
 
-function AST.Stat.Yield.new(expression)
+function AST.Stat.Yield.new(expressions)
 	local self = {}
-	self.expression = expression
+	self.expressions = expressions
 	return setmetatable(self, AST.Stat.Yield)
 end
 
 function AST.Stat.Yield:evaluate(env)
-	self.values = self.expression and {self.expression:evaluate(env)} or {}
+	self.values = self.expressions and evaluateAll(self.expressions, env)
 	error(self, 0)
 end
 
 function AST.Stat.Yield:resolve(scope)
-	if self.expression then self.expression:resolve(scope) end
+	for _, expr in ipairs(self.expressions) do
+		expr:resolve(scope)
+	end
 end
 
 function AST.Stat.Yield:__tostring()
-	return "yield "..tostring(self.expression)
+	local expressions = {}
+	for _, expr in ipairs(self.expressions) do
+		table.insert(expressions, tostring(expr))
+	end
+	return "yield "..table.concat(expressions, ", ")
 end
 
 setmetatable(AST.Stat.Yield, {

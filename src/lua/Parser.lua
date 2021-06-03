@@ -267,11 +267,13 @@ function Parser:statement()
 end
 
 function Parser:returnStatement()
-	return AST.Stat.Return(self:expression())
+	local values = self:anylist(self:expression(), self.expression, "expression")
+	return AST.Stat.Return(values)
 end
 
 function Parser:yieldStatement()
-	return AST.Stat.Yield(self:expression())
+	local values = self:anylist(self:expression(), self.expression, "expression")
+	return AST.Stat.Yield(values)
 end
 
 function Parser:ifStatement()

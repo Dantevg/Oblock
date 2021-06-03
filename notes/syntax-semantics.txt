@@ -68,6 +68,23 @@ To-Do / roadmap / proposals
     - Pro: terse `a = b = c` (needs to be right-associative for this: `a = (b = c)`)
     - Con: cryptic "code-golf" things
     - Con: possible mistakes like `while x = 1`
+- TODO: Check formal syntax for assigment/definition (`10 = 2` is valid syntax)
+  - Maybe let `10 = 2` be syntax for defining in current block? like Lua's `[10] = 2`
+- TODO: Revisit juxtaposition function application precedence (maybe lower)
+- Types
+  - structural
+  - operations on types? for more safe typing (algebraic data type like?)
+    - or, and, not
+  - constraints on values, for even more safe typing
+    - natural numbers, hex numbers, numbers 0..1, ascii values A..Z
+    - https://github.com/Microsoft/TypeScript/issues/15480
+    - maybe better to keep this to documentation or assert
+  - Structural typing is problem for native types
+    - Int should be subtype of Float (any int is also a float)
+    - Float should not be sybtype of Int, but structure might not differentiate
+	- Solution: only use structural subtyping for non-native / non-external types?
+- Macros?
+- Annotations with @ ?
 - Lists using block syntax again?
   - block saves expressions separated by comma or newline until semicolon or expression
   - in the following examples, results of fn1 and fn2 are stored, of fn3 and fn4 not
@@ -251,6 +268,7 @@ Functions
     (this means no overloading with lambda/fn-expression syntax)
     - with fn(x) and fn(x,y), calling fn(10,20) will be equal to calling
       fn.[[Block,Block]](10,20), indexed with lists of argument types
+    - problem again: what about vararg functions?
 - Getters by using argument-less methods, setters?
 - Parentheses can be omitted if only one argument passed on the same line
 
@@ -349,6 +367,9 @@ Apply to variables (not values). By default, only `public` is applied implicitly
 - const (and var/variable/varying/changing/volatile?): cannot assign other value to variable
 - static (and ??? instance? proto(type)? "dynamic" is weird):
   variable exists in class, instead of in its instances
+
+Apply to values (blocks), not variables:
+- fixed? final?: cannot mutate value (maybe freeze function?)
 
 - assign to const value: error
 - read private value: yield nil/null?

@@ -131,7 +131,11 @@ function Parser:disjunction()
 end
 
 function Parser:conjunction()
-	return self:binary({"and and"}, Parser.comparison, AST.Expr.Logical)
+	return self:binary({"and and"}, Parser.pipe, AST.Expr.Logical)
+end
+
+function Parser:pipe()
+	return self:binary({"bar greater"}, Parser.comparison)
 end
 
 function Parser:comparison()

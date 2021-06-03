@@ -64,6 +64,7 @@ Interpreter.Block.__name = "Block"
 function Interpreter.Block.new(parent)
 	local self = {}
 	self.environment = Interpreter.Environment(parent)
+	self.environment:define("|>", Interpreter.Block.pipe)
 	return setmetatable(self, Interpreter.Block)
 end
 
@@ -87,6 +88,11 @@ end
 
 function Interpreter.Block:assign(key, value)
 	return self.environment:assign(key, value)
+end
+
+function Interpreter.Block:pipe(env, other)
+	if not Interpreter.isCallable(other) then error("cannot pipe into "..other.__name, 0) end
+	return other:call {self}
 end
 
 function Interpreter.Block:__tostring()

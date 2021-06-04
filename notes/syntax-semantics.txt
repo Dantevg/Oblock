@@ -23,6 +23,25 @@ To-Do / roadmap / proposals
     - behave like nothing was present, removed in lists, stops iteration
       [10, nil, 20] == [10, 20],  for x in () => { yield 10; yield nil; yield 20 } loops once
   - Attempting to use keyword kind as value yields value kind (keyword kind == value kind is true)
+- Getter functions (without parameter list), `=> body`
+  - Ambiguous, what is `x => body`?
+    - anonymous function with single parameter
+    - getter function named `x`
+- Stream-based programming / Flow-Based Programming (FBP)
+  - Lazy streams: important! so pull, not push
+  - With operator `||>` or maybe replace operator `|>`
+  - Using coroutines, yielding and iterators
+    evenInts = []
+    i := 0
+    for x in generateIntegers: {
+    	i = i+1
+    	if i >= 10: break
+    	if x % 2 == 0: evenInts.push(x)
+    }
+    can then be rewritten to
+    evenInts = generateIntegers ||> filter(x => x % 2 == 0) ||> limit(10)
+    	||> reduce((a, x) => a.push(x), [])
+  - other example: first10words = stdin ||> groupByWords ||> limit(10) ||> []
 - Indexing and setting to index as methods _Get and _Set?
 - Blocks as ordered associative arrays?
   - keys are sorted by their addition time
@@ -83,6 +102,8 @@ To-Do / roadmap / proposals
     - Int should be subtype of Float (any int is also a float)
     - Float should not be sybtype of Int, but structure might not differentiate
 	- Solution: only use structural subtyping for non-native / non-external types?
+- Mixins or traits (deriving?) (what's the difference exactly? traits seem more powerful?)
+  - Automatic? i.e. can use `!=`, `>` automatically on class defining only `==` and `<=`
 - Macros?
 - Annotations with @ ?
 - Lists using block syntax again?

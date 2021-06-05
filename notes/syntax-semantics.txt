@@ -13,7 +13,10 @@ To-Do / roadmap / proposals
     - Named parameters in correct place?
 - Multiple values for nothing-ness: nil, null, unit, void, nothing, none?
   - Usage: empty indices in lists while iterating (atm iteration stops at nil)
+    - otherwise, iteration could skip empty (not present!) indices,
+      use iteration with range to not-skip
   - Usage: removing variables from objects (setting to nil does not remove atm)
+    - otherwise, remove when set to nil
   - One *value* instance of singleton class
     - set to this value: variable has this value
     - behaves just like value, is kept in lists
@@ -69,20 +72,27 @@ To-Do / roadmap / proposals
 - Pattern matching
   - useful for switch/match case and function parameters
   - match against types, lists, blocks, number of values?, ...
-- Destructuring with `in` or `from`
+- Destructuring / import with `from`
   - maybe renaming with `as`?
-  - x, z as y from { x := 10; y := 20; z := 30 }
-    x == 10 && y == 30
+  - `*` to include all
+  - Two use-cases:
+    - modules: * from require "mymodule" will import everything from "mymodule"
+    - traits: { * from MyTrait }
+      - does not really work for traits (e.g. checking for trait preconditions)
+  - a := { x := 10; y := 20 }
+    b := { z := 30 }
+    c := { x, z as y from a, b; w := 40 }
+    c is {x=10, y=30, w=40}
 - Compound assignment operators
 - Nullary operators? doubt usefullness
   - ??? like in scala (is it an operator or expression?)
 - Statements as expressions?
   - New style: var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"
   - In Lua style: var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")
+  - `break` with value, could also allow for multi-level break? i.e. `break break`
+    value := for x in [1,2,3,4,5]: if x % 2 && x % 3: break x
   - https://news.ycombinator.com/item?id=8827843
   - https://news.ycombinator.com/item?id=8828230
-  - I think not for all statements, because waste of memory if return value
-    is not used (loops create lists?)
   - Maybe make assignment an expression
     - Pro: terse `a = b = c` (needs to be right-associative for this: `a = (b = c)`)
     - Con: cryptic "code-golf" things
@@ -104,6 +114,8 @@ To-Do / roadmap / proposals
 	- Solution: only use structural subtyping for non-native / non-external types?
 - Mixins or traits (deriving?) (what's the difference exactly? traits seem more powerful?)
   - Automatic? i.e. can use `!=`, `>` automatically on class defining only `==` and `<=`
+  - https://blog.10pines.com/2014/10/14/mixins-or-traits/
+  - https://stackoverflow.com/a/23124968
 - Macros?
 - Annotations with @ ?
 - Lists using block syntax again?

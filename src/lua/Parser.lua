@@ -348,6 +348,8 @@ function Parser:defStatement()
 		local equal = self:previous()
 		local values = self:anylist(self:func(), self.func, "non-assignment expression")
 		modifiers.var = nil
+		-- TODO: accept any primary as assignment target
+		-- https://twitter.com/munificentbob/status/1396892839192104961
 		if expr.__name == "Variable"
 				and (isDefinition or isAssignment) then
 			return isDefinition

@@ -117,6 +117,7 @@ setmetatable(AST.Expr.Logical, {
 
 
 
+-- TODO: generalise list of expressions (lot of code duplication atm)
 AST.Expr.Group = {}
 AST.Expr.Group.__index = AST.Expr.Group
 AST.Expr.Group.__name = "Group"

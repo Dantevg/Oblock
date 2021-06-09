@@ -4,7 +4,7 @@ expression	= defexpr ;
 (* Expressions *)
 defexpr		= variable ':=' function ;
 function	= fn | disjunction ;
-disjunction = conjunction {'||' conjunction} ;
+disjunction	= conjunction {'||' conjunction} ;
 conjunction	= application {'&&' application} ;
 application	= comparison {'|>' comparison} ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;

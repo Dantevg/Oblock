@@ -444,7 +444,7 @@ setmetatable(Interpreter.List, {
 local function defineProtoNativeFn(base, name, key)
 	Interpreter[base].proto:define(
 		key,
-		Interpreter.NativeFunction(nil, Interpreter[base][name])
+		Interpreter.NativeFunction(nil, Interpreter[base][name], name)
 	)
 end
 defineProtoNativeFn("Block", "pipe", "|>")
@@ -463,10 +463,13 @@ defineProtoNativeFn("String", "add", "+")
 defineProtoNativeFn("String", "not_", "!")
 
 defineProtoNativeFn("Boolean", "not_", "!")
+Interpreter.Boolean.proto:define("true", Interpreter.Boolean(nil, true))
+Interpreter.Boolean.proto:define("false", Interpreter.Boolean(nil, false))
 
 defineProtoNativeFn("Nil", "eq", "==")
 defineProtoNativeFn("Nil", "neq", "!=")
 defineProtoNativeFn("Nil", "not_", "!")
+Interpreter.Nil.proto:define("nil", Interpreter.Nil())
 
 defineProtoNativeFn("List", "add", "+")
 defineProtoNativeFn("List", "spread", "...")

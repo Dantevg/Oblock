@@ -32,11 +32,11 @@ end
 function AST.Expr.Unary:evaluate(env)
 	local right = self.right:evaluate(env)
 	local fn = right:get(self.op.lexeme)
-	if type(fn) ~= "function" then
+	if not Interpreter.isCallable(fn) then
 		error(string.format("no operator instance '%s' on %s value '%s'",
 			self.op.lexeme, right.__name, self.right), 0)
 	end
-	return fn(right, env)
+	return fn:call {right, env}
 end
 
 function AST.Expr.Unary:resolve(scope)
@@ -68,11 +68,11 @@ end
 function AST.Expr.Binary:evaluate(env)
 	local left, right = self.left:evaluate(env), self.right:evaluate(env)
 	local fn = left:get(self.op.lexeme)
-	if type(fn) ~= "function" then
+	if not Interpreter.isCallable(fn) then
 		error(string.format("no operator instance '%s' on %s value '%s'",
 			self.op.lexeme, left.__name, self.left), 0)
 	end
-	return fn(left, env, right)
+	return fn:call {left, env, right}
 end
 
 function AST.Expr.Binary:resolve(scope)

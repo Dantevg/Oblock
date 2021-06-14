@@ -64,7 +64,7 @@ Interpreter.Block.__name = "Block"
 function Interpreter.Block.new(parent)
 	local self = {}
 	self.environment = Interpreter.Environment(parent)
-	self.environment:define("|>", Interpreter.Block.pipe)
+	self.environment:define("_Proto", Interpreter.Block.proto)
 	return setmetatable(self, Interpreter.Block)
 end
 
@@ -98,10 +98,15 @@ end
 function Interpreter.Block:__tostring()
 	local strings = {}
 	for key, value in pairs(self.environment.env) do
-		table.insert(strings, tostring(key).." = "..tostring(value.value))
+		-- Hide "_Proto" key
+		if key ~= "_Proto" then
+			table.insert(strings, tostring(key).." = "..tostring(value.value))
+		end
 	end
 	return "{"..table.concat(strings, "; ").."}"
 end
+
+Interpreter.Block.proto = Interpreter.Block.new()
 
 setmetatable(Interpreter.Block, {
 	__call = function(_, ...) return Interpreter.Block.new(...) end,
@@ -113,10 +118,13 @@ Interpreter.NativeFunction = {}
 Interpreter.NativeFunction.__index = Interpreter.NativeFunction
 Interpreter.NativeFunction.__name = "NativeFunction"
 
-function Interpreter.NativeFunction.new(parent, body)
+Interpreter.NativeFunction.proto = Interpreter.Block()
+
+function Interpreter.NativeFunction.new(parent, body, name)
 	local self = Interpreter.Block(parent)
 	self.body = body
-	self:define("()", Interpreter.NativeFunction.call)
+	self.name = name
+	self:assign("_Proto", Interpreter.NativeFunction.proto)
 	return setmetatable(self, Interpreter.NativeFunction)
 end
 
@@ -125,7 +133,7 @@ function Interpreter.NativeFunction:call(args)
 end
 
 function Interpreter.NativeFunction:__tostring()
-	return "<native function>"
+	return self.name and "<native function: "..self.name..">" or "<native function>"
 end
 
 setmetatable(Interpreter.NativeFunction, {
@@ -139,10 +147,12 @@ Interpreter.Function = {}
 Interpreter.Function.__index = Interpreter.Function
 Interpreter.Function.__name = "Function"
 
+Interpreter.Function.proto = Interpreter.Block()
+
 function Interpreter.Function.new(parent, body)
 	local self = Interpreter.Block(parent)
 	self.body = body
-	self:define("()", Interpreter.Function.call)
+	self:assign("_Proto", Interpreter.Function.proto)
 	return setmetatable(self, Interpreter.Function)
 end
 
@@ -201,15 +211,11 @@ Interpreter.Number = {}
 Interpreter.Number.__index = Interpreter.Number
 Interpreter.Number.__name = "Number"
 
+Interpreter.Number.proto = Interpreter.Block()
+
 function Interpreter.Number.new(parent, value)
 	local self = Interpreter.Value(parent, tonumber(value))
-	self:define("==", Interpreter.Number.eq)
-	self:define("!=", Interpreter.Number.neq)
-	self:define("<", Interpreter.Number.lt)
-	self:define("+", Interpreter.Number.add)
-	self:define("-", Interpreter.Number.sub)
-	self:define("*", Interpreter.Number.mul)
-	self:define("!", Interpreter.Number.not_)
+	self:assign("_Proto", Interpreter.Number.proto)
 	return setmetatable(self, Interpreter.Number)
 end
 
@@ -268,10 +274,11 @@ Interpreter.String = {}
 Interpreter.String.__index = Interpreter.String
 Interpreter.String.__name = "String"
 
+Interpreter.String.proto = Interpreter.Block()
+
 function Interpreter.String.new(parent, value)
 	local self = Interpreter.Value(parent, tostring(value))
-	self:define("+", Interpreter.String.add)
-	self:define("!", Interpreter.String.not_)
+	self:assign("_Proto", Interpreter.String.proto)
 	return setmetatable(self, Interpreter.String)
 end
 
@@ -299,9 +306,11 @@ Interpreter.Boolean = {}
 Interpreter.Boolean.__index = Interpreter.Boolean
 Interpreter.Boolean.__name = "Boolean"
 
+Interpreter.Boolean.proto = Interpreter.Block()
+
 function Interpreter.Boolean.new(parent, value)
 	local self = Interpreter.Value(parent, not not value)
-	self:define("!", Interpreter.Boolean.not_)
+	self:assign("_Proto", Interpreter.Boolean.proto)
 	return setmetatable(self, Interpreter.Boolean)
 end
 
@@ -327,11 +336,11 @@ Interpreter.Nil = {}
 Interpreter.Nil.__index = Interpreter.Nil
 Interpreter.Nil.__name = "Nil"
 
+Interpreter.Nil.proto = Interpreter.Block()
+
 function Interpreter.Nil.new(parent)
 	local self = Interpreter.Value(parent, nil)
-	self:define("==", Interpreter.Nil.eq)
-	self:define("!=", Interpreter.Nil.neq)
-	self:define("!", Interpreter.Nil.not_)
+	self:assign("_Proto", Interpreter.Nil.proto)
 	return setmetatable(self, Interpreter.Nil)
 end
 
@@ -364,10 +373,10 @@ Interpreter.List = {}
 Interpreter.List.__index = Interpreter.List
 Interpreter.List.__name = "List"
 
+Interpreter.List.proto = Interpreter.Block()
+
 function Interpreter.List.new(parent, elements)
 	local self = Interpreter.Block(parent)
-	self:define("+", Interpreter.List.add)
-	self:define("...", Interpreter.List.spread)
 	self:define("iterate", Interpreter.NativeFunction(parent, function(env)
 		return self:iterate(env)
 	end))
@@ -376,6 +385,7 @@ function Interpreter.List.new(parent, elements)
 		self:define(i, elements[i])
 	end
 	self:define("length", Interpreter.Number(nil, #elements))
+	self:assign("_Proto", Interpreter.List.proto)
 	return setmetatable(self, Interpreter.List)
 end
 
@@ -428,6 +438,38 @@ setmetatable(Interpreter.List, {
 	__call = function(_, ...) return Interpreter.List.new(...) end,
 	__index = Interpreter.Block,
 })
+
+
+
+local function defineProtoNativeFn(base, name, key)
+	Interpreter[base].proto:define(
+		key,
+		Interpreter.NativeFunction(nil, Interpreter[base][name])
+	)
+end
+defineProtoNativeFn("Block", "pipe", "|>")
+
+defineProtoNativeFn("Function", "call", "()")
+
+defineProtoNativeFn("Number", "eq", "==")
+defineProtoNativeFn("Number", "neq", "!=")
+defineProtoNativeFn("Number", "lt", "<")
+defineProtoNativeFn("Number", "add", "+")
+defineProtoNativeFn("Number", "sub", "-")
+defineProtoNativeFn("Number", "mul", "*")
+defineProtoNativeFn("Number", "not_", "!")
+
+defineProtoNativeFn("String", "add", "+")
+defineProtoNativeFn("String", "not_", "!")
+
+defineProtoNativeFn("Boolean", "not_", "!")
+
+defineProtoNativeFn("Nil", "eq", "==")
+defineProtoNativeFn("Nil", "neq", "!=")
+defineProtoNativeFn("Nil", "not_", "!")
+
+defineProtoNativeFn("List", "add", "+")
+defineProtoNativeFn("List", "spread", "...")
 
 
 

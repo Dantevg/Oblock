@@ -648,7 +648,7 @@ function AST.Stat.For:evaluate(env)
 		error(string.format("no callable instance 'iterate' on %s value '%s'",
 			container.__name, self.expr), 0)
 	end
-	local iterator = iteratorSource:call(env)
+	local iterator = iteratorSource:call()
 	if not Interpreter.isCallable(iterator) then
 		error("'iterate' does not return callable", 0)
 	end

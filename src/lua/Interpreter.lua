@@ -46,7 +46,7 @@ end
 
 function Interpreter.Environment:define(key, value, modifiers)
 	if type(key) == "table" then key = key.value end
-	if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
+	-- if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
 	self.env[key] = {
 		value = value,
 		modifiers = modifiers or {}
@@ -462,13 +462,11 @@ function Interpreter.List:spread()
 	return table.unpack(values)
 end
 
-function Interpreter.List:iterate(env, args)
+function Interpreter.List:iterate()
 	local i = 0
-	return Interpreter.Function(env, function(e)
+	return Interpreter.Function(self, function()
 		i = i+1
-		local this = env:get("this")
-		if not this then error("no 'this'", 0) end
-		return this:get(i)
+		return self:get("this"):get(i)
 	end, "iterator")
 end
 

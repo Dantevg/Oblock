@@ -655,12 +655,12 @@ function AST.Stat.For:evaluate(env)
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
 	local block = Interpreter.Block(env)
-	local value = iterator:call(block)
+	local value = iterator:call()
 	self.variable:define(block)
 	while value and value.__name ~= "Nil" do
 		self.variable:assign(block, value)
 		self.body:evaluate(block)
-		value = iterator:call(block)
+		value = iterator:call()
 	end
 end
 

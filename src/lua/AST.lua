@@ -378,7 +378,7 @@ function AST.Expr.Function:call(env, arguments)
 end
 
 function AST.Expr.Function:resolve(scope)
-	local childScope = {parent = {parent = scope}}
+	local childScope = {this = true, parent = {parent = scope}}
 	for _, parameter in ipairs(self.parameters.expressions) do
 		if parameter.__name == "Variable" then
 			childScope[parameter.token.lexeme] = true
@@ -417,7 +417,7 @@ end
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
 	if not Interpreter.isCallable(fn) then
-		error("Attempt to call non-callable type "..fn.__name, 0)
+		error("Attempt to call non-callable type "..(fn and fn.__name or "Nil"), 0)
 	end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)

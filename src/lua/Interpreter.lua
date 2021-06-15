@@ -1,6 +1,37 @@
 local Interpreter = {}
 Interpreter.__index = Interpreter
 
+function Interpreter.new(program)
+	local self = {}
+	self.program = program
+	self.environment = Interpreter.Environment(nil, "main")
+	require("stdlib")(self.environment)
+	return setmetatable(self, Interpreter)
+end
+
+function Interpreter:interpret()
+	-- Resolve
+	local globalScope = {}
+	for k in pairs(self.environment.env) do
+		globalScope[k] = true
+	end
+	local success, err = pcall(self.program.resolve, self.program, globalScope)
+	if not success then print(err) return end
+	
+	-- Run
+	local results = {pcall(self.program.evaluate, self.program, self.environment)}
+	if results[1] then
+		return table.unpack(results, 2)
+	else
+		print(tostring(results[2]).."\n\tin main chunk")
+		error()
+	end
+end
+
+function Interpreter.isCallable(fn)
+	return fn and type(fn) == "table" and fn.call
+end
+
 
 
 Interpreter.Environment = {}
@@ -78,6 +109,9 @@ function Interpreter.Block:get(key)
 	if not value then
 		local proto = self.environment:get("_Proto", 0)
 		value = proto and proto:get(key)
+		if value and (value.__name == "Function" or value.__name == "NativeFunction") then
+			value = value:bind(self)
+		end
 	end
 	return value or Interpreter.Nil()
 end
@@ -128,7 +162,15 @@ function Interpreter.NativeFunction.new(parent, body, name)
 	return setmetatable(self, Interpreter.NativeFunction)
 end
 
+function Interpreter.NativeFunction:bind(block)
+	local new = {}
+	for k, v in pairs(self) do new[k] = v end
+	new.this = block
+	return setmetatable(new, Interpreter.NativeFunction)
+end
+
 function Interpreter.NativeFunction:call(args)
+	-- if self.this then table.insert(args, 1, self.this) end
 	return self.body(table.unpack(args))
 end
 
@@ -149,15 +191,24 @@ Interpreter.Function.__name = "Function"
 
 Interpreter.Function.proto = Interpreter.Block()
 
-function Interpreter.Function.new(parent, body)
+function Interpreter.Function.new(parent, body, name)
 	local self = Interpreter.Block(parent)
 	self.body = body
+	self.name = name
 	self:assign("_Proto", Interpreter.Function.proto)
 	return setmetatable(self, Interpreter.Function)
 end
 
+function Interpreter.Function:bind(block)
+	local new = {}
+	for k, v in pairs(self) do new[k] = v end
+	new.this = block
+	return setmetatable(new, Interpreter.Function)
+end
+
 function Interpreter.Function:call(args)
 	local environment = Interpreter.Environment(self.environment)
+	if self.this then environment:define("this", self.this) end
 	local values = {pcall(self.body, environment, args)}
 	if values[1] then
 		return table.unpack(values, 2)
@@ -172,7 +223,7 @@ function Interpreter.Function:call(args)
 end
 
 function Interpreter.Function:__tostring()
-	return self.__tostring and self.__tostring() or "<function>"
+	return self.name and "<function: "..self.name..">" or "<function>"
 end
 
 setmetatable(Interpreter.Function, {
@@ -377,9 +428,6 @@ Interpreter.List.proto = Interpreter.Block()
 
 function Interpreter.List.new(parent, elements)
 	local self = Interpreter.Block(parent)
-	self:define("iterate", Interpreter.NativeFunction(parent, function(env)
-		return self:iterate(env)
-	end))
 	elements = elements or {}
 	for i = 1, #elements do
 		self:define(i, elements[i])
@@ -414,12 +462,14 @@ function Interpreter.List:spread()
 	return table.unpack(values)
 end
 
-function Interpreter.List:iterate(env)
+function Interpreter.List:iterate(env, args)
 	local i = 0
-	return Interpreter.NativeFunction(env, function()
+	return Interpreter.Function(env, function(e)
 		i = i+1
-		return self:get(i)
-	end)
+		local this = env:get("this")
+		if not this then error("no 'this'", 0) end
+		return this:get(i)
+	end, "iterator")
 end
 
 function Interpreter.List:__len()
@@ -447,6 +497,7 @@ local function defineProtoNativeFn(base, name, key)
 		Interpreter.NativeFunction(nil, Interpreter[base][name], name)
 	)
 end
+
 defineProtoNativeFn("Block", "pipe", "|>")
 
 defineProtoNativeFn("Function", "call", "()")
@@ -473,39 +524,11 @@ Interpreter.Nil.proto:define("nil", Interpreter.Nil())
 
 defineProtoNativeFn("List", "add", "+")
 defineProtoNativeFn("List", "spread", "...")
+Interpreter.List.proto:define("iterate",
+	Interpreter.Function(nil, Interpreter.List.iterate, "iterate")
+)
 
 
-
-function Interpreter.new(program)
-	local self = {}
-	self.program = program
-	self.environment = Interpreter.Environment()
-	require("stdlib")(self.environment)
-	return setmetatable(self, Interpreter)
-end
-
-function Interpreter:interpret()
-	-- Resolve
-	local globalScope = {}
-	for k in pairs(self.environment.env) do
-		globalScope[k] = true
-	end
-	local success, err = pcall(self.program.resolve, self.program, globalScope)
-	if not success then print(err) return end
-	
-	-- Run
-	local results = {pcall(self.program.evaluate, self.program, self.environment)}
-	if results[1] then
-		return table.unpack(results, 2)
-	else
-		print(tostring(results[2]).."\n\tin main chunk")
-		error()
-	end
-end
-
-function Interpreter.isCallable(fn)
-	return fn and type(fn) == "table" and fn.call
-end
 
 return setmetatable(Interpreter, {
 	__call = function(_, ...) return Interpreter.new(...) end,

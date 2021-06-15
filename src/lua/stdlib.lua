@@ -9,6 +9,11 @@ fn.print = function(...)
 	return ...
 end
 
+fn.type = function(x)
+	if not x then return "Nil" end
+	return x.__name
+end
+
 return function(env)
 	for name, f in pairs(fn) do
 		env:define(name, Interpreter.NativeFunction(env, f))

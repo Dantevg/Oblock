@@ -73,3 +73,15 @@ Ideas
                             	Standard library
 ================================================================================
 https://en.wikipedia.org/wiki/Abstract_data_type#Examples_2
+
+2 Libraries for language:
+- Base library: only essentials, always present (for embedding, like Lua)
+  - Nil, Bool, Int, Float, ASCIIString, Math/Random, ...?
+- Standard library: more extensive, optional (for stand-alone usage, like Java/Python)
+  - ideas: UnicodeString / UTF8String, Debug, OS/IO/FS, Date, Regex, Socket,
+    Json, encoding/decoding, data structures, Thread, ...
+
+- ASCII string and Unicode/UTF8 string separate?
+  - maybe Unicode string in base lib, ASCII string in std lib?
+    - pro: need unicode support for lexing/parsing anyway so why not provide string
+    - con: possibly more resource intensive (string indexing complexity, storage etc)

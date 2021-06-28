@@ -315,45 +315,45 @@ end
 function Parser:defStatement()
 	local modifiers = {}
 	local isDefinition, isAssignment, isFunction = false, false, false
+	
+	-- Match modifiers: `var`, `const`, `instance`
 	while self:match {"var", "const", "instance"} do
 		local mod = self:previous().type
 		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
 		modifiers[mod] = true
+		isDefinition = true
 	end
 	
+	-- Match assignment target
 	local variables = self:anylist(self:expression(), self.variable, "variable")
 	local expr = variables[1]
 	
 	if modifiers.var or modifiers.const or modifiers.instance then
 		if self:match {"equal"} then
-			isDefinition = true
+			isAssignment = true
 		elseif self:match {"equal greater"} then
 			isFunction = true
 		else
-			if expr.__name ~= "Variable" then
+			-- Plain definition without `=` value
+			if expr.__name ~= "Variable" and #variables == 1 then
 				self:error(self:previous(), "Expected identifier")
 			else
-				return AST.Stat.Definition(variables, {}, modifiers)
+				return AST.Stat.Assignment(variables, {}, modifiers, false, isDefinition)
 			end
 		end
-	elseif self:match {"colon equal"} then
-		isDefinition = true
 	elseif self:match {"equal"} then
 		isAssignment = true
 	elseif self:match {"equal greater"} then
 		isFunction = true
 	end
 	
-	if isDefinition or isAssignment or isFunction then
+	if isAssignment or isFunction then
+		-- Match `=` and values
 		local equal = self:previous()
 		local values = self:anylist(self:func(), self.func, "non-assignment expression")
 		modifiers.var = nil
-		-- TODO: accept any primary as assignment target
-		-- https://twitter.com/munificentbob/status/1396892839192104961
-		if isDefinition or isAssignment then
-			return isDefinition
-				and AST.Stat.Definition(variables, values, modifiers)
-				or AST.Stat.Assignment(variables, values)
+		if isAssignment then
+			return AST.Stat.Assignment(variables, values, modifiers, false, isDefinition)
 		elseif expr.__name == "Call" and isFunction and #variables == 1 then
 			local name, parameters = expr.expression, expr.arglist
 			if parameters.__name == "Variable" then -- name arg => body
@@ -361,7 +361,7 @@ function Parser:defStatement()
 			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
 				self:error(equal, "Invalid function argument: "..parameters.__name)
 			end
-			return AST.Stat.Definition({name}, {AST.Expr.Function(parameters, values[1])}, modifiers, true)
+			return AST.Stat.Assignment({name}, {AST.Expr.Function(parameters, values[1])}, modifiers, true, isDefinition)
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end

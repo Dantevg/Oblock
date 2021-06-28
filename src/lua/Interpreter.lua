@@ -46,7 +46,7 @@ end
 
 function Interpreter.Environment:define(key, value, modifiers)
 	if type(key) == "table" then key = key.value end
-	-- if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
+	if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
 	self.env[key] = {
 		value = value,
 		modifiers = modifiers or {}
@@ -64,6 +64,23 @@ function Interpreter.Environment:assign(key, value, level)
 		self.parent:assign(key, value, level and level-1)
 	else
 		error("attempt to mutate non-existent variable "..tostring(key), 0)
+	end
+end
+
+function Interpreter.Environment:set(key, value, modifiers, level)
+	if type(key) == "table" then key = key.value end
+	if self.env[key] and (not level or level == 0) then
+		if self.env[key].modifiers.const then
+			error("Attempt to mutate const variable "..tostring(key), 0)
+		end
+		self.env[key].value = value
+	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
+		self.parent:set(key, value, modifiers, level and level-1)
+	else
+		self.env[key] = {
+			value = value,
+			modifiers = modifiers or {}
+		}
 	end
 end
 
@@ -105,7 +122,7 @@ end
 
 function Interpreter.Block:get(key)
 	-- TODO: should accept `level` argument?
-	local value = self.environment:get(key)
+	local value = self.environment:get(key, 0)
 	if not value then
 		local proto = self.environment:get("_Proto", 0)
 		value = proto and proto:get(key)
@@ -122,6 +139,10 @@ end
 
 function Interpreter.Block:assign(key, value)
 	return self.environment:assign(key, value)
+end
+
+function Interpreter.Block:set(key, value, modifiers, level)
+	return self.environment:set(key, value, modifiers, level)
 end
 
 function Interpreter.Block:pipe(env, other)
@@ -430,16 +451,16 @@ function Interpreter.List.new(parent, elements)
 	local self = Interpreter.Block(parent)
 	elements = elements or {}
 	for i = 1, #elements do
-		self:define(i, elements[i])
+		self:set(i, elements[i])
 	end
-	self:define("length", Interpreter.Number(nil, #elements))
+	self:set("length", Interpreter.Number(nil, #elements))
 	self:assign("_Proto", Interpreter.List.proto)
 	return setmetatable(self, Interpreter.List)
 end
 
 function Interpreter.List:push(value)
-	self:define(#self+1, value)
-	self:assign("length", Interpreter.Number(nil, #self))
+	self:set(#self+1, value)
+	self:set("length", Interpreter.Number(nil, #self))
 end
 
 function Interpreter.List:add(env, other)

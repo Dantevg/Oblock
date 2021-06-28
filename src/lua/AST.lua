@@ -186,6 +186,10 @@ function AST.Expr.Variable:assign(env, value)
 	env:assign(self.token.lexeme, value, self.level)
 end
 
+function AST.Expr.Variable:set(env, value, modifiers, level)
+	env:set(self.token.lexeme, value, modifiers, level or self.level)
+end
+
 function AST.Expr.Variable:resolve(scope)
 	if self.level then error("resolving already-resolved variable", 0) end
 	local level = 0
@@ -233,6 +237,10 @@ end
 
 function AST.Expr.Index:assign(env, value)
 	self.base:evaluate(env):assign(ref(self.expr, env), value, self.level)
+end
+
+function AST.Expr.Index:set(env, value, modifiers)
+	self.base:evaluate(env):set(ref(self.expr, env), value, modifiers, self.level)
 end
 
 function AST.Expr.Index:resolve(scope)
@@ -360,14 +368,14 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:define(parameter.token.lexeme, argument)
+			env:set(parameter.token.lexeme, argument)
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
 			local list = Interpreter.List(env)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
-			env:define(parameter.right.token.lexeme, list)
+			env:set(parameter.right.token.lexeme, list)
 			break
 		else
 			error("invalid parameter type", 0)
@@ -656,9 +664,9 @@ function AST.Stat.For:evaluate(env)
 	-- Loop: set variable to iterator result, run body if result was non-nil
 	local block = Interpreter.Block(env)
 	local value = iterator:call()
-	self.variable:define(block)
+	self.variable:set(block)
 	while value and value.__name ~= "Nil" do
-		self.variable:assign(block, value)
+		self.variable:set(block, value)
 		self.body:evaluate(block)
 		value = iterator:call()
 	end
@@ -682,70 +690,17 @@ setmetatable(AST.Stat.For, {
 
 
 
-AST.Stat.Definition = {}
-AST.Stat.Definition.__index = AST.Stat.Definition
-AST.Stat.Definition.__name = "Definition"
+AST.Stat.Assignment = {}
+AST.Stat.Assignment.__index = AST.Stat.Assignment
+AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Definition.new(targets, expressions, modifiers, predef)
+function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, isDef)
 	local self = {}
 	self.targets = targets
 	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
-	return setmetatable(self, AST.Stat.Definition)
-end
-
-function AST.Stat.Definition:evaluate(env)
-	local values = evaluateAll(self.expressions, env)
-	
-	for i, target in ipairs(self.targets) do
-		target:define(env, values[i] or AST.Expr.Literal.Nil(), self.modifiers)
-	end
-end
-
-function AST.Stat.Definition:resolve(scope)
-	for _, target in ipairs(self.targets) do
-		if scope[target.token.lexeme] then
-			error("redefinition of "..target.token.lexeme, 0)
-		end
-		if self.predef then scope[target.token.lexeme] = true end
-	end
-	
-	for _, expr in ipairs(self.expressions) do
-		expr:resolve(scope)
-	end
-	
-	for _, target in ipairs(self.targets) do
-		scope[target.token.lexeme] = true
-	end
-end
-
-function AST.Stat.Definition:__tostring()
-	local targets, expressions = {}, {}
-	for _, target in ipairs(self.targets) do
-		table.insert(targets, tostring(target))
-	end
-	for _, expr in ipairs(self.expressions) do
-		table.insert(expressions, tostring(expr))
-	end
-	return "var "..(self.predef and table.concat(targets, ", ").."; " or "")
-		..table.concat(targets, ", ").." = "..table.concat(expressions, ", ")
-end
-
-setmetatable(AST.Stat.Definition, {
-	__call = function(_, ...) return AST.Stat.Definition.new(...) end,
-})
-
-
-
-AST.Stat.Assignment = {}
-AST.Stat.Assignment.__index = AST.Stat.Assignment
-AST.Stat.Assignment.__name = "Assignment"
-
-function AST.Stat.Assignment.new(targets, expressions)
-	local self = {}
-	self.targets = targets
-	self.expressions = expressions
+	self.isDef = isDef
 	return setmetatable(self, AST.Stat.Assignment)
 end
 
@@ -753,17 +708,39 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = evaluateAll(self.expressions, env)
 	
 	for i, target in ipairs(self.targets) do
-		target:assign(env, values[i] or AST.Expr.Literal.Nil())
+		target:set(env, values[i] or AST.Expr.Literal.Nil(), self.modifiers, self.isDef and 0 or nil)
 	end
 end
 
 function AST.Stat.Assignment:resolve(scope)
+	if self.predef then
+		for _, target in ipairs(self.targets) do
+			scope[target.token.lexeme] = true
+		end
+	end
+	
 	for _, expr in ipairs(self.expressions) do expr:resolve(scope) end
-	for _, target in ipairs(self.targets) do target:resolve(scope) end
+	
+	for _, target in ipairs(self.targets) do
+		local resolved
+		if not self.isDef then
+			resolved = pcall(target.resolve, target, scope)
+		end
+		if not resolved then
+			scope[target.token.lexeme] = true
+		end
+	end
 end
 
 function AST.Stat.Assignment:__tostring()
-	return tostring(self.target).." = "..tostring(self.expr)
+	local targets, expressions = {}, {}
+	for _, target in ipairs(self.targets) do
+		table.insert(targets, tostring(target))
+	end
+	for _, expr in ipairs(self.expressions) do
+		table.insert(expressions, tostring(expr))
+	end
+	return table.concat(targets, ", ").." = "..table.concat(expressions, ", ")
 end
 
 setmetatable(AST.Stat.Assignment, {

@@ -1,12 +1,12 @@
 {
-	PersonProto := {
+	PersonProto = {
 		printDetails() => print(this.name, this.id)
 	}
 	
-	me := {
-		name := "RedPolygon"
-		id := 42
-		_Proto := PersonProto
+	me = {
+		name = "RedPolygon"
+		id = 42
+		_Proto = PersonProto
 	}
 	
 	me.printDetails()

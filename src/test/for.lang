@@ -1,7 +1,7 @@
 {
-	iterable := {
-		iterate := () => {
-			i := 0
+	iterable = {
+		iterate = () => {
+			i = 0
 			return () => {
 				i = i+1
 				return i < 5 && i || nil
@@ -11,7 +11,7 @@
 	
 	for x in iterable: print x
 	
-	list := [10, y := 20, 30]
+	list = [10, y = 20, 30]
 	for x in list: print x
 	
 	for x in [1,2,3,4]: print x

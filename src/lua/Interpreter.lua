@@ -109,9 +109,9 @@ function Interpreter.Block:get(key)
 	if not value then
 		local proto = self.environment:get("_Proto", 0)
 		value = proto and proto:get(key)
-		if value and (value.__name == "Function" or value.__name == "NativeFunction") then
-			value = value:bind(self)
-		end
+	end
+	if value and (value.__name == "Function" or value.__name == "NativeFunction") then
+		value = value:bind(self)
 	end
 	return value or Interpreter.Nil()
 end

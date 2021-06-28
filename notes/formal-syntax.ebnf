@@ -1,8 +1,7 @@
 program		= expression ;
-expression	= defexpr ;
+expression	= function ;
 
 (* Expressions *)
-defexpr		= variable ':=' function ;
 function	= fn | disjunction ;
 disjunction	= conjunction {'||' conjunction} ;
 conjunction	= application {'&&' application} ;
@@ -11,10 +10,8 @@ comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
-unary		= ('-' | '!' | '...') unary
-			| call ;
-call		= variable variable {variable}
-			| variable ;
+unary		= ('-' | '!' | '...') unary | call ;
+call		= variable {variable} ;
 variable	= primary {'.' primary} ;
 primary		= Identifier | Number | String | group | list | block ;
 group		= '(' expseq ')' ;
@@ -27,18 +24,15 @@ statement	= 'return' explist
 			| 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement
-			| definition ;
-definition	= ('var' | modifier {modifier}) varlist ['=' explist | fn]
-			| varlist ':=' explist
 			| assignment ;
-assignment	= varlist '=' explist
+assignment	= {modifier} varlist ['=' explist | fn]
 			| expression ;
 
 (* Smaller components *)
 fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
-expseq		= {expression | ','} ;
+expseq		= {primary '=' expression | expression | ','} ;
 statseq		= {statement | ';'} ;
 varlist		= variable {',' variable} ;
-explist		= function {',' function} ;
+explist		= expression {',' expression} ;
 param		= ['...'] Identifier ;
-modifier	= 'const' | 'instance' ;
+modifier	= 'var' | 'const' | 'instance' ;

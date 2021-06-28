@@ -6,6 +6,19 @@ https://wren.io/classes.html
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
+- Revisit assignment and definition
+  - Maybe let `10 = 2` be syntax for defining in current block? like Lua's `[10] = 2`
+    - Con: confusing, `10 = 2; print 10` will still print `10`
+  - Maybe don't separate assignment and definition (only use `=`), instead
+    always mutate variable if it is present in outer scope
+  - Make assignment/definition purely expression again
+    - Problem: weird stuff like definition in other container
+      `[42, other.x = 10, 32]` or in loop condition `while x = 1`
+    - Solution: maybe just make warning
+    - Problem: precedence of comma
+      - in statements:  x, y = 10, 20    will yield x=10, y=20
+      - in expressions: [x, y = 10, 20]  will yield y=10
+    - Solution: use semicolon for list element separation? [x; y = 10; 20] and add(10; 20)
 - Default parameters
 - Named parameters by (<arg> = <exp>)
   - Following C# valid-ness, valid when one of:
@@ -30,6 +43,9 @@ To-Do / roadmap / proposals
   - Ambiguous, what is `x => body`?
     - anonymous function with single parameter
     - getter function named `x`
+- Function arguments as sequence instead of repeated application?
+  - `a b c` is now `a(b(c))`, then `a(b,c)`
+  - As replacement for partial application in functional languages
 - Stream-based programming / Flow-Based Programming (FBP)
   - Lazy streams: important! so pull, not push
   - With operator `||>` or maybe replace operator `|>`
@@ -48,6 +64,7 @@ To-Do / roadmap / proposals
 - Indexing and setting to index as methods _Get and _Set?
 - Blocks as ordered associative arrays?
   - keys are sorted by their addition time
+  - what happens when deleting (setting to nil) and re-inserting a key?
 - Modifiers as single characters?
   - private `-x := 42`
   - public `+x := 42`
@@ -97,9 +114,6 @@ To-Do / roadmap / proposals
     - Pro: terse `a = b = c` (needs to be right-associative for this: `a = (b = c)`)
     - Con: cryptic "code-golf" things
     - Con: possible mistakes like `while x = 1`
-- TODO: Check formal syntax for assigment/definition (`10 = 2` is valid syntax)
-  - Maybe let `10 = 2` be syntax for defining in current block? like Lua's `[10] = 2`
-- TODO: Revisit juxtaposition function application precedence (maybe lower)
 - Types
   - structural
   - operations on types? for more safe typing (algebraic data type like?)

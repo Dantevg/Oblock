@@ -86,25 +86,25 @@ function Parser:parse()
 end
 
 function Parser:expression()
-	return self:defExpr()
+	return self:func()
 end
 
-function Parser:defExpr()
-	local expr = self:func()
-	if not expr then return end
+-- function Parser:defExpr()
+-- 	local expr = self:func()
+-- 	if not expr then return end
 	
-	if self:match {"colon equal"} then
-		local equal = self:previous()
-		local value = self:func()
-		if expr.__name == "Variable" then
-			expr = AST.Stat.Definition({expr}, {value}, {})
-		else
-			self:error(equal, "Invalid assignment target: "..expr.__name)
-		end
-	end
+-- 	if self:match {"colon equal"} then
+-- 		local equal = self:previous()
+-- 		local value = self:func()
+-- 		if expr.__name == "Variable" then
+-- 			expr = AST.Stat.Definition({expr}, {value}, {})
+-- 		else
+-- 			self:error(equal, "Invalid assignment target: "..expr.__name)
+-- 		end
+-- 	end
 	
-	return expr
-end
+-- 	return expr
+-- end
 
 function Parser:func()
 	local expr = self:disjunction()
@@ -350,8 +350,7 @@ function Parser:defStatement()
 		modifiers.var = nil
 		-- TODO: accept any primary as assignment target
 		-- https://twitter.com/munificentbob/status/1396892839192104961
-		if expr.__name == "Variable"
-				and (isDefinition or isAssignment) then
+		if isDefinition or isAssignment then
 			return isDefinition
 				and AST.Stat.Definition(variables, values, modifiers)
 				or AST.Stat.Assignment(variables, values)

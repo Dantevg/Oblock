@@ -760,13 +760,12 @@ AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, isDef)
+function AST.Stat.Assignment.new(targets, expressions, modifiers, predef)
 	local self = {}
 	self.targets = targets
 	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
-	self.isDef = isDef
 	return setmetatable(self, AST.Stat.Assignment)
 end
 
@@ -774,10 +773,12 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = evaluateAll(self.expressions, env)
 	
 	for i, target in ipairs(self.targets) do
+		local value = values[i] or AST.Expr.Literal.Nil()
+		local level = (#self.modifiers == 0) and 0 or nil
 		if target.set then
-			target:set(env, values[i] or AST.Expr.Literal.Nil(), self.modifiers, self.isDef and 0 or nil)
+			target:set(env, value, self.modifiers, level)
 		else
-			env:set(target:evaluate(env), values[i] or AST.Expr.Literal.Nil(), self.modifiers, self.isDef and 0 or nil)
+			env:set(target:evaluate(env), value, self.modifiers, level)
 		end
 	end
 end
@@ -793,7 +794,7 @@ function AST.Stat.Assignment:resolve(scope)
 	
 	for _, target in ipairs(self.targets) do
 		local resolved
-		if not self.isDef then
+		if #self.modifiers == 0 then -- is not explicit definition
 			resolved = pcall(target.resolve, target, scope)
 		end
 		if not resolved then
@@ -804,7 +805,7 @@ end
 
 function AST.Stat.Assignment:debug(indent)
 	return debug(indent, self.__name,
-		{modifiers = self.modifiers, predef = self.predef, isDef = self.isDef},
+		{modifiers = self.modifiers, predef = self.predef},
 		{targets = self.targets, expressions = self.expressions})
 end
 

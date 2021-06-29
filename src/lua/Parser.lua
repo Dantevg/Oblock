@@ -89,22 +89,9 @@ function Parser:expression()
 	return self:func()
 end
 
--- function Parser:defExpr()
--- 	local expr = self:func()
--- 	if not expr then return end
-	
--- 	if self:match {"colon equal"} then
--- 		local equal = self:previous()
--- 		local value = self:func()
--- 		if expr.__name == "Variable" then
--- 			expr = AST.Stat.Definition({expr}, {value}, {})
--- 		else
--- 			self:error(equal, "Invalid assignment target: "..expr.__name)
--- 		end
--- 	end
-	
--- 	return expr
--- end
+function Parser:defExpr()
+	return self:assignment(true)
+end
 
 function Parser:func()
 	local expr = self:disjunction()
@@ -211,11 +198,11 @@ function Parser:primary()
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:sequence("closing parenthesis", "comma", "expression"))
+	return AST.Expr.Group(self:sequence("closing parenthesis", "comma", "defExpr"))
 end
 
 function Parser:list()
-	return AST.Expr.List(self:sequence("closing bracket", "comma", "expression"))
+	return AST.Expr.List(self:sequence("closing bracket", "comma", "defExpr"))
 end
 
 function Parser:block()
@@ -262,7 +249,7 @@ function Parser:statement()
 	elseif self:match {"for"} then
 		return self:forStatement()
 	else
-		return self:defStatement()
+		return self:assignment()
 	end
 end
 
@@ -312,7 +299,7 @@ function Parser:forStatement()
 	return AST.Stat.For(variable, expr, body)
 end
 
-function Parser:defStatement()
+function Parser:assignment(isExpr)
 	local modifiers = {}
 	local isDefinition, isAssignment, isFunction = false, false, false
 	
@@ -325,32 +312,33 @@ function Parser:defStatement()
 	end
 	
 	-- Match assignment target
-	local variables = self:anylist(self:expression(), self.variable, "variable")
+	local variables = isExpr
+		and {self:expression()}
+		or self:anylist(self:expression(), self.variable, "variable")
 	local expr = variables[1]
 	
-	if modifiers.var or modifiers.const or modifiers.instance then
-		if self:match {"equal"} then
-			isAssignment = true
-		elseif self:match {"equal greater"} then
-			isFunction = true
-		else
-			-- Plain definition without `=` value
-			if expr.__name ~= "Variable" and #variables == 1 then
-				self:error(self:previous(), "Expected identifier")
-			else
-				return AST.Stat.Assignment(variables, {}, modifiers, false, isDefinition)
-			end
-		end
-	elseif self:match {"equal"} then
+	if self:match {"equal"} then -- a = b
 		isAssignment = true
-	elseif self:match {"equal greater"} then
+	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
+	elseif modifiers.var or modifiers.const or modifiers.instance then -- var a
+		local correct = true
+		for _, v in ipairs(variables) do
+			if v.__name ~= "Variable" then correct = false break end
+		end
+		if not correct then
+			self:error(self:previous(), "Expected identifier")
+		else
+			return AST.Stat.Assignment(variables, {}, modifiers, false, isDefinition)
+		end
 	end
 	
 	if isAssignment or isFunction then
 		-- Match `=` and values
 		local equal = self:previous()
-		local values = self:anylist(self:func(), self.func, "non-assignment expression")
+		local values = isExpr
+			and {self:expression()}
+			or self:anylist(self:expression(), self.expression, "expression")
 		modifiers.var = nil
 		if isAssignment then
 			return AST.Stat.Assignment(variables, values, modifiers, false, isDefinition)

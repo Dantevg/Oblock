@@ -2,7 +2,7 @@ local Interpreter = require "Interpreter"
 
 local fn = {}
 
-fn.clock = os.clock
+fn.clock = function() return Interpreter.Number(nil, os.clock()) end
 fn.print = function(...)
 	-- Pass-through variables
 	print(...)
@@ -11,7 +11,7 @@ end
 
 fn.type = function(x)
 	if not x then return "Nil" end
-	return x.__name
+	return Interpreter.String(nil, x.__name)
 end
 
 return function(env)

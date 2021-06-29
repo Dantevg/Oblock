@@ -6,19 +6,6 @@ https://wren.io/classes.html
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
-- Revisit assignment and definition
-  - Maybe let `10 = 2` be syntax for defining in current block? like Lua's `[10] = 2`
-    - Con: confusing, `10 = 2; print 10` will still print `10`
-  - Maybe don't separate assignment and definition (only use `=`), instead
-    always mutate variable if it is present in outer scope
-  - Make assignment/definition purely expression again
-    - Problem: weird stuff like definition in other container
-      `[42, other.x = 10, 32]` or in loop condition `while x = 1`
-    - Solution: maybe just make warning
-    - Problem: precedence of comma
-      - in statements:  x, y = 10, 20    will yield x=10, y=20
-      - in expressions: [x, y = 10, 20]  will yield y=10
-    - Solution: use semicolon for list element separation? [x; y = 10; 20] and add(10; 20)
 - Default parameters
 - Named parameters by (<arg> = <exp>)
   - Following C# valid-ness, valid when one of:
@@ -195,29 +182,6 @@ To-Do / roadmap / proposals
   - a [b] should call '[]' with b as argument and pass that as argument to a: a([](b))
     - definition of '[]' method should be defined in its own operator class
       (see operators as first-class citizens ^)
-
-Formal syntax
-=============
-- exp ::= var | number | string | list | exp op exp | op exp | wrapopl exp wrapopr
-        | block | lambda | fncall | varlist '=' explist | '(' exp ')'
-- stat ::= sep
-         | exp
-         | {modifier} identifier ['(' arglist ')'] '=>' exp
-         | 'if' exp ':' exp {'elseif' exp ':' exp} ['else' exp]
-         | 'while' exp ':' exp
-         | 'for' varlist 'in' explist ':' exp
-- block ::= {modifier} '{' {stat} '}'
-- lambda ::= '(' arglist ')' '=>' exp
-- identifier ::= (letter | '_') [{alphanum | '_'}]
-- fncall ::= exp args
-- args ::= exp  |  '(' [explist] ')'
-- varlist ::= {modifier} var {sep {modifier} var}
-- explist ::= exp {sep exp}
-- op ::= '+' | '-' | '*' | '/' | '^' | '%'
-       | '!' | '||' | '&&' | '<' | '>' | '==' | '!=' | '<=' | '>='
-       | '~' | '|' | '&' | '<<' | '>>'
-       | '@' | '#' | '$' | '\' | '?' | ':' | '..' | '...'
-- sep ::= ';' | ','
 
 Operators and keywords
 ======================

@@ -120,9 +120,8 @@ function Interpreter.Block:has(key)
 	return self.environment:has(key)
 end
 
-function Interpreter.Block:get(key)
-	-- TODO: should accept `level` argument?
-	local value = self.environment:get(key, 0)
+function Interpreter.Block:get(key, level)
+	local value = self.environment:get(key, level)
 	if not value then
 		local proto = self.environment:get("_Proto", 0)
 		value = proto and proto:get(key)

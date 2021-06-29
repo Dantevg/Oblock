@@ -18,6 +18,9 @@ local function debug(indent, name, properties, nodelists)
 		local success
 		success, pretty = pcall(require, "pretty")
 		if not success then pretty = tostring end
+	end
+	if not tc then
+		local success
 		success, tc = pcall(require, "terminalcolours")
 		if not success then tc = setmetatable({fg={},bg={},cursor={}},{__call=function()return""end}) end
 	end
@@ -41,6 +44,8 @@ local function debug(indent, name, properties, nodelists)
 		end
 		if lines == 1 then
 			str[#str-1] = str[#str-1].." "..table.remove(str):match("^%s*(.+)$")
+		elseif lines == 0 then
+			table.remove(str)
 		end
 	end
 	
@@ -120,7 +125,8 @@ function AST.Expr.Binary:resolve(scope)
 end
 
 function AST.Expr.Binary:debug(indent)
-	return debug(indent, self.__name, {op = self.op}, {left = {self.left}, right = {self.right}})
+	return debug(indent, self.__name, {op = self.op},
+		{left = {self.left}, right = {self.right}})
 end
 
 function AST.Expr.Binary:__tostring()
@@ -436,7 +442,8 @@ function AST.Expr.Function:resolve(scope)
 end
 
 function AST.Expr.Function:debug(indent)
-	return debug(indent, self.__name, {}, {parameters = self.parameters.expressions, body = {self.body}})
+	return debug(indent, self.__name, {},
+		{parameters = self.parameters.expressions, body = {self.body}})
 end
 
 function AST.Expr.Function:__tostring()
@@ -475,7 +482,8 @@ function AST.Expr.Call:resolve(scope)
 end
 
 function AST.Expr.Call:debug(indent)
-	return debug(indent, self.__name, {}, {expression = {self.expression}, args = {self.arglist}})
+	return debug(indent, self.__name, {},
+		{expression = {self.expression}, args = {self.arglist}})
 end
 
 function AST.Expr.Call:__tostring()
@@ -643,7 +651,8 @@ function AST.Stat.If:resolve(scope)
 end
 
 function AST.Stat.If:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {},
+		{condition = {self.condition}, ["then"] = {self.ifTrue}, ["else"] = {self.ifFalse}})
 end
 
 function AST.Stat.If:__tostring()
@@ -684,7 +693,8 @@ function AST.Stat.While:resolve(scope)
 end
 
 function AST.Stat.While:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {},
+		{condition = {self.condition}, body = {self.body}})
 end
 
 function AST.Stat.While:__tostring()
@@ -742,7 +752,8 @@ function AST.Stat.For:resolve(scope)
 end
 
 function AST.Stat.For:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {variable = self.variable},
+		{expression = {self.expr}, body = {self.body}})
 end
 
 function AST.Stat.For:__tostring()

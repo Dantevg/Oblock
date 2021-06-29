@@ -11,5 +11,6 @@
 	print z
 	
 	b = { 37 + 5 = "forty-two" }
-	print b.42
+	"hello world" = "hehe"
+	print(b.42, ."hello world")
 }

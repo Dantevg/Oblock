@@ -12,6 +12,41 @@ local function evaluateAll(expressions, env)
 	return values
 end
 
+local pretty, tc
+local function debug(indent, name, properties, nodelists)
+	if not pretty then
+		local success
+		success, pretty = pcall(require, "pretty")
+		if not success then pretty = tostring end
+		success, tc = pcall(require, "terminalcolours")
+		if not success then tc = setmetatable({fg={},bg={},cursor={}},{__call=function()return""end}) end
+	end
+	
+	indent = indent or ""
+	local str = {}
+	
+	local proplist = {}
+	for k, v in pairs(properties) do
+		table.insert(proplist, tostring(k)..": "..pretty(v, true))
+	end
+	str[1] = indent..tc(tc.fg.red)..name..tc(tc.reset).." { "..table.concat(proplist, ", ").." }"
+	
+	for nodelistname, nodes in pairs(nodelists) do
+		table.insert(str, indent.."  - "..nodelistname..":")
+		local lines = 0
+		for _, node in ipairs(nodes) do
+			local value, isSingleLine = node:debug(indent.."    ")
+			lines = lines + (isSingleLine and 1 or 2)
+			table.insert(str, value)
+		end
+		if lines == 1 then
+			str[#str-1] = str[#str-1].." "..table.remove(str):match("^%s*(.+)$")
+		end
+	end
+	
+	return table.concat(str, "\n"), #str == 1
+end
+
 local AST = {}
 
 
@@ -41,6 +76,10 @@ end
 
 function AST.Expr.Unary:resolve(scope)
 	self.right:resolve(scope)
+end
+
+function AST.Expr.Unary:debug(indent)
+	return debug(indent, self.__name, {op = self.op}, {right = {self.right}})
 end
 
 function AST.Expr.Unary:__tostring()
@@ -78,6 +117,10 @@ end
 function AST.Expr.Binary:resolve(scope)
 	self.left:resolve(scope)
 	self.right:resolve(scope)
+end
+
+function AST.Expr.Binary:debug(indent)
+	return debug(indent, self.__name, {op = self.op}, {left = {self.left}, right = {self.right}})
 end
 
 function AST.Expr.Binary:__tostring()
@@ -132,22 +175,14 @@ function AST.Expr.Group:evaluate(env)
 	return table.unpack(evaluateAll(self.expressions, env))
 end
 
-function AST.Expr.Group:define(env, values, modifiers)
-	for i, expr in ipairs(self.expressions) do
-		expr:define(env, values[i], modifiers)
-	end
-end
-
-function AST.Expr.Group:assign(env, values)
-	for i, expr in ipairs(self.expressions) do
-		expr:assign(env, values[i])
-	end
-end
-
 function AST.Expr.Group:resolve(scope)
 	for _, expr in ipairs(self.expressions) do
 		expr:resolve(scope)
 	end
+end
+
+function AST.Expr.Group:debug(indent)
+	return debug(indent, self.__name, {}, {expressions = self.expressions})
 end
 
 function AST.Expr.Group:__tostring()
@@ -192,6 +227,10 @@ function AST.Expr.Variable:resolve(scope)
 	if not self.level then error("unresolved variable "..self.token.lexeme, 0) end
 end
 
+function AST.Expr.Variable:debug(indent)
+	return debug(indent, self.__name, self, {})
+end
+
 function AST.Expr.Variable:__tostring()
 	return self.token.lexeme
 end
@@ -232,6 +271,10 @@ function AST.Expr.Index:resolve(scope)
 	self.base:resolve(scope)
 	if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
 	self.level = 0
+end
+
+function AST.Expr.Index:debug(indent)
+	return debug(indent, self.__name, self, {})
 end
 
 function AST.Expr.Index:__tostring()
@@ -276,6 +319,10 @@ function AST.Expr.Block:resolve(scope)
 	end
 end
 
+function AST.Expr.Block:debug(indent)
+	return debug(indent, self.__name, {}, {statements = self.statements})
+end
+
 function AST.Expr.Block:__tostring()
 	local strings = {}
 	for _, statement in ipairs(self.statements) do
@@ -314,9 +361,13 @@ function AST.Expr.List:resolve(scope)
 	end
 end
 
+function AST.Expr.List:debug(indent)
+	return debug(indent, self.__name, {}, {expressions = self.expressions})
+end
+
 function AST.Expr.List:__tostring()
 	local strings = {}
-	for _, value in ipairs(self.environment.environment) do
+	for _, value in ipairs(self.expressions) do
 		table.insert(strings, tostring(value))
 	end
 	return "["..table.concat(strings, ", ").."]"
@@ -384,6 +435,10 @@ function AST.Expr.Function:resolve(scope)
 	self.body:resolve(childScope)
 end
 
+function AST.Expr.Function:debug(indent)
+	return debug(indent, self.__name, {}, {parameters = self.parameters.expressions, body = {self.body}})
+end
+
 function AST.Expr.Function:__tostring()
 	return string.format("%s => %s", self.parameters, self.body)
 end
@@ -417,6 +472,10 @@ end
 function AST.Expr.Call:resolve(scope)
 	self.expression:resolve(scope)
 	self.arglist:resolve(scope)
+end
+
+function AST.Expr.Call:debug(indent)
+	return debug(indent, self.__name, self, {})
 end
 
 function AST.Expr.Call:__tostring()
@@ -457,6 +516,10 @@ end
 
 function AST.Expr.Literal.resolve() end
 
+function AST.Expr.Literal:debug(indent)
+	return debug(indent, self.__name, self, {})
+end
+
 function AST.Expr.Literal:__tostring()
 	return self.lexeme
 end
@@ -494,6 +557,10 @@ function AST.Stat.Return:resolve(scope)
 	end
 end
 
+function AST.Stat.Return:debug(indent)
+	return debug(indent, self.__name, {}, {expressions = self.expressions})
+end
+
 function AST.Stat.Return:__tostring()
 	local expressions = {}
 	for _, expr in ipairs(self.expressions) do
@@ -528,6 +595,10 @@ function AST.Stat.Yield:resolve(scope)
 	for _, expr in ipairs(self.expressions) do
 		expr:resolve(scope)
 	end
+end
+
+function AST.Stat.Yield:debug(indent)
+	return debug(indent, self.__name, {}, {expressions = self.expressions})
 end
 
 function AST.Stat.Yield:__tostring()
@@ -571,6 +642,10 @@ function AST.Stat.If:resolve(scope)
 	if self.ifFalse then self.ifFalse:resolve(scope) end
 end
 
+function AST.Stat.If:debug(indent)
+	return debug(indent, self.__name, self, {})
+end
+
 function AST.Stat.If:__tostring()
 	if self.ifFalse then
 		return string.format("if %s: %s else %s", self.condition, self.ifTrue, self.ifFalse)
@@ -606,6 +681,10 @@ end
 function AST.Stat.While:resolve(scope)
 	self.condition:resolve(scope)
 	self.body:resolve(scope)
+end
+
+function AST.Stat.While:debug(indent)
+	return debug(indent, self.__name, self, {})
 end
 
 function AST.Stat.While:__tostring()
@@ -660,6 +739,10 @@ function AST.Stat.For:resolve(scope)
 	local childScope = {parent = scope}
 	childScope[self.variable.token.lexeme] = true
 	self.body:resolve(childScope)
+end
+
+function AST.Stat.For:debug(indent)
+	return debug(indent, self.__name, self, {})
 end
 
 function AST.Stat.For:__tostring()
@@ -717,6 +800,12 @@ function AST.Stat.Assignment:resolve(scope)
 			scope[target.token.lexeme] = true
 		end
 	end
+end
+
+function AST.Stat.Assignment:debug(indent)
+	return debug(indent, self.__name,
+		{modifiers = self.modifiers, predef = self.predef, isDef = self.isDef},
+		{targets = self.targets, expressions = self.expressions})
 end
 
 function AST.Stat.Assignment:__tostring()

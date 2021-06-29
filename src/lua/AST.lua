@@ -259,16 +259,16 @@ local function ref(value, env)
 end
 
 function AST.Expr.Index:evaluate(env)
-	return self.base:evaluate(env):get(ref(self.expr, env), self.level)
+	return (self.base and self.base:evaluate(env) or env):get(ref(self.expr, env), self.level)
 end
 
 function AST.Expr.Index:set(env, value, modifiers)
-	self.base:evaluate(env):set(ref(self.expr, env), value, modifiers, self.level)
+	(self.base and self.base:evaluate(env) or env):set(ref(self.expr, env), value, modifiers, self.level)
 end
 
 function AST.Expr.Index:resolve(scope)
 	if self.level then error("resolving already-resolved variable", 0) end
-	self.base:resolve(scope)
+	if self.base then self.base:resolve(scope) end
 	if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
 	self.level = 0
 end
@@ -278,7 +278,7 @@ function AST.Expr.Index:debug(indent)
 end
 
 function AST.Expr.Index:__tostring()
-	return tostring(self.base).."."..tostring(self.expr)
+	return tostring(self.base or "").."."..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Index, {
@@ -475,7 +475,7 @@ function AST.Expr.Call:resolve(scope)
 end
 
 function AST.Expr.Call:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {}, {expression = {self.expression}, args = {self.arglist}})
 end
 
 function AST.Expr.Call:__tostring()
@@ -766,6 +766,7 @@ function AST.Stat.Assignment.new(targets, expressions, modifiers, predef)
 	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
+	self.isDef = modifiers.var or modifiers.const or modifiers.instance
 	return setmetatable(self, AST.Stat.Assignment)
 end
 
@@ -774,7 +775,7 @@ function AST.Stat.Assignment:evaluate(env)
 	
 	for i, target in ipairs(self.targets) do
 		local value = values[i] or AST.Expr.Literal.Nil()
-		local level = (#self.modifiers == 0) and 0 or nil
+		local level = self.isDef and 0 or nil
 		if target.set then
 			target:set(env, value, self.modifiers, level)
 		else
@@ -794,7 +795,7 @@ function AST.Stat.Assignment:resolve(scope)
 	
 	for _, target in ipairs(self.targets) do
 		local resolved
-		if #self.modifiers == 0 then -- is not explicit definition
+		if not self.isDef then
 			resolved = pcall(target.resolve, target, scope)
 		end
 		if not resolved then

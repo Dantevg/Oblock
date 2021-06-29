@@ -330,7 +330,6 @@ function Parser:assignment(isExpr)
 		local values = isExpr
 			and {self:expression()}
 			or self:anylist(self:expression(), self.expression, "expression")
-		modifiers.var = nil
 		if isAssignment then
 			return AST.Stat.Assignment(variables, values, modifiers, false)
 		elseif isFunction and expr.__name == "Call" and #variables == 1 then

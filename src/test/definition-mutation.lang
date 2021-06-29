@@ -9,4 +9,7 @@
 	print x
 	print a.x
 	print z
+	
+	b = { 37 + 5 = "forty-two" }
+	print b.42
 }

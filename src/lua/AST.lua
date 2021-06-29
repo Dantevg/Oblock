@@ -178,14 +178,6 @@ function AST.Expr.Variable:evaluate(env)
 	return env:get(self.token.lexeme, self.level)
 end
 
-function AST.Expr.Variable:define(env, value, modifiers)
-	env:define(self.token.lexeme, value, modifiers)
-end
-
-function AST.Expr.Variable:assign(env, value)
-	env:assign(self.token.lexeme, value, self.level)
-end
-
 function AST.Expr.Variable:set(env, value, modifiers, level)
 	env:set(self.token.lexeme, value, modifiers, level or self.level)
 end
@@ -214,7 +206,7 @@ AST.Expr.Index = {}
 AST.Expr.Index.__index = AST.Expr.Index
 AST.Expr.Index.__name = "Index"
 
--- b.(c).(d)  is  (b.(c)).(d)  is  Index(Index(Index(nil, b), c), d)
+-- b.(c).(d)  is  (b.(c)).(d)  is  Index(Index(Variable(b), c), d)
 
 function AST.Expr.Index.new(base, expr)
 	local self = {}
@@ -231,14 +223,6 @@ function AST.Expr.Index:evaluate(env)
 	return self.base:evaluate(env):get(ref(self.expr, env), self.level)
 end
 
-function AST.Expr.Index:define(env, value, modifiers)
-	self.base:evaluate(env):define(ref(self.expr, env), value, modifiers)
-end
-
-function AST.Expr.Index:assign(env, value)
-	self.base:evaluate(env):assign(ref(self.expr, env), value, self.level)
-end
-
 function AST.Expr.Index:set(env, value, modifiers)
 	self.base:evaluate(env):set(ref(self.expr, env), value, modifiers, self.level)
 end
@@ -251,8 +235,7 @@ function AST.Expr.Index:resolve(scope)
 end
 
 function AST.Expr.Index:__tostring()
-	local base = tostring(self.base).."."
-	return self.expr.__name == "Literal" and base..self.expr.lexeme or base..tostring(self.expr)
+	return tostring(self.base).."."..tostring(self.expr)
 end
 
 setmetatable(AST.Expr.Index, {
@@ -708,7 +691,11 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = evaluateAll(self.expressions, env)
 	
 	for i, target in ipairs(self.targets) do
-		target:set(env, values[i] or AST.Expr.Literal.Nil(), self.modifiers, self.isDef and 0 or nil)
+		if target.set then
+			target:set(env, values[i] or AST.Expr.Literal.Nil(), self.modifiers, self.isDef and 0 or nil)
+		else
+			env:set(target:evaluate(env), values[i] or AST.Expr.Literal.Nil(), self.modifiers, self.isDef and 0 or nil)
+		end
 	end
 end
 

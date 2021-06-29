@@ -25,14 +25,13 @@ statement	= 'return' explist
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement
 			| assignment ;
-assignment	= {modifier} varlist ['=' explist | fn]
+assignment	= {modifier} explist ['=' explist | fn]
 			| expression ;
 
 (* Smaller components *)
 fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
 expseq		= {primary '=' expression | expression | ','} ;
 statseq		= {statement | ';'} ;
-varlist		= variable {',' variable} ;
 explist		= expression {',' expression} ;
 param		= ['...'] Identifier ;
 modifier	= 'var' | 'const' | 'instance' ;

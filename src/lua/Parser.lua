@@ -314,7 +314,7 @@ function Parser:assignment(isExpr)
 	-- Match assignment target
 	local variables = isExpr
 		and {self:expression()}
-		or self:anylist(self:expression(), self.variable, "variable")
+		or self:anylist(self:expression(), self.expression, "expression")
 	local expr = variables[1]
 	
 	if self:match {"equal"} then -- a = b
@@ -322,15 +322,7 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 	elseif modifiers.var or modifiers.const or modifiers.instance then -- var a
-		local correct = true
-		for _, v in ipairs(variables) do
-			if v.__name ~= "Variable" then correct = false break end
-		end
-		if not correct then
-			self:error(self:previous(), "Expected identifier")
-		else
-			return AST.Stat.Assignment(variables, {}, modifiers, false, isDefinition)
-		end
+		return AST.Stat.Assignment(variables, {}, modifiers, false, isDefinition)
 	end
 	
 	if isAssignment or isFunction then
@@ -342,7 +334,7 @@ function Parser:assignment(isExpr)
 		modifiers.var = nil
 		if isAssignment then
 			return AST.Stat.Assignment(variables, values, modifiers, false, isDefinition)
-		elseif expr.__name == "Call" and isFunction and #variables == 1 then
+		elseif isFunction and expr.__name == "Call" and #variables == 1 then
 			local name, parameters = expr.expression, expr.arglist
 			if parameters.__name == "Variable" then -- name arg => body
 				parameters = AST.Expr.Group {parameters}

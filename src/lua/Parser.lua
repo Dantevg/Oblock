@@ -28,6 +28,19 @@ function Parser:error(token, message)
 	error(true)
 end
 
+function Parser:synchronise()
+	self:advance()
+	
+	self.nlSensitive = true
+	while self:peek().type ~= "EOF" do
+		local prev, next = self:previous(), self:peek()
+		if prev.type == "semicolon" then return end
+		if next.type == "if" or next.type == "for" or next.type == "while" then return end
+		self:advance()
+	end
+	self.nlSensitive = false
+end
+
 function Parser:nextIndex()
 	return (self.nlSensitive or self.tokens[self.current].type ~= "newline")
 		and self.current or self.current+1
@@ -234,9 +247,8 @@ function Parser:sequence(endTokenName, separator, type)
 	return elements
 end
 
-function Parser:anylist(first, next, typename)
-	local elements = {first}
-	if not first then self:error(self:previous(), "Expected "..typename, 0) end
+function Parser:anylist(next, typename)
+	local elements = {}
 	while self:match {"comma"} do
 		local element = next(self)
 		if element then
@@ -249,6 +261,15 @@ function Parser:anylist(first, next, typename)
 end
 
 function Parser:statement()
+	local success, value = pcall(self._statement, self)
+	if success then
+		return value
+	else
+		self:synchronise()
+	end
+end
+
+function Parser:_statement()
 	if self:match {"return"} then
 		return self:returnStatement(self:loc())
 	elseif self:match {"yield"} then
@@ -265,12 +286,12 @@ function Parser:statement()
 end
 
 function Parser:returnStatement(loc)
-	local values = self:anylist(self:expression(), self.expression, "expression")
+	local values = self:anylist(self.expression, "expression")
 	return AST.Stat.Return(values, loc)
 end
 
 function Parser:yieldStatement(loc)
-	local values = self:anylist(self:expression(), self.expression, "expression")
+	local values = self:anylist(self.expression, "expression")
 	return AST.Stat.Yield(values, loc)
 end
 
@@ -326,7 +347,7 @@ function Parser:assignment(isExpr)
 	-- Match assignment target
 	local variables = isExpr
 		and {self:expression()}
-		or self:anylist(self:expression(), self.expression, "expression")
+		or self:anylist(self.expression, "expression")
 	local expr = variables[1]
 	
 	if self:match {"equal"} then -- a = b
@@ -344,7 +365,7 @@ function Parser:assignment(isExpr)
 		local equal = self:previous()
 		local values = isExpr
 			and {self:expression()}
-			or self:anylist(self:expression(), self.expression, "expression")
+			or self:anylist(self.expression, "expression")
 		if isAssignment then
 			return AST.Stat.Assignment(variables, values, modifiers, false, loc)
 		elseif isFunction and expr.__name == "Call" and #variables == 1 then

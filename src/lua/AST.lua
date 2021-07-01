@@ -794,7 +794,7 @@ function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, loc)
 	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
-	self.isDef = modifiers.var or modifiers.const or modifiers.instance
+	self.isDef = modifiers.var or modifiers.const or modifiers.static or modifiers.instance
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Assignment)
 end

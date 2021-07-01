@@ -34,4 +34,4 @@ expseq		= {primary '=' expression | expression | ','} ;
 statseq		= {statement | ';'} ;
 explist		= expression {',' expression} ;
 param		= ['...'] Identifier ;
-modifier	= 'var' | 'const' | 'instance' ;
+modifier	= 'var' | 'const' | 'static' | 'instance' ;

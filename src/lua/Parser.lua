@@ -337,8 +337,8 @@ function Parser:assignment(isExpr)
 	local isAssignment, isFunction = false, false
 	local loc = self:loc(self:peek())
 	
-	-- Match modifiers: `var`, `const`, `instance`
-	while self:match {"var", "const", "instance"} do
+	-- Match modifiers: `var`, `const`, `static`, `instance`
+	while self:match {"var", "const", "static", "instance"} do
 		local mod = self:previous().type
 		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
 		modifiers[mod] = true
@@ -356,7 +356,7 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()
-	elseif modifiers.var or modifiers.const or modifiers.instance then -- var a
+	elseif modifiers.var or modifiers.const or modifiers.static or modifiers.instance then -- var a
 		return AST.Stat.Assignment(variables, {}, modifiers, false, loc)
 	end
 	

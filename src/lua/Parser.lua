@@ -104,7 +104,7 @@ function Parser:func()
 		elseif expr.__name == "Group" then -- (arg, arg) => body
 			return AST.Expr.Function(expr, body)
 		else
-			self:error(arrow, "Invalid function argument: "..expr.__name)
+			self:error(arrow, "Invalid function parameter: "..expr.__name)
 		end
 	end
 	-- other case: name arg => body  or  name(arg, arg) => body
@@ -336,7 +336,7 @@ function Parser:assignment(isExpr)
 			if parameters.__name == "Variable" then -- name arg => body
 				parameters = AST.Expr.Group {parameters}
 			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
-				self:error(equal, "Invalid function argument: "..parameters.__name)
+				self:error(equal, "Invalid function parameter: "..parameters.__name)
 			end
 			return AST.Stat.Assignment({name}, {AST.Expr.Function(parameters, values[1])}, modifiers, true)
 		else

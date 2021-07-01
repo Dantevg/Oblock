@@ -25,13 +25,17 @@ function Interpreter:interpret()
 	if results[1] then
 		return table.unpack(results, 2)
 	else
-		if type(results[2]) == "table" and results[2].__name == "Error" then
-			print(tc(tc.fg.red)..tostring(results[2]:get("message"))..tc(tc.reset))
-			local traceback = {results[2]:get("traceback"):spread()}
-			table.insert(traceback, "\tin main chunk")
-			print(table.concat(traceback, "\n"))
+		local err = results[2]
+		if type(err) == "table" and err.__name == "Error" then
+			print(tc(tc.fg.red)..string.format("[%s:%d:%d] %s",
+				err.loc.file, err.loc.line, err.loc.column, err:get("message"))
+				..tc(tc.reset))
+			local traceback = {err:get("traceback"):spread()}
+			if #traceback > 0 then
+				print(tc(tc.fg.red)..table.concat(traceback, "\n")..tc(tc.reset))
+			end
 		else
-			print(tostring(results[2]).."\n\tin main chunk")
+			print(err)
 		end
 		error()
 	end
@@ -41,8 +45,8 @@ function Interpreter.isCallable(fn)
 	return fn and type(fn) == "table" and fn.call
 end
 
-function Interpreter.error(message)
-	error(Interpreter.Error(nil, message), 0)
+function Interpreter.error(message, loc)
+	error(Interpreter.Error(nil, message, loc), 0)
 end
 
 
@@ -524,8 +528,9 @@ Interpreter.Error.__name = "Error"
 
 Interpreter.Error.proto = Interpreter.Block()
 
-function Interpreter.Error.new(parent, message)
+function Interpreter.Error.new(parent, message, loc)
 	local self = Interpreter.Block(parent)
+	self.loc = loc
 	self:set("_Proto", Interpreter.Error.proto, nil, 0)
 	self:set("message", Interpreter.String(nil, message), nil, 0)
 	self:set("traceback", Interpreter.List(), nil, 0)

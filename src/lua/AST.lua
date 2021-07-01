@@ -62,10 +62,11 @@ AST.Expr.Unary = {}
 AST.Expr.Unary.__index = AST.Expr.Unary
 AST.Expr.Unary.__name = "Unary"
 
-function AST.Expr.Unary.new(op, right)
+function AST.Expr.Unary.new(op, right, loc)
 	local self = {}
 	self.op = op
 	self.right = right
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Unary)
 end
 
@@ -74,7 +75,7 @@ function AST.Expr.Unary:evaluate(env)
 	local fn = right:get(self.op.lexeme)
 	if not Interpreter.isCallable(fn) then
 		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, right.__name, self.right))
+			self.op.lexeme, right.__name, self.right), self.loc)
 	end
 	return fn:call {right, env}
 end
@@ -101,11 +102,12 @@ AST.Expr.Binary = {}
 AST.Expr.Binary.__index = AST.Expr.Binary
 AST.Expr.Binary.__name = "Binary"
 
-function AST.Expr.Binary.new(left, op, right)
+function AST.Expr.Binary.new(left, op, right, loc)
 	local self = {}
 	self.left = left
 	self.op = op
 	self.right = right
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Binary)
 end
 
@@ -114,7 +116,7 @@ function AST.Expr.Binary:evaluate(env)
 	local fn = left:get(self.op.lexeme)
 	if not Interpreter.isCallable(fn) then
 		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, left.__name, self.left))
+			self.op.lexeme, left.__name, self.left), self.loc)
 	end
 	return fn:call {left, env, right}
 end
@@ -143,8 +145,8 @@ AST.Expr.Logical = {}
 AST.Expr.Logical.__index = AST.Expr.Logical
 AST.Expr.Logical.__name = "Logical"
 
-function AST.Expr.Logical.new(left, op, right)
-	local self = AST.Expr.Binary(left, op, right)
+function AST.Expr.Logical.new(left, op, right, loc)
+	local self = AST.Expr.Binary(left, op, right, loc)
 	return setmetatable(self, AST.Expr.Logical)
 end
 
@@ -171,9 +173,10 @@ AST.Expr.Group = {}
 AST.Expr.Group.__index = AST.Expr.Group
 AST.Expr.Group.__name = "Group"
 
-function AST.Expr.Group.new(expressions)
+function AST.Expr.Group.new(expressions, loc)
 	local self = {}
 	self.expressions = expressions
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Group)
 end
 
@@ -209,9 +212,10 @@ AST.Expr.Variable = {}
 AST.Expr.Variable.__index = AST.Expr.Variable
 AST.Expr.Variable.__name = "Variable"
 
-function AST.Expr.Variable.new(token)
+function AST.Expr.Variable.new(token, loc)
 	local self = {}
 	self.token = token
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Variable)
 end
 
@@ -253,10 +257,11 @@ AST.Expr.Index.__name = "Index"
 
 -- b.(c).(d)  is  (b.(c)).(d)  is  Index(Index(Variable(b), c), d)
 
-function AST.Expr.Index.new(base, expr)
+function AST.Expr.Index.new(base, expr, loc)
 	local self = {}
 	self.base = base
 	self.expr = expr
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Index)
 end
 
@@ -297,9 +302,10 @@ AST.Expr.Block = {}
 AST.Expr.Block.__index = AST.Expr.Block
 AST.Expr.Block.__name = "Block"
 
-function AST.Expr.Block.new(statements)
+function AST.Expr.Block.new(statements, loc)
 	local self = {}
 	self.statements = statements
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Block)
 end
 
@@ -347,9 +353,10 @@ AST.Expr.List = {}
 AST.Expr.List.__index = AST.Expr.List
 AST.Expr.List.__name = "List"
 
-function AST.Expr.List.new(expressions)
+function AST.Expr.List.new(expressions, loc)
 	local self = {}
 	self.expressions = expressions
+	self.loc = loc
 	return setmetatable(self, AST.Expr.List)
 end
 
@@ -389,10 +396,11 @@ AST.Expr.Function = {}
 AST.Expr.Function.__index = AST.Expr.Function
 AST.Expr.Function.__name = "Function"
 
-function AST.Expr.Function.new(parameters, body)
+function AST.Expr.Function.new(parameters, body, loc)
 	local self = {}
 	self.parameters = parameters
 	self.body = body
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Function)
 end
 
@@ -460,17 +468,18 @@ AST.Expr.Call = {}
 AST.Expr.Call.__index = AST.Expr.Call
 AST.Expr.Call.__name = "Call"
 
-function AST.Expr.Call.new(expression, arglist)
+function AST.Expr.Call.new(expression, arglist, loc)
 	local self = {}
 	self.expression = expression
 	self.arglist = arglist
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Call)
 end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
 	if not Interpreter.isCallable(fn) then
-		Interpreter.error("Attempt to call non-callable type "..(fn and fn.__name or "Nil"))
+		Interpreter.error("Attempt to call non-callable type "..(fn and fn.__name or "Nil"), self.loc)
 	end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
@@ -500,7 +509,7 @@ AST.Expr.Literal = {}
 AST.Expr.Literal.__index = AST.Expr.Literal
 AST.Expr.Literal.__name = "Literal"
 
-function AST.Expr.Literal.new(literal, lexeme)
+function AST.Expr.Literal.new(literal, lexeme, loc)
 	local self = {}
 	if lexeme then
 		self.literal = literal
@@ -509,6 +518,7 @@ function AST.Expr.Literal.new(literal, lexeme)
 		self.literal = literal.literal
 		self.lexeme = literal.lexeme
 	end
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Literal)
 end
 
@@ -548,9 +558,10 @@ AST.Stat.Return = {}
 AST.Stat.Return.__index = AST.Stat.Return
 AST.Stat.Return.__name = "Return"
 
-function AST.Stat.Return.new(expressions)
+function AST.Stat.Return.new(expressions, loc)
 	local self = {}
 	self.expressions = expressions or {}
+	self.loc = loc
 	return setmetatable(self, AST.Stat.Return)
 end
 
@@ -588,9 +599,10 @@ AST.Stat.Yield = {}
 AST.Stat.Yield.__index = AST.Stat.Yield
 AST.Stat.Yield.__name = "Yield"
 
-function AST.Stat.Yield.new(expressions)
+function AST.Stat.Yield.new(expressions, loc)
 	local self = {}
 	self.expressions = expressions
+	self.loc = loc
 	return setmetatable(self, AST.Stat.Yield)
 end
 
@@ -628,11 +640,12 @@ AST.Stat.If = {}
 AST.Stat.If.__index = AST.Stat.If
 AST.Stat.If.__name = "If"
 
-function AST.Stat.If.new(condition, ifTrue, ifFalse)
+function AST.Stat.If.new(condition, ifTrue, ifFalse, loc)
 	local self = {}
 	self.condition = condition
 	self.ifTrue = ifTrue
 	self.ifFalse = ifFalse
+	self.loc = loc
 	return setmetatable(self, AST.Stat.If)
 end
 
@@ -674,10 +687,11 @@ AST.Stat.While = {}
 AST.Stat.While.__index = AST.Stat.While
 AST.Stat.While.__name = "While"
 
-function AST.Stat.While.new(condition, body)
+function AST.Stat.While.new(condition, body, loc)
 	local self = {}
 	self.condition = condition
 	self.body = body
+	self.loc = loc
 	return setmetatable(self, AST.Stat.While)
 end
 
@@ -712,11 +726,12 @@ AST.Stat.For = {}
 AST.Stat.For.__index = AST.Stat.For
 AST.Stat.For.__name = "For"
 
-function AST.Stat.For.new(variable, expr, body)
+function AST.Stat.For.new(variable, expr, body, loc)
 	local self = {}
 	self.variable = variable
 	self.expr = expr
 	self.body = body
+	self.loc = loc
 	return setmetatable(self, AST.Stat.For)
 end
 
@@ -726,11 +741,11 @@ function AST.Stat.For:evaluate(env)
 	local iteratorSource = container:get("iterate")
 	if not Interpreter.isCallable(iteratorSource) then
 		Interpreter.error(string.format("no callable instance 'iterate' on %s value '%s'",
-			container.__name, self.expr))
+			container.__name, self.expr), self.loc)
 	end
 	local iterator = iteratorSource:call()
 	if not Interpreter.isCallable(iterator) then
-		error("'iterate' does not return callable", 0)
+		Interpreter.error("'iterate' does not return callable", self.loc)
 	end
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
@@ -771,13 +786,14 @@ AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(targets, expressions, modifiers, predef)
+function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, loc)
 	local self = {}
 	self.targets = targets
 	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
 	self.isDef = modifiers.var or modifiers.const or modifiers.instance
+	self.loc = loc
 	return setmetatable(self, AST.Stat.Assignment)
 end
 

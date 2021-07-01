@@ -14,6 +14,15 @@ function Parser.new(tokens, name)
 	return setmetatable(self, Parser)
 end
 
+function Parser:loc(token)
+	token = token or self:previous()
+	return {
+		file = self.name,
+		line = token.line,
+		column = token.column,
+	}
+end
+
 function Parser:error(token, message)
 	token.lexer:printError(token, message)
 	error(true)
@@ -63,7 +72,7 @@ function Parser:binary(tokens, next, fn)
 	while self:match(tokens) do
 		local op = self:previous()
 		local right = next(self)
-		expr = (fn or AST.Expr.Binary)(expr, op, right)
+		expr = (fn or AST.Expr.Binary)(expr, op, right, self:loc(op))
 	end
 	
 	return expr
@@ -80,7 +89,7 @@ function Parser:parse()
 	if success then
 		return result
 	elseif result ~= true then
-		error(result)
+		error(result, 0)
 	end
 end
 
@@ -100,9 +109,9 @@ function Parser:func()
 		local body = self:expression()
 		-- Check if expression is variable or group of variables
 		if expr.__name == "Variable" then -- arg => body
-			return AST.Expr.Function(AST.Expr.Group {expr}, body)
+			return AST.Expr.Function(AST.Expr.Group {expr}, body, self:loc(arrow))
 		elseif expr.__name == "Group" then -- (arg, arg) => body
-			return AST.Expr.Function(expr, body)
+			return AST.Expr.Function(expr, body, self:loc(arrow))
 		else
 			self:error(arrow, "Invalid function parameter: "..expr.__name)
 		end
@@ -147,7 +156,7 @@ function Parser:unary()
 	if self:match {"minus", "exclamation", "dot dot dot"} then
 		local op = self:previous()
 		local right = self:unary()
-		return AST.Expr.Unary(op, right)
+		return AST.Expr.Unary(op, right, self:loc(op))
 	else
 		return self:call()
 	end
@@ -159,7 +168,7 @@ function Parser:call()
 	self.nlSensitive = true
 	local arglist = self:variable()
 	while arglist do
-		expr = AST.Expr.Call(expr, arglist)
+		expr = AST.Expr.Call(expr, arglist, self:loc())
 		self.nlSensitive = true
 		arglist = self:variable()
 	end
@@ -170,18 +179,18 @@ end
 function Parser:variable()
 	local expr = self:primary()
 	while self:match {"dot"} do
-		expr = AST.Expr.Index(expr, self:primary())
+		expr = AST.Expr.Index(expr, self:primary(), self:loc())
 	end
 	return expr
 end
 
 function Parser:primary()
 	if self:match {"number", "string"} then
-		return AST.Expr.Literal(self:previous())
+		return AST.Expr.Literal(self:previous(), nil, self:loc())
 	elseif self:match {"true"} then
-		return AST.Expr.Literal.True()
+		return AST.Expr.Literal.True(self:loc())
 	elseif self:match {"false"} then
-		return AST.Expr.Literal.False()
+		return AST.Expr.Literal.False(self:loc())
 	elseif self:match {"opening parenthesis"} then
 		self.nlSensitive = false
 		return self:group()
@@ -192,20 +201,23 @@ function Parser:primary()
 		self.nlSensitive = false
 		return self:block()
 	elseif self:match {"identifier"} then
-		return AST.Expr.Variable(self:previous())
+		return AST.Expr.Variable(self:previous(), self:loc())
 	end
 end
 
 function Parser:group()
-	return AST.Expr.Group(self:sequence("closing parenthesis", "comma", "defExpr"))
+	return AST.Expr.Group(
+		self:sequence("closing parenthesis", "comma", "defExpr"), self:loc())
 end
 
 function Parser:list()
-	return AST.Expr.List(self:sequence("closing bracket", "comma", "defExpr"))
+	return AST.Expr.List(
+		self:sequence("closing bracket", "comma", "defExpr"), self:loc())
 end
 
 function Parser:block()
-	return AST.Expr.Block(self:sequence("closing curly bracket", "semicolon", "statement"))
+	return AST.Expr.Block(
+		self:sequence("closing curly bracket", "semicolon", "statement"), self:loc())
 end
 
 function Parser:sequence(endTokenName, separator, type)
@@ -254,12 +266,12 @@ end
 
 function Parser:returnStatement()
 	local values = self:anylist(self:expression(), self.expression, "expression")
-	return AST.Stat.Return(values)
+	return AST.Stat.Return(values, self:loc())
 end
 
 function Parser:yieldStatement()
 	local values = self:anylist(self:expression(), self.expression, "expression")
-	return AST.Stat.Yield(values)
+	return AST.Stat.Yield(values, self:loc())
 end
 
 function Parser:ifStatement()
@@ -274,7 +286,7 @@ function Parser:ifStatement()
 			self:error(self:peek(), "Expected statement")
 		end
 	end
-	return AST.Stat.If(condition, ifTrue, ifFalse)
+	return AST.Stat.If(condition, ifTrue, ifFalse, self:loc())
 end
 
 function Parser:whileStatement()
@@ -282,12 +294,13 @@ function Parser:whileStatement()
 	self:consume("colon", "Expected ':'")
 	local body = self:statement()
 	if not body then self:error(self:peek(), "Expected statement") end
-	return AST.Stat.While(condition, body)
+	return AST.Stat.While(condition, body, self:loc())
 end
 
 function Parser:forStatement()
 	local variable = AST.Expr.Variable(
-		AST.Expr.Literal(self:consume("identifier", "Expected identifier"))
+		AST.Expr.Literal(self:consume("identifier", "Expected identifier"), self:loc()),
+		self:loc()
 	)
 	self:consume("in", "Expected 'in'")
 	local expr = self:expression()
@@ -295,7 +308,7 @@ function Parser:forStatement()
 	local body = self:statement()
 	if not body then self:error(self:peek(), "Expected statement") end
 	
-	return AST.Stat.For(variable, expr, body)
+	return AST.Stat.For(variable, expr, body, self:loc())
 end
 
 function Parser:assignment(isExpr)
@@ -320,7 +333,7 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 	elseif modifiers.var or modifiers.const or modifiers.instance then -- var a
-		return AST.Stat.Assignment(variables, {}, modifiers, false)
+		return AST.Stat.Assignment(variables, {}, modifiers, false, self:loc())
 	end
 	
 	if isAssignment or isFunction then
@@ -330,15 +343,17 @@ function Parser:assignment(isExpr)
 			and {self:expression()}
 			or self:anylist(self:expression(), self.expression, "expression")
 		if isAssignment then
-			return AST.Stat.Assignment(variables, values, modifiers, false)
+			return AST.Stat.Assignment(variables, values, modifiers, false, self:loc())
 		elseif isFunction and expr.__name == "Call" and #variables == 1 then
 			local name, parameters = expr.expression, expr.arglist
 			if parameters.__name == "Variable" then -- name arg => body
-				parameters = AST.Expr.Group {parameters}
+				parameters = AST.Expr.Group({parameters}, self:loc())
 			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
 				self:error(equal, "Invalid function parameter: "..parameters.__name)
 			end
-			return AST.Stat.Assignment({name}, {AST.Expr.Function(parameters, values[1])}, modifiers, true)
+			return AST.Stat.Assignment(
+				{name}, {AST.Expr.Function(parameters, values[1], self:loc())},
+				modifiers, true, self:loc())
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end

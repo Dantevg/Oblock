@@ -77,7 +77,8 @@ function AST.Expr.Unary:evaluate(env)
 		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
 			self.op.lexeme, right.__name, self.right), self.loc)
 	end
-	return fn:call {right, env}
+	return Interpreter.context(self.loc, "operator '"..self.op.lexeme.."'",
+		fn.call, fn, {right, env})
 end
 
 function AST.Expr.Unary:resolve(scope)
@@ -118,7 +119,8 @@ function AST.Expr.Binary:evaluate(env)
 		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
 			self.op.lexeme, left.__name, self.left), self.loc)
 	end
-	return fn:call {left, env, right}
+	return Interpreter.context(self.loc, "operator '"..self.op.lexeme.."'",
+		fn.call, fn, {left, env, right})
 end
 
 function AST.Expr.Binary:resolve(scope)

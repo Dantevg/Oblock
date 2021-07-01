@@ -27,9 +27,13 @@ function Interpreter:interpret()
 	else
 		local err = results[2]
 		if type(err) == "table" and err.__name == "Error" then
-			print(tc(tc.fg.red)..string.format("[%s:%d:%d] %s",
-				err.loc.file, err.loc.line, err.loc.column, err:get("message"))
-				..tc(tc.reset))
+			if err.loc then
+				print(tc(tc.fg.red)..string.format("[%s:%d:%d] %s",
+					err.loc.file, err.loc.line, err.loc.column, err:get("message"))
+					..tc(tc.reset))
+			else
+				print(tc(tc.fg.red)..tostring(err:get("message"))..tc(tc.reset))
+			end
 			local traceback = {err:get("traceback"):spread()}
 			if #traceback > 0 then
 				print(tc(tc.fg.red)..table.concat(traceback, "\n")..tc(tc.reset))
@@ -47,6 +51,22 @@ end
 
 function Interpreter.error(message, loc)
 	error(Interpreter.Error(nil, message, loc), 0)
+end
+
+function Interpreter.context(loc, trace, fn, ...)
+	local values = {pcall(fn, ...)}
+	if values[1] then
+		return table.unpack(values, 2)
+	else
+		local err = values[2]
+		if type(err) == "table" and err.__name == "Error" then
+			err:get("traceback"):push("\tin "..tostring(trace))
+			if not err.loc then err.loc = loc end
+			error(err, 0)
+		else
+			error(err, 0)
+		end
+	end
 end
 
 
@@ -239,19 +259,12 @@ end
 function Interpreter.Function:call(args)
 	local environment = Interpreter.Environment(self.environment)
 	if self.this then environment:set("this", self.this, nil, 0) end
-	local values = {pcall(self.body, environment, args)}
+	local values = {pcall(Interpreter.context, self.loc, tostring(self),
+		self.body, environment, args)}
 	if values[1] then
 		return table.unpack(values, 2)
-	else
-		local err = values[2]
-		if type(err) == "table" and err.__name == "Return" then
-			return table.unpack(err.values)
-		elseif type(err) == "table" and err.__name == "Error" then
-			err:get("traceback"):push("\tin "..tostring(self))
-			error(err, 0)
-		else
-			error(tostring(err).."\n\tin "..tostring(self), 0)
-		end
+	elseif type(values[2]) == "table" and values[2].__name == "Return" then
+		return table.unpack(values[2].values)
 	end
 end
 

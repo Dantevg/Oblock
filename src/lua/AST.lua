@@ -73,8 +73,8 @@ function AST.Expr.Unary:evaluate(env)
 	local right = self.right:evaluate(env)
 	local fn = right:get(self.op.lexeme)
 	if not Interpreter.isCallable(fn) then
-		error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, right.__name, self.right), 0)
+		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
+			self.op.lexeme, right.__name, self.right))
 	end
 	return fn:call {right, env}
 end
@@ -113,8 +113,8 @@ function AST.Expr.Binary:evaluate(env)
 	local left, right = self.left:evaluate(env), self.right:evaluate(env)
 	local fn = left:get(self.op.lexeme)
 	if not Interpreter.isCallable(fn) then
-		error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, left.__name, self.left), 0)
+		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
+			self.op.lexeme, left.__name, self.left))
 	end
 	return fn:call {left, env, right}
 end
@@ -470,7 +470,7 @@ end
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
 	if not Interpreter.isCallable(fn) then
-		error("Attempt to call non-callable type "..(fn and fn.__name or "Nil"), 0)
+		Interpreter.error("Attempt to call non-callable type "..(fn and fn.__name or "Nil"))
 	end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
@@ -725,8 +725,8 @@ function AST.Stat.For:evaluate(env)
 	local container = self.expr:evaluate(env)
 	local iteratorSource = container:get("iterate")
 	if not Interpreter.isCallable(iteratorSource) then
-		error(string.format("no callable instance 'iterate' on %s value '%s'",
-			container.__name, self.expr), 0)
+		Interpreter.error(string.format("no callable instance 'iterate' on %s value '%s'",
+			container.__name, self.expr))
 	end
 	local iterator = iteratorSource:call()
 	if not Interpreter.isCallable(iterator) then

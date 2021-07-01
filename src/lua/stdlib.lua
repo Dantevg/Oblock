@@ -16,17 +16,17 @@ end
 
 return function(env)
 	for name, f in pairs(fn) do
-		env:define(name, Interpreter.NativeFunction(env, f))
+		env:set(name, Interpreter.NativeFunction(env, f), nil, 0)
 	end
-	env:define("Block", Interpreter.Block.proto)
-	env:define("Function", Interpreter.Function.proto)
-	env:define("Number", Interpreter.Number.proto)
-	env:define("String", Interpreter.String.proto)
-	env:define("Boolean", Interpreter.Boolean.proto)
-	env:define("Nil", Interpreter.Nil.proto)
-	env:define("List", Interpreter.List.proto)
+	env:set("Block", Interpreter.Block.proto, nil, 0)
+	env:set("Function", Interpreter.Function.proto, nil, 0)
+	env:set("Number", Interpreter.Number.proto, nil, 0)
+	env:set("String", Interpreter.String.proto, nil, 0)
+	env:set("Boolean", Interpreter.Boolean.proto, nil, 0)
+	env:set("Nil", Interpreter.Nil.proto, nil, 0)
+	env:set("List", Interpreter.List.proto, nil, 0)
 	
-	env:define("nil", Interpreter.Nil.proto:get("nil"))
-	env:define("true", Interpreter.Boolean.proto:get("true"))
-	env:define("false", Interpreter.Boolean.proto:get("false"))
+	env:set("nil", Interpreter.Nil.proto:get("nil"), nil, 0)
+	env:set("true", Interpreter.Boolean.proto:get("true"), nil, 0)
+	env:set("false", Interpreter.Boolean.proto:get("false"), nil, 0)
 end

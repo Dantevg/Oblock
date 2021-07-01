@@ -15,8 +15,7 @@ function Parser.new(tokens, name)
 end
 
 function Parser:error(token, message)
-	print(string.format("[%s%d] at '%s': %s",
-		self.name and self.name..":" or "", token.line, token.lexeme, message))
+	token.lexer:printError(token, message)
 	error(true)
 end
 

@@ -1,10 +1,12 @@
+local tc = require "terminalcolours"
+
 local Interpreter = {}
 Interpreter.__index = Interpreter
 
 function Interpreter.new(program)
 	local self = {}
 	self.program = program
-	self.environment = Interpreter.Environment(nil, "main")
+	self.environment = Interpreter.Environment()
 	require("stdlib")(self.environment)
 	return setmetatable(self, Interpreter)
 end
@@ -23,13 +25,24 @@ function Interpreter:interpret()
 	if results[1] then
 		return table.unpack(results, 2)
 	else
-		print(tostring(results[2]).."\n\tin main chunk")
+		if type(results[2]) == "table" and results[2].__name == "Error" then
+			print(tc(tc.fg.red)..tostring(results[2]:get("message"))..tc(tc.reset))
+			local traceback = {results[2]:get("traceback"):spread()}
+			table.insert(traceback, "\tin main chunk")
+			print(table.concat(traceback, "\n"))
+		else
+			print(tostring(results[2]).."\n\tin main chunk")
+		end
 		error()
 	end
 end
 
 function Interpreter.isCallable(fn)
 	return fn and type(fn) == "table" and fn.call
+end
+
+function Interpreter.error(message)
+	error(Interpreter.Error(nil, message), 0)
 end
 
 
@@ -46,7 +59,7 @@ end
 
 function Interpreter.Environment:define(key, value, modifiers)
 	if type(key) == "table" then key = key.value end
-	if self.env[key] then error("Redefinition of variable "..tostring(key), 0) end
+	if self.env[key] then Interpreter.error("Redefinition of variable "..tostring(key)) end
 	self.env[key] = {
 		value = value,
 		modifiers = modifiers or {}
@@ -57,21 +70,22 @@ function Interpreter.Environment:assign(key, value, level)
 	if type(key) == "table" then key = key.value end
 	if self.env[key] and (not level or level == 0) then
 		if self.env[key].modifiers.const then
-			error("Attempt to mutate const variable "..tostring(key), 0)
+			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
 	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
 		self.parent:assign(key, value, level and level-1)
 	else
-		error("attempt to mutate non-existent variable "..tostring(key), 0)
+		Interpreter.error("attempt to mutate non-existent variable "..tostring(key))
 	end
 end
 
 function Interpreter.Environment:set(key, value, modifiers, level)
 	if type(key) == "table" then key = key.value end
 	if self.env[key] and (not level or level == 0) then
+		-- if modifiers ~= nil then Interpreter.error("Redefinition of variable "..tostring(key)) end
 		if self.env[key].modifiers.const then
-			error("Attempt to mutate const variable "..tostring(key), 0)
+			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
 	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
@@ -112,7 +126,7 @@ Interpreter.Block.__name = "Block"
 function Interpreter.Block.new(parent)
 	local self = {}
 	self.environment = Interpreter.Environment(parent)
-	self.environment:define("_Proto", Interpreter.Block.proto)
+	self.environment:set("_Proto", Interpreter.Block.proto, nil, 0)
 	return setmetatable(self, Interpreter.Block)
 end
 
@@ -130,14 +144,6 @@ function Interpreter.Block:get(key, level)
 		value = value:bind(self)
 	end
 	return value or Interpreter.Nil()
-end
-
-function Interpreter.Block:define(key, value, modifiers)
-	return self.environment:define(key, value, modifiers)
-end
-
-function Interpreter.Block:assign(key, value)
-	return self.environment:assign(key, value)
 end
 
 function Interpreter.Block:set(key, value, modifiers, level)
@@ -178,7 +184,7 @@ function Interpreter.NativeFunction.new(parent, body, name)
 	local self = Interpreter.Block(parent)
 	self.body = body
 	self.name = name
-	self:assign("_Proto", Interpreter.NativeFunction.proto)
+	self:set("_Proto", Interpreter.NativeFunction.proto, nil, 0)
 	return setmetatable(self, Interpreter.NativeFunction)
 end
 
@@ -215,7 +221,7 @@ function Interpreter.Function.new(parent, body, name)
 	local self = Interpreter.Block(parent)
 	self.body = body
 	self.name = name
-	self:assign("_Proto", Interpreter.Function.proto)
+	self:set("_Proto", Interpreter.Function.proto, nil, 0)
 	return setmetatable(self, Interpreter.Function)
 end
 
@@ -228,7 +234,7 @@ end
 
 function Interpreter.Function:call(args)
 	local environment = Interpreter.Environment(self.environment)
-	if self.this then environment:define("this", self.this) end
+	if self.this then environment:set("this", self.this, nil, 0) end
 	local values = {pcall(self.body, environment, args)}
 	if values[1] then
 		return table.unpack(values, 2)
@@ -236,6 +242,9 @@ function Interpreter.Function:call(args)
 		local err = values[2]
 		if type(err) == "table" and err.__name == "Return" then
 			return table.unpack(err.values)
+		elseif type(err) == "table" and err.__name == "Error" then
+			err:get("traceback"):push("\tin "..tostring(self))
+			error(err, 0)
 		else
 			error(tostring(err).."\n\tin "..tostring(self), 0)
 		end
@@ -286,7 +295,7 @@ Interpreter.Number.proto = Interpreter.Block()
 
 function Interpreter.Number.new(parent, value)
 	local self = Interpreter.Value(parent, tonumber(value))
-	self:assign("_Proto", Interpreter.Number.proto)
+	self:set("_Proto", Interpreter.Number.proto, nil, 0)
 	return setmetatable(self, Interpreter.Number)
 end
 
@@ -306,13 +315,13 @@ end
 
 function Interpreter.Number:add(env, other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
+	if type(b) ~= "number" then Interpreter.error("cannot perform '+' on "..other.__name) end
 	return self.new(env, a + b)
 end
 
 function Interpreter.Number:mul(env, other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then error("cannot perform '*' on "..other.__name, 0) end
+	if type(b) ~= "number" then Interpreter.error("cannot perform '*' on "..other.__name) end
 	return self.new(env, a * b)
 end
 
@@ -320,7 +329,7 @@ function Interpreter.Number:sub(env, other)
 	local a = tonumber(self.value)
 	if other then
 		local b = tonumber(other.value)
-		if type(b) ~= "number" then error("cannot perform '+' on "..other.__name, 0) end
+		if type(b) ~= "number" then Interpreter.error("cannot perform '-' on "..other.__name) end
 		return self.new(env, a - b)
 	else
 		return self.new(env, -a)
@@ -349,13 +358,13 @@ Interpreter.String.proto = Interpreter.Block()
 
 function Interpreter.String.new(parent, value)
 	local self = Interpreter.Value(parent, tostring(value))
-	self:assign("_Proto", Interpreter.String.proto)
+	self:set("_Proto", Interpreter.String.proto, nil, 0)
 	return setmetatable(self, Interpreter.String)
 end
 
 function Interpreter.String:add(env, other)
 	local a, b = tostring(self.value), tostring(other.value)
-	if type(b) ~= "string" then error("cannot perform '+' on "..other.__name, 0) end
+	if type(b) ~= "string" then Interpreter.error("cannot perform '+' on "..other.__name) end
 	return self.new(env, a..b)
 end
 
@@ -381,7 +390,7 @@ Interpreter.Boolean.proto = Interpreter.Block()
 
 function Interpreter.Boolean.new(parent, value)
 	local self = Interpreter.Value(parent, not not value)
-	self:assign("_Proto", Interpreter.Boolean.proto)
+	self:set("_Proto", Interpreter.Boolean.proto, nil, 0)
 	return setmetatable(self, Interpreter.Boolean)
 end
 
@@ -411,7 +420,7 @@ Interpreter.Nil.proto = Interpreter.Block()
 
 function Interpreter.Nil.new(parent)
 	local self = Interpreter.Value(parent, nil)
-	self:assign("_Proto", Interpreter.Nil.proto)
+	self:set("_Proto", Interpreter.Nil.proto, nil, 0)
 	return setmetatable(self, Interpreter.Nil)
 end
 
@@ -453,7 +462,7 @@ function Interpreter.List.new(parent, elements)
 		self:set(i, elements[i])
 	end
 	self:set("length", Interpreter.Number(nil, #elements))
-	self:assign("_Proto", Interpreter.List.proto)
+	self:set("_Proto", Interpreter.List.proto, nil, 0)
 	return setmetatable(self, Interpreter.List)
 end
 
@@ -470,7 +479,7 @@ function Interpreter.List:add(env, other)
 	for i = 1, #other do
 		table.insert(values, other:get(i))
 	end
-	self:assign("length", Interpreter.Number(nil, #self))
+	self:set("length", Interpreter.Number(nil, #self), nil, 0)
 	return self.new(nil, values)
 end
 
@@ -509,10 +518,36 @@ setmetatable(Interpreter.List, {
 
 
 
+Interpreter.Error = {}
+Interpreter.Error.__index = Interpreter.Error
+Interpreter.Error.__name = "Error"
+
+Interpreter.Error.proto = Interpreter.Block()
+
+function Interpreter.Error.new(parent, message)
+	local self = Interpreter.Block(parent)
+	self:set("_Proto", Interpreter.Error.proto, nil, 0)
+	self:set("message", Interpreter.String(nil, message), nil, 0)
+	self:set("traceback", Interpreter.List(), nil, 0)
+	return setmetatable(self, Interpreter.Error)
+end
+
+function Interpreter.Error:__tostring()
+	return tostring(self:get("message")).."\n"..tostring(self:get("traceback"))
+end
+
+setmetatable(Interpreter.Error, {
+	__call = function(_, ...) return Interpreter.Error.new(...) end,
+	__index = Interpreter.Block,
+})
+
+
+
 local function defineProtoNativeFn(base, name, key)
-	Interpreter[base].proto:define(
+	Interpreter[base].proto:set(
 		key,
-		Interpreter.NativeFunction(nil, Interpreter[base][name], name)
+		Interpreter.NativeFunction(nil, Interpreter[base][name], name),
+		nil, 0
 	)
 end
 
@@ -532,18 +567,19 @@ defineProtoNativeFn("String", "add", "+")
 defineProtoNativeFn("String", "not_", "!")
 
 defineProtoNativeFn("Boolean", "not_", "!")
-Interpreter.Boolean.proto:define("true", Interpreter.Boolean(nil, true))
-Interpreter.Boolean.proto:define("false", Interpreter.Boolean(nil, false))
+Interpreter.Boolean.proto:set("true", Interpreter.Boolean(nil, true), nil, 0)
+Interpreter.Boolean.proto:set("false", Interpreter.Boolean(nil, false), nil, 0)
 
 defineProtoNativeFn("Nil", "eq", "==")
 defineProtoNativeFn("Nil", "neq", "!=")
 defineProtoNativeFn("Nil", "not_", "!")
-Interpreter.Nil.proto:define("nil", Interpreter.Nil())
+Interpreter.Nil.proto:set("nil", Interpreter.Nil(), nil, 0)
 
 defineProtoNativeFn("List", "add", "+")
 defineProtoNativeFn("List", "spread", "...")
-Interpreter.List.proto:define("iterate",
-	Interpreter.Function(nil, Interpreter.List.iterate, "iterate")
+Interpreter.List.proto:set("iterate",
+	Interpreter.Function(nil, Interpreter.List.iterate, "iterate"),
+	nil, 0
 )
 
 

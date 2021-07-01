@@ -1,13 +1,6 @@
 -- Inspired by https://craftinginterpreters.com/scanning.html
 
-function Token(type, lexeme, literal, line)
-	local token = {}
-	token.type = type
-	token.lexeme = lexeme
-	token.literal = literal
-	token.line = line
-	return token
-end
+local tc = require "terminalcolours"
 
 local Lexer = {}
 Lexer.__index = Lexer
@@ -18,32 +11,77 @@ function Lexer.new(source, name)
 	self.name = name
 	self.tokens = {}
 	self.start, self.current, self.line = 1, 1, 1
+	self.lineStart, self.column = 1, 1
 	self.hasError = false
 	return setmetatable(self, Lexer)
+end
+
+function Lexer.getLine(source, lineStart)
+	local lineEnd = source:find("\n", lineStart, true)
+	return source:sub(lineStart, lineEnd and lineEnd-1)
+end
+
+function Lexer.getLineFromToken(token)
+	if not token.lexer then return "" end
+	return Lexer.getLine(token.lexer.source, token.lineStart)
+end
+
+function Lexer:token(type, lexeme, literal)
+	return {
+		lexer = self,
+		type = type,
+		lexeme = lexeme,
+		literal = literal,
+		line = self.line,
+		column = self.column,
+		lineStart = self.lineStart,
+	}
 end
 
 function Lexer:lex()
 	while self.current <= #self.source do
 		self.start = self.current
+		self.column = self.start - self.lineStart + 1
 		self:scanToken()
 	end
-	table.insert(self.tokens, Token("EOF", "", nil, self.line))
+	table.insert(self.tokens, self:token("EOF", "", nil))
 	if not self.hasError then return self.tokens end
 end
 
 function Lexer:addToken(type, literal)
 	local text = self:sub()
-	table.insert(self.tokens, Token(type, text, literal, self.line))
+	table.insert(self.tokens, self:token(type, text, literal))
 end
 
-function Lexer:error(message, where)
+function Lexer:getCurrentLine()
+	return Lexer.getLine(self.source, self.lineStart)
+end
+
+function Lexer:printError(token, message)
+	local line = token and token.line or self.line
+	local column = token and token.column or self.column
+	local code = token and Lexer.getLineFromToken(token) or self:getCurrentLine()
+	
+	print(tc(tc.fg.red)..string.format("[%s%d:%d] %s",
+		(self.name and self.name..":" or ""), line, column, message))
+	print(tc(tc.reset)..line.." | "..code)
+	print(tc(tc.fg.red)..string.rep(' ', #tostring(line) + 3 + column-1)
+		..string.rep('▔', token and #token.lexeme or 1)..tc(tc.reset))
+end
+
+function Lexer:error(message)
 	self.hasError = true
-	print("["..(self.name and self.name..":" or "")..self.line.."]"..(where and where..": " or " ")..(message or ""))
+	self:printError(nil, message)
 end
 
 function Lexer:advance()
 	self.current = self.current+1
 	return self.source:sub(self.current-1, self.current-1)
+end
+
+function Lexer:nextLine()
+	self.line = self.line+1
+	self.lineStart = self.current
 end
 
 function Lexer:peek(n)
@@ -66,7 +104,7 @@ end
 
 function Lexer:string(quote)
 	while self:peek() ~= quote and self.current <= #self.source do
-		if self:peek() == "\n" then self.line = self.line+1 end
+		if self:peek() == "\n" then self:nextLine() end
 		self:advance()
 	end
 	
@@ -119,11 +157,11 @@ function Lexer:whitespace(char)
 	-- Collapse multiple whitespace and newline characters into a single token
 	-- (or no token if no newlines were present)
 	local hasNewline = (char == "\n")
-	if hasNewline then self.line = self.line+1 end
+	if hasNewline then self:nextLine() end
 	while self:peek():match("[ \r\t\n]") do
 		if self:advance() == "\n" then
 			hasNewline = true
-			self.line = self.line+1
+			self:nextLine()
 		end
 	end
 	if hasNewline then self:addToken("newline") end

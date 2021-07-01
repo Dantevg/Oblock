@@ -12,7 +12,7 @@ local content = file:read("a")
 file:close()
 if isDemo then print() end
 
-local filename = string.match(path or "", "/([^/]+)$") or path
+local filename = string.match(path or "", "/([^/]+)$") or path or "stdin"
 
 local tokens = Lexer(content, filename):lex()
 if not tokens then return end

@@ -18,7 +18,10 @@ function Interpreter:interpret()
 		globalScope[k] = true
 	end
 	local success, err = pcall(self.program.resolve, self.program, globalScope)
-	if not success then Interpreter.printError(err) return end
+	if not success then
+		if type(err) == "table" then Interpreter.printError(err) else error(err, 0) end
+		return
+	end
 	
 	-- Run
 	local results = {pcall(self.program.evaluate, self.program, self.environment)}

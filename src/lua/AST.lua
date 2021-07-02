@@ -805,7 +805,7 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = evaluateAll(self.expressions, env)
 	
 	for i, target in ipairs(self.targets) do
-		local value = values[i] or AST.Expr.Literal.Nil(nil, self.loc)
+		local value = values[i] or Interpreter.Nil(nil, self.loc)
 		local level = self.isDef and 0 or nil
 		if target.set then
 			target:set(env, value, self.modifiers, level)

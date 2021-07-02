@@ -75,7 +75,7 @@ function AST.Expr.Unary:evaluate(env)
 	local fn = right:get(self.op.lexeme)
 	if not Interpreter.isCallable(fn) then
 		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, right.__name, self.right), self.loc)
+			self.op.lexeme, right.__name, self.right), self.loc, right.loc)
 	end
 	return Interpreter.context(self.loc, "operator '"..self.op.lexeme.."'",
 		fn.call, fn, {right, env})
@@ -117,7 +117,7 @@ function AST.Expr.Binary:evaluate(env)
 	local fn = left:get(self.op.lexeme)
 	if not Interpreter.isCallable(fn) then
 		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, left.__name, self.left), self.loc)
+			self.op.lexeme, left.__name, self.left), self.loc, left.loc)
 	end
 	return Interpreter.context(self.loc, "operator '"..self.op.lexeme.."'",
 		fn.call, fn, {left, env, right})
@@ -222,7 +222,9 @@ function AST.Expr.Variable.new(token, loc)
 end
 
 function AST.Expr.Variable:evaluate(env)
-	return env:get(self.token.lexeme, self.level)
+	local value = env:get(self.token.lexeme, self.level)
+	if value.__name == "Nil" and not value.loc then value.loc = self.loc end
+	return value
 end
 
 function AST.Expr.Variable:set(env, value, modifiers, level)
@@ -272,7 +274,9 @@ local function ref(value, env)
 end
 
 function AST.Expr.Index:evaluate(env)
-	return (self.base and self.base:evaluate(env) or env):get(ref(self.expr, env), self.level)
+	local value = (self.base and self.base:evaluate(env) or env):get(ref(self.expr, env), self.level)
+	if value.__name == "Nil" and not value.loc then value.loc = self.loc end
+	return value
 end
 
 function AST.Expr.Index:set(env, value, modifiers)
@@ -418,7 +422,7 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:set(parameter.token.lexeme, argument or Interpreter.Nil())
+			env:set(parameter.token.lexeme, argument or Interpreter.Nil(nil, self.loc))
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
 			local list = Interpreter.List(env)
@@ -481,7 +485,8 @@ end
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
 	if not Interpreter.isCallable(fn) then
-		Interpreter.error("Attempt to call non-callable type "..(fn and fn.__name or "Nil"), self.loc)
+		Interpreter.error("Attempt to call non-callable type "
+			..(fn and fn.__name or "Nil"), self.loc, fn.loc)
 	end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)
@@ -530,7 +535,7 @@ function AST.Expr.Literal:evaluate(env)
 	elseif type(self.literal) == "string" then
 		return Interpreter.String(env, self.literal)
 	elseif type(self.literal) == "nil" then
-		return Interpreter.Nil(env)
+		return Interpreter.Nil(env, self.loc)
 	end
 end
 
@@ -547,10 +552,6 @@ end
 setmetatable(AST.Expr.Literal, {
 	__call = function(_, ...) return AST.Expr.Literal.new(...) end,
 })
-
-function AST.Expr.Literal.Nil()
-	return AST.Expr.Literal(nil, "nil")
-end
 
 
 
@@ -743,11 +744,12 @@ function AST.Stat.For:evaluate(env)
 	local iteratorSource = container:get("iterate")
 	if not Interpreter.isCallable(iteratorSource) then
 		Interpreter.error(string.format("no callable instance 'iterate' on %s value '%s'",
-			container.__name, self.expr), self.loc)
+			container.__name, self.expr), self.loc, container.loc)
 	end
 	local iterator = iteratorSource:call()
 	if not Interpreter.isCallable(iterator) then
-		Interpreter.error("'iterate' does not return callable", self.loc)
+		Interpreter.error("'iterate' returns non-callable type "..iterator.__name,
+			self.loc, iterator.loc)
 	end
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
@@ -803,7 +805,7 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = evaluateAll(self.expressions, env)
 	
 	for i, target in ipairs(self.targets) do
-		local value = values[i] or AST.Expr.Literal.Nil()
+		local value = values[i] or AST.Expr.Literal.Nil(nil, self.loc)
 		local level = self.isDef and 0 or nil
 		if target.set then
 			target:set(env, value, self.modifiers, level)

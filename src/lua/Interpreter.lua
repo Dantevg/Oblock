@@ -39,8 +39,8 @@ function Interpreter.isCallable(fn)
 	return fn and type(fn) == "table" and fn.call
 end
 
-function Interpreter.error(message, loc)
-	error(Interpreter.Error(nil, message, loc), 0)
+function Interpreter.error(message, loc, sourceLoc)
+	error(Interpreter.Error(nil, message, loc, sourceLoc), 0)
 end
 
 function Interpreter.printError(err)
@@ -50,6 +50,10 @@ function Interpreter.printError(err)
 			..tc(tc.reset))
 	else
 		print(tc(tc.fg.red)..tostring(err:get("message"))..tc(tc.reset))
+	end
+	if err.sourceLoc then
+		print(tc(tc.fg.blue)..string.format("(value came from %s:%d:%d)",
+			err.sourceLoc.file, err.sourceLoc.line, err.sourceLoc.column)..tc(tc.reset))
 	end
 	local traceback = {err:get("traceback"):spread()}
 	if #traceback > 0 then
@@ -441,8 +445,9 @@ Interpreter.Nil.__name = "Nil"
 
 Interpreter.Nil.proto = Interpreter.Block()
 
-function Interpreter.Nil.new(parent)
+function Interpreter.Nil.new(parent, loc)
 	local self = Interpreter.Value(parent, nil)
+	self.loc = loc
 	self:set("_Proto", Interpreter.Nil.proto, nil, 0)
 	return setmetatable(self, Interpreter.Nil)
 end
@@ -547,9 +552,9 @@ Interpreter.Error.__name = "Error"
 
 Interpreter.Error.proto = Interpreter.Block()
 
-function Interpreter.Error.new(parent, message, loc)
+function Interpreter.Error.new(parent, message, loc, sourceLoc)
 	local self = Interpreter.Block(parent)
-	self.loc = loc
+	self.loc, self.sourceLoc = loc, sourceLoc
 	self:set("_Proto", Interpreter.Error.proto, nil, 0)
 	self:set("message", Interpreter.String(nil, message), nil, 0)
 	self:set("traceback", Interpreter.List(), nil, 0)

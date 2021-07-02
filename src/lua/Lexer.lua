@@ -44,6 +44,8 @@ function Lexer:lex()
 		self.column = self.start - self.lineStart + 1
 		self:scanToken()
 	end
+	self.start = self.current
+	self.column = self.start - self.lineStart + 1
 	table.insert(self.tokens, self:token("EOF", "", nil))
 	if not self.hasError then return self.tokens end
 end
@@ -67,7 +69,7 @@ function Lexer:printError(token, message)
 		(self.name and self.name..":" or ""), line, column, message))
 	print(tc(tc.reset)..line.." | "..code:gsub("\t", "    "))
 	print(tc(tc.fg.red)..string.rep(' ', #tostring(line) + 3 + column-1 + nTabs*3)
-		..string.rep('▔', token and #token.lexeme or 1)..tc(tc.reset))
+		..string.rep('▔', token and math.max(1, #token.lexeme) or 1)..tc(tc.reset))
 end
 
 function Lexer:error(message, token)

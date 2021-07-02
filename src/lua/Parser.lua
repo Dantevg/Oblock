@@ -247,8 +247,10 @@ function Parser:sequence(endTokenName, separator, type)
 	return elements
 end
 
-function Parser:anylist(next, typename)
-	local elements = {}
+function Parser:anylist(next, typename, required)
+	local first = required and next(self)
+	local elements = {first}
+	if required and not first then self:error(self:previous(), "Expected "..typename, 0) end
 	while self:match {"comma"} do
 		local element = next(self)
 		if element then
@@ -347,7 +349,7 @@ function Parser:assignment(isExpr)
 	-- Match assignment target
 	local variables = isExpr
 		and {self:expression()}
-		or self:anylist(self.expression, "expression")
+		or self:anylist(self.expression, "expression", true)
 	local expr = variables[1]
 	
 	if self:match {"equal"} then -- a = b
@@ -365,7 +367,7 @@ function Parser:assignment(isExpr)
 		local equal = self:previous()
 		local values = isExpr
 			and {self:expression()}
-			or self:anylist(self.expression, "expression")
+			or self:anylist(self.expression, "expression", true)
 		if isAssignment then
 			return AST.Stat.Assignment(variables, values, modifiers, false, loc)
 		elseif isFunction and expr.__name == "Call" and #variables == 1 then

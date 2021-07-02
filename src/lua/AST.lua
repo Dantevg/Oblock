@@ -36,15 +36,13 @@ local function debug(indent, name, properties, nodelists)
 	
 	for nodelistname, nodes in pairs(nodelists) do
 		table.insert(str, indent.."  - "..nodelistname..":")
-		local lines = 0
 		for _, node in ipairs(nodes) do
 			local value, isSingleLine = node:debug(indent.."    ")
-			lines = lines + (isSingleLine and 1 or 2)
 			table.insert(str, value)
 		end
-		if lines == 1 then
+		if #nodes == 1 then
 			str[#str-1] = str[#str-1].." "..table.remove(str):match("^%s*(.+)$")
-		elseif lines == 0 then
+		elseif #nodes == 0 then
 			table.remove(str)
 		end
 	end
@@ -58,114 +56,46 @@ local AST = {}
 
 AST.Expr = {}
 
-AST.Expr.Unary = {}
-AST.Expr.Unary.__index = AST.Expr.Unary
-AST.Expr.Unary.__name = "Unary"
-
-function AST.Expr.Unary.new(op, right, loc)
-	local self = {}
-	self.op = op
-	self.right = right
-	self.loc = loc
-	return setmetatable(self, AST.Expr.Unary)
-end
-
-function AST.Expr.Unary:evaluate(env)
-	local right = self.right:evaluate(env)
-	local fn = right:get(self.op.lexeme)
-	if not Interpreter.isCallable(fn) then
-		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, right.__name, self.right), self.loc, right.loc)
-	end
-	return Interpreter.context(self.loc, "operator '"..self.op.lexeme.."'",
-		fn.call, fn, {right, env})
-end
-
-function AST.Expr.Unary:resolve(scope)
-	self.right:resolve(scope)
-end
-
-function AST.Expr.Unary:debug(indent)
-	return debug(indent, self.__name, {op = self.op}, {right = {self.right}})
-end
-
-function AST.Expr.Unary:__tostring()
-	return string.format("(%s%s)", self.op.lexeme, self.right)
-end
-
-setmetatable(AST.Expr.Unary, {
-	__call = function(_, ...) return AST.Expr.Unary.new(...) end,
-})
-
-
-
-AST.Expr.Binary = {}
-AST.Expr.Binary.__index = AST.Expr.Binary
-AST.Expr.Binary.__name = "Binary"
-
-function AST.Expr.Binary.new(left, op, right, loc)
-	local self = {}
-	self.left = left
-	self.op = op
-	self.right = right
-	self.loc = loc
-	return setmetatable(self, AST.Expr.Binary)
-end
-
-function AST.Expr.Binary:evaluate(env)
-	local left, right = self.left:evaluate(env), self.right:evaluate(env)
-	local fn = left:get(self.op.lexeme)
-	if not Interpreter.isCallable(fn) then
-		Interpreter.error(string.format("no operator instance '%s' on %s value '%s'",
-			self.op.lexeme, left.__name, self.left), self.loc, left.loc)
-	end
-	return Interpreter.context(self.loc, "operator '"..self.op.lexeme.."'",
-		fn.call, fn, {left, env, right})
-end
-
-function AST.Expr.Binary:resolve(scope)
-	self.left:resolve(scope)
-	self.right:resolve(scope)
-end
-
-function AST.Expr.Binary:debug(indent)
-	return debug(indent, self.__name, {op = self.op},
-		{left = {self.left}, right = {self.right}})
-end
-
-function AST.Expr.Binary:__tostring()
-	return string.format("(%s %s %s)", self.left, self.op.lexeme, self.right)
-end
-
-setmetatable(AST.Expr.Binary, {
-	__call = function(_, ...) return AST.Expr.Binary.new(...) end,
-})
-
-
-
 AST.Expr.Logical = {}
 AST.Expr.Logical.__index = AST.Expr.Logical
 AST.Expr.Logical.__name = "Logical"
 
 function AST.Expr.Logical.new(left, op, right, loc)
-	local self = AST.Expr.Binary(left, op, right, loc)
+	local self = {}
+	self.left = left
+	self.op = op
+	self.right = right
+	self.loc = loc
 	return setmetatable(self, AST.Expr.Logical)
 end
 
 function AST.Expr.Logical:evaluate(env)
 	local left = self.left:evaluate(env)
 	if self.op.lexeme == "||" then
-		return Interpreter.Boolean.toBoolean(env, left).value
+		return Interpreter.Boolean.toBoolean(left).value
 			and left or self.right:evaluate(env)
 	elseif self.op.lexeme == "&&" then
-		return Interpreter.Boolean.toBoolean(env, left).value
+		return Interpreter.Boolean.toBoolean(left).value
 			and self.right:evaluate(env) or left
 	end
 end
 
+function AST.Expr.Logical:resolve(scope)
+	self.left:resolve(scope)
+	self.right:resolve(scope)
+end
+
+function AST.Expr.Logical:debug(indent)
+	return debug(indent, self.__name, {op = self.op},
+		{left = {self.left}, right = {self.right}})
+end
+
+function AST.Expr.Logical:__tostring()
+	return string.format("(%s %s %s)", self.left, self.op.lexeme, self.right)
+end
+
 setmetatable(AST.Expr.Logical, {
 	__call = function(_, ...) return AST.Expr.Logical.new(...) end,
-	__index = AST.Expr.Binary
 })
 
 
@@ -291,7 +221,7 @@ function AST.Expr.Index:resolve(scope)
 end
 
 function AST.Expr.Index:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {}, {base = {self.base}, {expr = {self.expr}}})
 end
 
 function AST.Expr.Index:__tostring()

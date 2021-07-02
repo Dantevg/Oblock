@@ -3,13 +3,13 @@ local Interpreter = require "Interpreter"
 local fn = {}
 
 fn.clock = function() return Interpreter.Number(nil, os.clock()) end
-fn.print = function(...)
+fn.print = function(_, ...)
 	-- Pass-through variables
 	print(...)
 	return ...
 end
 
-fn.type = function(x)
+fn.type = function(_, x)
 	if not x then return "Nil" end
 	return Interpreter.String(nil, x.__name)
 end

@@ -185,7 +185,7 @@ function Interpreter.Block:set(key, value, modifiers, level)
 	return self.environment:set(key, value, modifiers, level)
 end
 
-function Interpreter.Block:pipe(env, other)
+function Interpreter.Block:pipe(other)
 	if not Interpreter.isCallable(other) then error("cannot pipe into "..other.__name, 0) end
 	return other:call {self}
 end
@@ -231,7 +231,7 @@ function Interpreter.NativeFunction:bind(block)
 end
 
 function Interpreter.NativeFunction:call(args)
-	-- if self.this then table.insert(args, 1, self.this) end
+	table.insert(args, 1, self.this)
 	return self.body(table.unpack(args))
 end
 
@@ -329,40 +329,46 @@ function Interpreter.Number.new(parent, value)
 	return setmetatable(self, Interpreter.Number)
 end
 
-function Interpreter.Number:eq(env, other)
+function Interpreter.Number:eq(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	return Interpreter.Boolean(env, a == b)
+	return Interpreter.Boolean(nil, a == b)
 end
 
-function Interpreter.Number:neq(env, other)
-	return Interpreter.Boolean(env, not self:eq(env, other).value)
+function Interpreter.Number:neq(other)
+	local val = self:get("=="):call {self, other}
+	return val:get("!"):call {val}
 end
 
-function Interpreter.Number:lt(env, other)
+function Interpreter.Number:lt(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	return Interpreter.Boolean(env, a < b)
+	return Interpreter.Boolean(nil, a < b)
 end
 
-function Interpreter.Number:add(env, other)
+function Interpreter.Number:gt(other)
+	local val = self:get("<"):call {self, other}
+	return val:get("!"):call {val}
+end
+
+function Interpreter.Number:add(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then Interpreter.error("cannot perform '+' on "..other.__name) end
-	return self.new(env, a + b)
+	return self.new(nil, a + b)
 end
 
-function Interpreter.Number:mul(env, other)
+function Interpreter.Number:mul(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then Interpreter.error("cannot perform '*' on "..other.__name) end
-	return self.new(env, a * b)
+	return self.new(nil, a * b)
 end
 
-function Interpreter.Number:sub(env, other)
+function Interpreter.Number:sub(other)
 	local a = tonumber(self.value)
 	if other then
 		local b = tonumber(other.value)
 		if type(b) ~= "number" then Interpreter.error("cannot perform '-' on "..other.__name) end
-		return self.new(env, a - b)
+		return self.new(nil, a - b)
 	else
-		return self.new(env, -a)
+		return self.new(nil, -a)
 	end
 end
 
@@ -392,14 +398,14 @@ function Interpreter.String.new(parent, value)
 	return setmetatable(self, Interpreter.String)
 end
 
-function Interpreter.String:add(env, other)
+function Interpreter.String:add(other)
 	local a, b = tostring(self.value), tostring(other.value)
 	if type(b) ~= "string" then Interpreter.error("cannot perform '+' on "..other.__name) end
-	return self.new(env, a..b)
+	return self.new(nil, a..b)
 end
 
-function Interpreter.String:not_(env)
-	return Interpreter.Boolean(env, false)
+function Interpreter.String:not_()
+	return Interpreter.Boolean(nil, false)
 end
 
 Interpreter.String.__eq = Interpreter.Value.__eq
@@ -424,12 +430,12 @@ function Interpreter.Boolean.new(parent, value)
 	return setmetatable(self, Interpreter.Boolean)
 end
 
-function Interpreter.Boolean.toBoolean(env, value)
-	return Interpreter.Boolean(env, value.value)
+function Interpreter.Boolean.toBoolean(value)
+	return Interpreter.Boolean(nil, value.value)
 end
 
-function Interpreter.Boolean:not_(env)
-	return Interpreter.Boolean(env, not self.value)
+function Interpreter.Boolean:not_()
+	return Interpreter.Boolean(nil, not self.value)
 end
 
 Interpreter.Boolean.__eq = Interpreter.Value.__eq
@@ -455,16 +461,16 @@ function Interpreter.Nil.new(parent, loc)
 	return setmetatable(self, Interpreter.Nil)
 end
 
-function Interpreter.Nil:eq(env, other)
-	return Interpreter.Boolean(env, other.__name == "Nil")
+function Interpreter.Nil:eq(other)
+	return Interpreter.Boolean(nil, other.__name == "Nil")
 end
 
-function Interpreter.Nil:neq(env, other)
-	return Interpreter.Boolean(env, other.__name ~= "Nil")
+function Interpreter.Nil:neq(other)
+	return Interpreter.Boolean(nil, other.__name ~= "Nil")
 end
 
-function Interpreter.Nil:not_(env)
-	return Interpreter.Boolean(env, true)
+function Interpreter.Nil:not_()
+	return Interpreter.Boolean(nil, true)
 end
 
 Interpreter.Nil.__eq = Interpreter.Value.__eq
@@ -502,7 +508,7 @@ function Interpreter.List:push(value)
 	self:set("length", Interpreter.Number(nil, #self))
 end
 
-function Interpreter.List:add(env, other)
+function Interpreter.List:add(other)
 	local values = {}
 	for i = 1, #self do
 		table.insert(values, self:get(i))
@@ -590,6 +596,7 @@ defineProtoNativeFn("Function", "call", "()")
 defineProtoNativeFn("Number", "eq", "==")
 defineProtoNativeFn("Number", "neq", "!=")
 defineProtoNativeFn("Number", "lt", "<")
+defineProtoNativeFn("Number", "gt", ">")
 defineProtoNativeFn("Number", "add", "+")
 defineProtoNativeFn("Number", "sub", "-")
 defineProtoNativeFn("Number", "mul", "*")

@@ -91,7 +91,15 @@ function Parser:binary(tokens, next, fn)
 	while self:match(tokens) do
 		local op = self:previous()
 		local right = next(self)
-		expr = (fn or AST.Expr.Binary)(expr, op, right, self:loc(op))
+		if fn then -- For logical operators
+			expr = fn(expr, op, right, self:loc(op))
+		else
+			-- Desugar normal binary operator into function call
+			expr = AST.Expr.Call(
+				AST.Expr.Index(expr, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
+				right, self:loc(op)
+			)
+		end
 	end
 	
 	return expr
@@ -176,7 +184,11 @@ function Parser:unary()
 	if self:match {"minus", "exclamation", "dot dot dot"} then
 		local op = self:previous()
 		local right = self:unary()
-		return AST.Expr.Unary(op, right, self:loc(op))
+		return AST.Expr.Call(
+				AST.Expr.Index(right, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
+				AST.Expr.Group({}, self:loc(op)), self:loc(op)
+			)
+		-- return AST.Expr.Unary(op, right, self:loc(op))
 	else
 		return self:call()
 	end
@@ -240,7 +252,7 @@ function Parser:expseq(endTokenName)
 	local elements = {}
 	while not self:match {endTokenName} do
 		while self:match {"comma"} do end -- Skip separators
-		local element = self:assert(self:comma(), type)
+		local element = self:assert(self:defExpr(), "expression")
 		table.insert(elements, element)
 		while self:match {"comma"} do end -- Skip separators
 	end
@@ -253,8 +265,10 @@ function Parser:statseq()
 		local success, element = pcall(self.statement, self)
 		if success then
 			table.insert(elements, element)
-		else
+		elseif element then
 			self:synchronise()
+		else
+			error(element)
 		end
 	end
 	self:consume("closing curly bracket", "Expected '}'")

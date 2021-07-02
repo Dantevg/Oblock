@@ -748,7 +748,7 @@ end
 function AST.Stat.Assignment:resolve(scope)
 	if self.predef then
 		for _, target in ipairs(self.targets) do
-			scope[target.token.lexeme] = true
+			scope[target.lexeme or target.token.lexeme] = true
 		end
 	end
 	
@@ -760,7 +760,7 @@ function AST.Stat.Assignment:resolve(scope)
 			resolved = pcall(target.resolve, target, scope)
 		end
 		if not resolved then
-			scope[target.token.lexeme] = true
+			scope[target.lexeme or target.token.lexeme] = true
 		end
 	end
 end

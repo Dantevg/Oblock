@@ -18,7 +18,7 @@ function Interpreter:interpret()
 		globalScope[k] = true
 	end
 	local success, err = pcall(self.program.resolve, self.program, globalScope)
-	if not success then print(err) return end
+	if not success then Interpreter.printError(err) return end
 	
 	-- Run
 	local results = {pcall(self.program.evaluate, self.program, self.environment)}
@@ -27,17 +27,7 @@ function Interpreter:interpret()
 	else
 		local err = results[2]
 		if type(err) == "table" and err.__name == "Error" then
-			if err.loc then
-				print(tc(tc.fg.red)..string.format("[%s:%d:%d] %s",
-					err.loc.file, err.loc.line, err.loc.column, err:get("message"))
-					..tc(tc.reset))
-			else
-				print(tc(tc.fg.red)..tostring(err:get("message"))..tc(tc.reset))
-			end
-			local traceback = {err:get("traceback"):spread()}
-			if #traceback > 0 then
-				print(tc(tc.fg.red)..table.concat(traceback, "\n")..tc(tc.reset))
-			end
+			Interpreter.printError(err)
 		else
 			print(err)
 		end
@@ -51,6 +41,20 @@ end
 
 function Interpreter.error(message, loc)
 	error(Interpreter.Error(nil, message, loc), 0)
+end
+
+function Interpreter.printError(err)
+	if err.loc then
+		print(tc(tc.fg.red)..string.format("[%s:%d:%d] %s",
+			err.loc.file, err.loc.line, err.loc.column, err:get("message"))
+			..tc(tc.reset))
+	else
+		print(tc(tc.fg.red)..tostring(err:get("message"))..tc(tc.reset))
+	end
+	local traceback = {err:get("traceback"):spread()}
+	if #traceback > 0 then
+		print(tc(tc.fg.red)..table.concat(traceback, "\n")..tc(tc.reset))
+	end
 end
 
 function Interpreter.context(loc, trace, fn, ...)

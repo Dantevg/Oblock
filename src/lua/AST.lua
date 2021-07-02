@@ -230,13 +230,13 @@ function AST.Expr.Variable:set(env, value, modifiers, level)
 end
 
 function AST.Expr.Variable:resolve(scope)
-	if self.level then error("resolving already-resolved variable", 0) end
+	if self.level then Interpreter.error("resolving already-resolved variable", self.loc) end
 	local level = 0
 	while scope do
 		if scope[self.token.lexeme] then self.level = level return end
 		scope, level = scope.parent, level+1
 	end
-	if not self.level then error("unresolved variable "..self.token.lexeme, 0) end
+	if not self.level then Interpreter.error("unresolved variable "..self.token.lexeme, self.loc) end
 end
 
 function AST.Expr.Variable:debug(indent)
@@ -280,7 +280,7 @@ function AST.Expr.Index:set(env, value, modifiers)
 end
 
 function AST.Expr.Index:resolve(scope)
-	if self.level then error("resolving already-resolved variable", 0) end
+	if self.level then Interpreter.error("resolving already-resolved variable", self.loc) end
 	if self.base then self.base:resolve(scope) end
 	if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
 	self.level = 0
@@ -428,7 +428,7 @@ function AST.Expr.Function:call(env, arguments)
 			env:set(parameter.right.token.lexeme, list)
 			break
 		else
-			error("invalid parameter type", 0)
+			Interpreter.error("invalid parameter type", self.loc)
 		end
 	end
 	
@@ -445,7 +445,7 @@ function AST.Expr.Function:resolve(scope)
 			childScope[parameter.right.token.lexeme] = true
 			break
 		else
-			error("invalid parameter type", 0)
+			Interpreter.error("invalid parameter type", self.loc)
 		end
 	end
 	self.body:resolve(childScope)

@@ -250,8 +250,8 @@ end
 function Parser:anylist(next, typename, required)
 	local first = required and next(self)
 	local elements = {first}
-	if required and not first then self:error(self:previous(), "Expected "..typename, 0) end
-	while self:match {"comma"} do
+	if required and not first then self:error(self:previous(), "Expected "..typename) end
+	while (not required and #elements == 0) or self:match {"comma"} do
 		local element = next(self)
 		if element then
 			table.insert(elements, element)
@@ -322,7 +322,7 @@ end
 
 function Parser:forStatement(loc)
 	local variable = AST.Expr.Variable(
-		AST.Expr.Literal(self:consume("identifier", "Expected identifier"), self:loc()),
+		AST.Expr.Literal(self:consume("identifier", "Expected identifier"), nil, self:loc()),
 		self:loc()
 	)
 	self:consume("in", "Expected 'in'")

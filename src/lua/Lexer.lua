@@ -61,17 +61,18 @@ function Lexer:printError(token, message)
 	local line = token and token.line or self.line
 	local column = token and token.column or self.column
 	local code = token and Lexer.getLineFromToken(token) or self:getCurrentLine()
+	local _, nTabs = code:gsub("\t", "")
 	
 	print(tc(tc.fg.red)..string.format("[%s%d:%d] %s",
 		(self.name and self.name..":" or ""), line, column, message))
-	print(tc(tc.reset)..line.." | "..code)
-	print(tc(tc.fg.red)..string.rep(' ', #tostring(line) + 3 + column-1)
+	print(tc(tc.reset)..line.." | "..code:gsub("\t", "    "))
+	print(tc(tc.fg.red)..string.rep(' ', #tostring(line) + 3 + column-1 + nTabs*3)
 		..string.rep('▔', token and #token.lexeme or 1)..tc(tc.reset))
 end
 
-function Lexer:error(message)
+function Lexer:error(message, token)
 	self.hasError = true
-	self:printError(nil, message)
+	self:printError(token and self:token("error", self:sub()), message)
 end
 
 function Lexer:advance()
@@ -150,7 +151,11 @@ function Lexer:combine(token)
 		name = name.." "..token[1]
 		nextChar = self:peek()
 	end
-	self:addToken(name)
+	if self.current > self.start + 2 and not Lexer.longTokens[name] then
+		self:error("Unknown long token", true)
+	else
+		self:addToken(name)
+	end
 end
 
 function Lexer:whitespace(char)
@@ -225,6 +230,8 @@ Lexer.keywords = {
 	["var"] = true, ["const"] = true,
 	["static"] = true, ["instance"] = true,
 }
+
+Lexer.longTokens = {["dot dot dot"] = true}
 
 return setmetatable(Lexer, {
 	__call = function(_, ...) return Lexer.new(...) end,

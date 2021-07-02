@@ -265,6 +265,8 @@ function Interpreter.Function:call(args)
 		return table.unpack(values, 2)
 	elseif type(values[2]) == "table" and values[2].__name == "Return" then
 		return table.unpack(values[2].values)
+	else
+		error(values[2], 0)
 	end
 end
 

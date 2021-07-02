@@ -418,7 +418,7 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:set(parameter.token.lexeme, argument)
+			env:set(parameter.token.lexeme, argument or Interpreter.Nil())
 		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
 				and parameter.right.__name == "Variable" then
 			local list = Interpreter.List(env)

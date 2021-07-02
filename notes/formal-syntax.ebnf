@@ -19,11 +19,12 @@ list		= '[' expseq ']' ;
 block		= '{' statseq '}' ;
 
 (* Statements *)
-statement	= 'return' explist
-			| 'yield' explist
+statement	= 'return' [explist]
+			| 'yield' [explist]
 			| 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
 			| 'for' Identifier 'in' expression ':' statement
+			| ';'
 			| assignment ;
 assignment	= {modifier} explist ['=' explist | fn]
 			| expression ;
@@ -31,7 +32,7 @@ assignment	= {modifier} explist ['=' explist | fn]
 (* Smaller components *)
 fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
 expseq		= {primary '=' expression | expression | ','} ;
-statseq		= {statement | ';'} ;
+statseq		= {statement} ;
 explist		= expression {',' expression} ;
 param		= ['...'] Identifier ;
 modifier	= 'var' | 'const' | 'static' | 'instance' ;

@@ -11,6 +11,10 @@ To-Do / roadmap / proposals
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
     - Named parameters in correct place?
+- Exceptions
+  - try <statement> catch <identifier>: <statement>
+  - other syntax: try ... handle,  ... catch,  ... handle
+- Coroutines
 - Multiple values for nothing-ness: nil, null, unit, void, nothing, none?
   - Usage: empty indices in lists while iterating (atm iteration stops at nil)
     - otherwise, iteration could skip empty (not present!) indices,
@@ -154,7 +158,6 @@ To-Do / roadmap / proposals
   - Maybe like Java?
   - Enum instance (true, false, colours) is const instance with no values,
     enum "class" itself should be const as well (but do not enforce)
-- Coroutines
 - Generic types? maybe later, if needed
 - Ternary operator? Don't think, I like lua's and-or method
 - Type cast operator? to let nil/null and false both evaluate falsy

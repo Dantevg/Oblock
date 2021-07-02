@@ -39,7 +39,7 @@ function Interpreter:interpret()
 end
 
 function Interpreter.isCallable(fn)
-	return fn and type(fn) == "table" and fn.call
+	return fn and type(fn) == "table" and fn:has "()"
 end
 
 function Interpreter.error(message, loc, sourceLoc)
@@ -166,7 +166,12 @@ function Interpreter.Block.new(parent)
 end
 
 function Interpreter.Block:has(key)
-	return self.environment:has(key)
+	local has = self.environment:has(key)
+	if not has then
+		local proto = self.environment:get("_Proto", 0)
+		has = proto and proto:has(key)
+	end
+	return has
 end
 
 function Interpreter.Block:get(key, level)
@@ -199,6 +204,10 @@ function Interpreter.Block:__tostring()
 		end
 	end
 	return "{"..table.concat(strings, "; ").."}"
+end
+
+function Interpreter.Block:call(...)
+	return self:get("()"):call(...)
 end
 
 Interpreter.Block.proto = Interpreter.Block.new()
@@ -591,7 +600,9 @@ end
 
 defineProtoNativeFn("Block", "pipe", "|>")
 
-defineProtoNativeFn("Function", "call", "()")
+Interpreter.NativeFunction.proto:set("()", Interpreter.NativeFunction, nil, 0)
+
+Interpreter.Function.proto:set("()", Interpreter.Function, nil, 0)
 
 defineProtoNativeFn("Number", "eq", "==")
 defineProtoNativeFn("Number", "neq", "!=")

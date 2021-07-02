@@ -15,7 +15,7 @@ function Parser.new(tokens, name)
 end
 
 function Parser:loc(token)
-	token = token or self:previous()
+	token = token or self:previous() or self:peek()
 	return {
 		file = self.name,
 		line = token.line,
@@ -35,7 +35,8 @@ function Parser:synchronise()
 	while self:peek().type ~= "EOF" do
 		local prev, next = self:previous(), self:peek()
 		if prev.type == "semicolon" then return end
-		if next.type == "if" or next.type == "for" or next.type == "while" then return end
+		if next.type == "return" or next.type == "yield" or next.type == "if"
+			or next.type == "for" or next.type == "while" then return end
 		self:advance()
 	end
 	self.nlSensitive = false
@@ -77,6 +78,11 @@ function Parser:consume(type, message)
 	else
 		self:error(token, message)
 	end
+end
+
+function Parser:assert(value, type, token)
+	if not value then self:error(token or self:peek(), "Expected "..type) end
+	return value
 end
 
 function Parser:binary(tokens, next, fn)
@@ -219,59 +225,55 @@ function Parser:primary()
 end
 
 function Parser:group(loc)
-	return AST.Expr.Group(
-		self:sequence("closing parenthesis", "comma", "defExpr"), loc)
+	return AST.Expr.Group(self:expseq("closing parenthesis"), loc)
 end
 
 function Parser:list(loc)
-	return AST.Expr.List(
-		self:sequence("closing bracket", "comma", "defExpr"), loc)
+	return AST.Expr.List(self:expseq("closing bracket"), loc)
 end
 
 function Parser:block(loc)
-	return AST.Expr.Block(
-		self:sequence("closing curly bracket", "semicolon", "statement"), loc)
+	return AST.Expr.Block(self:statseq(), loc)
 end
 
-function Parser:sequence(endTokenName, separator, type)
+function Parser:expseq(endTokenName)
 	local elements = {}
 	while not self:match {endTokenName} do
-		while self:match {separator} do end -- Skip separators
-		local element = self[type](self)
-		if not element then
-			self:error(self:peek(), "Expected "..type)
-		end
+		while self:match {"comma"} do end -- Skip separators
+		local element = self:assert(self:comma(), type)
 		table.insert(elements, element)
-		while self:match {separator} do end -- Skip separators
+		while self:match {"comma"} do end -- Skip separators
 	end
+	return elements
+end
+
+function Parser:statseq()
+	local elements = {}
+	while self:peek().type ~= "closing curly bracket" and self:peek().type ~= "EOF" do
+		local success, element = pcall(self.statement, self)
+		if success then
+			table.insert(elements, element)
+		else
+			self:synchronise()
+		end
+	end
+	self:consume("closing curly bracket", "Expected '}'")
 	return elements
 end
 
 function Parser:anylist(next, typename, required)
 	local first = required and next(self)
 	local elements = {first}
-	if required and not first then self:error(self:previous(), "Expected "..typename) end
+	self:assert(not required or first, typename)
 	while (not required and #elements == 0) or self:match {"comma"} do
 		local element = next(self)
-		if element then
-			table.insert(elements, element)
-		else
-			self:error(self:previous(), "Expected "..typename)
-		end
+		self:assert(element, typename)
+		if element then table.insert(elements, element) end
 	end
 	return elements
 end
 
 function Parser:statement()
-	local success, value = pcall(self._statement, self)
-	if success then
-		return value
-	else
-		self:synchronise()
-	end
-end
-
-function Parser:_statement()
 	if self:match {"return"} then
 		return self:returnStatement(self:loc())
 	elseif self:match {"yield"} then
@@ -282,6 +284,8 @@ function Parser:_statement()
 		return self:whileStatement(self:loc())
 	elseif self:match {"for"} then
 		return self:forStatement(self:loc())
+	elseif self:match {"semicolon"} then
+		return
 	else
 		return self:assignment()
 	end
@@ -298,25 +302,20 @@ function Parser:yieldStatement(loc)
 end
 
 function Parser:ifStatement(loc)
-	local condition = self:expression()
+	local condition = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
-	local ifTrue = self:statement()
-	if not ifTrue then self:error(self:peek(), "Expected statement") end
+	local ifTrue = self:assert(self:statement(), "statement")
 	local ifFalse
 	if self:match {"else"} then
-		ifFalse = self:statement()
-		if not ifFalse then
-			self:error(self:peek(), "Expected statement")
-		end
+		ifFalse = self:assert(self:statement(), "statement")
 	end
 	return AST.Stat.If(condition, ifTrue, ifFalse, loc)
 end
 
 function Parser:whileStatement(loc)
-	local condition = self:expression()
+	local condition = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
-	local body = self:statement()
-	if not body then self:error(self:peek(), "Expected statement") end
+	local body = self:assert(self:statement(), "statement")
 	return AST.Stat.While(condition, body, loc)
 end
 
@@ -326,10 +325,9 @@ function Parser:forStatement(loc)
 		self:loc()
 	)
 	self:consume("in", "Expected 'in'")
-	local expr = self:expression()
+	local expr = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
-	local body = self:statement()
-	if not body then self:error(self:peek(), "Expected statement") end
+	local body = self:assert(self:statement(), "statement")
 	
 	return AST.Stat.For(variable, expr, body, loc)
 end

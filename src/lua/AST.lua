@@ -12,6 +12,10 @@ local function evaluateAll(expressions, env)
 	return values
 end
 
+local function resolveAll(expressions, scope)
+	for _, expr in ipairs(expressions) do expr:resolve(scope) end
+end
+
 local pretty, tc
 local function debug(indent, name, properties, nodelists)
 	if not pretty then
@@ -117,9 +121,7 @@ function AST.Expr.Group:evaluate(env)
 end
 
 function AST.Expr.Group:resolve(scope)
-	for _, expr in ipairs(self.expressions) do
-		expr:resolve(scope)
-	end
+	resolveAll(self.expressions, scope)
 end
 
 function AST.Expr.Group:debug(indent)
@@ -304,10 +306,7 @@ function AST.Expr.List:evaluate(parent)
 end
 
 function AST.Expr.List:resolve(scope)
-	local childScope = {parent = scope}
-	for i = 1, #self.expressions do
-		self.expressions[i]:resolve(childScope)
-	end
+	resolveAll(self.expressions, {parent = scope})
 end
 
 function AST.Expr.List:debug(indent)
@@ -504,9 +503,7 @@ function AST.Stat.Return:evaluate(env)
 end
 
 function AST.Stat.Return:resolve(scope)
-	for _, expr in ipairs(self.expressions) do
-		expr:resolve(scope)
-	end
+	resolveAll(self.expressions, scope)
 end
 
 function AST.Stat.Return:debug(indent)
@@ -534,20 +531,18 @@ AST.Stat.Yield.__name = "Yield"
 
 function AST.Stat.Yield.new(expressions, loc)
 	local self = {}
-	self.expressions = expressions
+	self.expressions = expressions or {}
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Yield)
 end
 
 function AST.Stat.Yield:evaluate(env)
-	self.values = self.expressions and evaluateAll(self.expressions, env)
+	self.values = evaluateAll(self.expressions, env)
 	error(self, 0)
 end
 
 function AST.Stat.Yield:resolve(scope)
-	for _, expr in ipairs(self.expressions) do
-		expr:resolve(scope)
-	end
+	resolveAll(self.expressions, scope)
 end
 
 function AST.Stat.Yield:debug(indent)
@@ -726,7 +721,6 @@ function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, loc)
 	self.expressions = expressions
 	self.modifiers = modifiers
 	self.predef = predef
-	self.isDef = modifiers.var or modifiers.const or modifiers.static or modifiers.instance
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Assignment)
 end
@@ -736,7 +730,7 @@ function AST.Stat.Assignment:evaluate(env)
 	
 	for i, target in ipairs(self.targets) do
 		local value = values[i] or Interpreter.Nil(nil, self.loc)
-		local level = self.isDef and 0 or nil
+		local level = not self.modifiers.empty and 0 or nil
 		if target.set then
 			target:set(env, value, self.modifiers, level)
 		else
@@ -752,11 +746,11 @@ function AST.Stat.Assignment:resolve(scope)
 		end
 	end
 	
-	for _, expr in ipairs(self.expressions) do expr:resolve(scope) end
+	resolveAll(self.expressions, scope)
 	
 	for _, target in ipairs(self.targets) do
 		local resolved
-		if not self.isDef then
+		if self.modifiers.empty then
 			resolved = pcall(target.resolve, target, scope)
 		end
 		if not resolved then

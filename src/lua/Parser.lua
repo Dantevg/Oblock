@@ -91,7 +91,8 @@ function Parser:binary(tokens, next, fn)
 	while self:match(tokens) do
 		local op = self:previous()
 		local right = next(self)
-		if fn then -- For logical operators
+		if fn then
+			-- For logical operators
 			expr = fn(expr, op, right, self:loc(op))
 		else
 			-- Desugar normal binary operator into function call
@@ -188,7 +189,6 @@ function Parser:unary()
 				AST.Expr.Index(right, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
 				AST.Expr.Group({}, self:loc(op)), self:loc(op)
 			)
-		-- return AST.Expr.Unary(op, right, self:loc(op))
 	else
 		return self:call()
 	end
@@ -347,7 +347,7 @@ function Parser:forStatement(loc)
 end
 
 function Parser:assignment(isExpr)
-	local modifiers = {}
+	local modifiers = {empty = true}
 	local isAssignment, isFunction = false, false
 	local loc = self:loc(self:peek())
 	
@@ -356,6 +356,7 @@ function Parser:assignment(isExpr)
 		local mod = self:previous().type
 		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
 		modifiers[mod] = true
+		modifiers.empty = false
 	end
 	
 	-- Match assignment target

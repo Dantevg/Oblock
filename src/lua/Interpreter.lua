@@ -92,33 +92,10 @@ function Interpreter.Environment.new(parent)
 	return setmetatable(self, Interpreter.Environment)
 end
 
-function Interpreter.Environment:define(key, value, modifiers)
-	if type(key) == "table" then key = key.value end
-	if self.env[key] then Interpreter.error("Redefinition of variable "..tostring(key)) end
-	self.env[key] = {
-		value = value,
-		modifiers = modifiers or {}
-	}
-end
-
-function Interpreter.Environment:assign(key, value, level)
-	if type(key) == "table" then key = key.value end
-	if self.env[key] and (not level or level == 0) then
-		if self.env[key].modifiers.const then
-			Interpreter.error("Attempt to mutate const variable "..tostring(key))
-		end
-		self.env[key].value = value
-	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
-		self.parent:assign(key, value, level and level-1)
-	else
-		Interpreter.error("attempt to mutate non-existent variable "..tostring(key))
-	end
-end
-
 function Interpreter.Environment:set(key, value, modifiers, level)
 	if type(key) == "table" then key = key.value end
 	if self.env[key] and (not level or level == 0) then
-		-- if modifiers ~= nil then Interpreter.error("Redefinition of variable "..tostring(key)) end
+		if modifiers ~= nil and not modifiers.empty then Interpreter.error("Redefinition of variable "..tostring(key)) end
 		if self.env[key].modifiers.const then
 			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
@@ -191,7 +168,7 @@ function Interpreter.Block:set(key, value, modifiers, level)
 end
 
 function Interpreter.Block:pipe(other)
-	if not Interpreter.isCallable(other) then error("cannot pipe into "..other.__name, 0) end
+	if not Interpreter.isCallable(other) then Interpreter.error("cannot pipe into "..other.__name) end
 	return other:call {self}
 end
 

@@ -37,6 +37,11 @@ To-Do / roadmap / proposals
 - Function arguments as sequence instead of repeated application?
   - `a b c` is now `a(b(c))`, then `a(b,c)`
   - As replacement for partial application in functional languages
+  - Real repeated application can then be done as `(a b) c`,
+    possibly with `$` operator like in Haskell? `a b $ c`
+  - con: multiple ways of doing the same thing: (imperative style and functional style)
+    - definition: `add a b => a + b`  and  `add(a, b) => a + b`
+    - call: `add 10 20`  and  `add(10, 20)`
 - Stream-based programming / Flow-Based Programming (FBP)
   - Lazy streams: important! so pull, not push
   - With operator `||>` or maybe replace operator `|>`
@@ -204,6 +209,7 @@ Operators and keywords
 - true, false and nil/null are not keywords, but instances of Bool and Nil/Null classes
 - unary operators: '-', '!' and other custom ones
   - postfix unary operators? like `a!` for factorial and `1..` for range from 1 to infinity
+    - function application without parameters with `!` like MoonScript
 - binary operators: '-', '+' and other custom ones
 - wrap operators: '{}', '()', '[]', '""' (n-ary operators)
   - '()' serves multiple purposes, but in different contexts this should be ok:

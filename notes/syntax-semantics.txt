@@ -11,6 +11,9 @@ To-Do / roadmap / proposals
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
     - Named parameters in correct place?
+  - problem: group does not open new scope as it is not a data structure
+    - possible solution: do open scope, but what to do with groups outside of calls?
+- Named return values, symmetric to named arguments using `from`
 - Exceptions
   - try <statement> catch <identifier>: <statement>
   - other syntax: try ... handle,  ... catch,  ... handle
@@ -83,8 +86,10 @@ To-Do / roadmap / proposals
   - Solution: maybe use list/array syntax (which may use '()' already, how convenient!)
   - Problem again: list syntax is syntax sugar for block extending List, still same problem
 - Pattern matching
-  - useful for switch/match case and function parameters
-  - match against types, lists, blocks, number of values?, ...
+  - match statement, function parameter overloading, match operator `~~`?
+  - match against values, number of values, lists, blocks, types, (destructuring), ...
+    - default implementation of match operator `~~` is equality, `within` for ranges, ...
+  - problem: now need to execute match operator functions to decide which function to call
 - Destructuring / import with `from`
   - maybe renaming with `as`?
   - `*` to include all

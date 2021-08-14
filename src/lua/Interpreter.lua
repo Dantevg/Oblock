@@ -167,6 +167,10 @@ function Interpreter.Block:set(key, value, modifiers, level)
 	return self.environment:set(key, value, modifiers, level)
 end
 
+function Interpreter.Block:eq(other)
+	return self == other
+end
+
 function Interpreter.Block:pipe(other)
 	if not Interpreter.isCallable(other) then Interpreter.error("cannot pipe into "..other.__name) end
 	return other:call {self}
@@ -575,6 +579,7 @@ local function defineProtoNativeFn(base, name, key)
 	)
 end
 
+defineProtoNativeFn("Block", "eq", "==")
 defineProtoNativeFn("Block", "pipe", "|>")
 
 Interpreter.NativeFunction.proto:set("()", Interpreter.NativeFunction, nil, 0)

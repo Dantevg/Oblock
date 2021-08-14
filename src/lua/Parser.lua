@@ -190,31 +190,24 @@ function Parser:unary()
 				AST.Expr.Group({}, self:loc(op)), self:loc(op)
 			)
 	else
-		return self:call()
+		return self:varcall()
 	end
 end
 
-function Parser:call()
-	local expr = self:variable()
-	local nl = self.nlSensitive
-	self.nlSensitive = true
-	local loc = self:loc()
-	local arglist = self:variable()
-	while arglist do
-		expr = AST.Expr.Call(expr, arglist, loc)
-		self.nlSensitive = true
-		loc = self:loc()
-		arglist = self:variable()
-	end
-	self.nlSensitive = nl
-	return expr
-end
-
-function Parser:variable()
+function Parser:varcall()
 	local expr = self:primary()
-	while self:match {"dot"} do
+	while true do
 		local loc = self:loc()
-		expr = AST.Expr.Index(expr, self:primary(), loc)
+		if self:match {"dot"} then
+			expr = AST.Expr.Index(expr, self:primary(), loc)
+		else
+			local nl = self.nlSensitive
+			self.nlSensitive = true
+			local arglist = self:primary()
+			self.nlSensitive = nl
+			if not arglist then break end
+			expr = AST.Expr.Call(expr, arglist, loc)
+		end
 	end
 	return expr
 end

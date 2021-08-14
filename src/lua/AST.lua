@@ -90,7 +90,7 @@ function AST.Expr.Logical:resolve(scope)
 end
 
 function AST.Expr.Logical:debug(indent)
-	return debug(indent, self.__name, {op = self.op},
+	return debug(indent, self.__name, {op = self.op.lexeme},
 		{left = {self.left}, right = {self.right}})
 end
 
@@ -174,7 +174,7 @@ function AST.Expr.Variable:resolve(scope)
 end
 
 function AST.Expr.Variable:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {token = self.token.lexeme}, {})
 end
 
 function AST.Expr.Variable:__tostring()
@@ -223,7 +223,7 @@ function AST.Expr.Index:resolve(scope)
 end
 
 function AST.Expr.Index:debug(indent)
-	return debug(indent, self.__name, {}, {base = {self.base}, {expr = {self.expr}}})
+	return debug(indent, self.__name, {}, {base = {self.base}, expr = {self.expr}})
 end
 
 function AST.Expr.Index:__tostring()
@@ -471,7 +471,7 @@ end
 function AST.Expr.Literal.resolve() end
 
 function AST.Expr.Literal:debug(indent)
-	return debug(indent, self.__name, self, {})
+	return debug(indent, self.__name, {token = self.lexeme}, {})
 end
 
 function AST.Expr.Literal:__tostring()

@@ -3,8 +3,8 @@ expression	= function ;
 
 (* Expressions *)
 function	= fn | disjunction ;
-disjunction	= conjunction {'||' conjunction} ;
-conjunction	= application {'&&' application} ;
+disjunction	= conjunction {'or' conjunction} ;
+conjunction	= application {'and' application} ;
 application	= comparison {'|>' comparison} ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;

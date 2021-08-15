@@ -4,7 +4,7 @@
 			i = 0
 			return () => {
 				i = i+1
-				return i < 5 && i || nil
+				return i < 5 and i or nil
 			}
 		}
 	}

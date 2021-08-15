@@ -4,5 +4,5 @@
 		y = 20
 	}
 	print a
-	print a.x
+	print(a.x)
 }

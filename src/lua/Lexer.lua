@@ -204,7 +204,7 @@ Lexer.tokens = {
 	["#"] = {"hash", '='},
 	["$"] = {"dollar", '='},
 	["%"] = {"percent", '='},
-	["&"] = {"and", '=', '&'},
+	["&"] = {"and", '='},
 	["*"] = {"star", '='},
 	["+"] = {"plus", '='},
 	[","] = {"comma"},
@@ -221,13 +221,14 @@ Lexer.tokens = {
 	["\\"]= {"backslash"},
 	["^"] = {"hat", '='},
 	["`"] = {"backtick"},
-	["|"] = {"bar", '=', '|', '>'},
+	["|"] = {"bar", '=', '>'},
 	["~"] = {"tilde", '='},
 }
 
 Lexer.keywords = {
 	["if"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
+	["and"] = true, ["or"] = true,
 	["return"] = true, ["yield"] = true,
 	["var"] = true, ["const"] = true,
 	["static"] = true, ["instance"] = true,

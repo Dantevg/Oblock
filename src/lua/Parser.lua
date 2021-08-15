@@ -151,11 +151,11 @@ function Parser:func()
 end
 
 function Parser:disjunction()
-	return self:binary({"bar bar"}, Parser.conjunction, AST.Expr.Logical)
+	return self:binary({"or"}, Parser.conjunction, AST.Expr.Logical)
 end
 
 function Parser:conjunction()
-	return self:binary({"and and"}, Parser.pipe, AST.Expr.Logical)
+	return self:binary({"and"}, Parser.pipe, AST.Expr.Logical)
 end
 
 function Parser:pipe()

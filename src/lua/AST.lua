@@ -75,10 +75,10 @@ end
 
 function AST.Expr.Logical:evaluate(env)
 	local left = self.left:evaluate(env)
-	if self.op.lexeme == "||" then
+	if self.op.lexeme == "or" then
 		return Interpreter.Boolean.toBoolean(left).value
 			and left or self.right:evaluate(env)
-	elseif self.op.lexeme == "&&" then
+	elseif self.op.lexeme == "and" then
 		return Interpreter.Boolean.toBoolean(left).value
 			and self.right:evaluate(env) or left
 	end

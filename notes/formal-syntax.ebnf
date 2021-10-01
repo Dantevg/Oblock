@@ -4,7 +4,7 @@ expression	= control ;
 (* Expressions *)
 control		= 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
-			| 'for' Identifier 'in' expression ':' statement
+			| 'for' paramlist 'in' expression ':' statement
 			| function ;
 function	= fn | disjunction ;
 disjunction	= conjunction {'or' conjunction} ;
@@ -32,9 +32,10 @@ assignment	= {modifier} explist ['=' explist | fn]
 			| expression ;
 
 (* Smaller components *)
-fn			= (Identifier | '(' param {',' param} ')') '=>' expression ;
+fn			= (Identifier | '(' paramlist ')') '=>' expression ;
 expseq		= {primary '=' expression | expression | ','} ;
 statseq		= {statement} ;
 explist		= expression {',' expression} ;
+paramlist	= param {',' param} ;
 param		= ['...'] Identifier ;
 modifier	= 'var' | 'const' | 'static' | 'instance' ;

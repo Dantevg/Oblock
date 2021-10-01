@@ -548,9 +548,9 @@ AST.Expr.For = {}
 AST.Expr.For.__index = AST.Expr.For
 AST.Expr.For.__name = "For"
 
-function AST.Expr.For.new(variable, expr, body, loc)
+function AST.Expr.For.new(targets, expr, body, loc)
 	local self = {}
-	self.variable = variable
+	self.targets = targets
 	self.expr = expr
 	self.body = body
 	self.loc = loc
@@ -573,20 +573,27 @@ function AST.Expr.For:evaluate(env)
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
 	local block = Interpreter.Block(env)
-	local value = iterator:call()
-	self.variable:set(block)
-	while value and value.__name ~= "Nil" do
-		self.variable:set(block, value)
+	local values = {iterator:call()}
+	for _, target in ipairs(self.targets) do
+		target:set(block)
+	end
+	while values[1] and values[1].__name ~= "Nil" do
+		for i, target in ipairs(self.targets) do
+			local value = values[i] or Interpreter.Nil(nil, self.loc)
+			target:set(block, value)
+		end
 		local breakVals = catchBreakContinue(self.body, block)
 		if breakVals then return table.unpack(breakVals) end
-		value = iterator:call()
+		values = {iterator:call()}
 	end
 end
 
 function AST.Expr.For:resolve(scope)
 	self.expr:resolve(scope)
 	local childScope = {parent = scope}
-	childScope[self.variable.token.lexeme] = true
+	for _, target in ipairs(self.targets) do
+		childScope[target.token.lexeme] = true
+	end
 	self.body:resolve(childScope)
 end
 
@@ -812,7 +819,7 @@ end
 function AST.Stat.Assignment:resolve(scope)
 	if self.predef then
 		for _, target in ipairs(self.targets) do
-			scope[target.lexeme or target.token.lexeme] = true
+			scope[target.lexeme or target.token.lexeme] = true -- TODO: do something with this
 		end
 	end
 	

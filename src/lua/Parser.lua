@@ -160,16 +160,11 @@ function Parser:whileExpr(loc)
 end
 
 function Parser:forExpr(loc)
-	local variable = AST.Expr.Variable(
-		AST.Expr.Literal(self:consume("identifier", "Expected identifier"), nil, self:loc()),
-		self:loc()
-	)
-	self:consume("in", "Expected 'in'")
+	local variables = self:expseq("in")
 	local expr = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
 	local body = self:assert(self:statement(), "statement")
-	
-	return AST.Expr.For(variable, expr, body, loc)
+	return AST.Expr.For(variables, expr, body, loc)
 end
 
 function Parser:func()

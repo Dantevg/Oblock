@@ -34,7 +34,7 @@ function Interpreter:interpret()
 		else
 			print(err)
 		end
-		error()
+		return
 	end
 end
 
@@ -522,7 +522,7 @@ function Interpreter.List:iterate()
 	local i = 0
 	return Interpreter.Function(self, function()
 		i = i+1
-		return self:get("this"):get(i)
+		return self:get("this"):get(i), Interpreter.Number(nil, i)
 	end, "iterator")
 end
 

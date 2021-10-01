@@ -16,6 +16,22 @@ local function resolveAll(expressions, scope)
 	for _, expr in ipairs(expressions) do expr:resolve(scope) end
 end
 
+local function catchBreakContinue(body, env)
+	local success, err = pcall(body.evaluate, body, env)
+	if not success then
+		if type(err) == "table" and err.__name == "Break" then
+			err.level = err.level-1
+			if err.level > 0 then
+				error(err, 0)
+			else
+				return err.values
+			end
+		elseif type(err) ~= "table" or err.__name ~= "Continue" then
+			error(err, 0)
+		end
+	end
+end
+
 local pretty, tc
 local function debug(indent, name, properties, nodelists)
 	if not pretty then
@@ -441,6 +457,155 @@ setmetatable(AST.Expr.Call, {
 
 
 
+AST.Expr.If = {}
+AST.Expr.If.__index = AST.Expr.If
+AST.Expr.If.__name = "If"
+
+function AST.Expr.If.new(condition, ifTrue, ifFalse, loc)
+	local self = {}
+	self.condition = condition
+	self.ifTrue = ifTrue
+	self.ifFalse = ifFalse
+	self.loc = loc
+	return setmetatable(self, AST.Expr.If)
+end
+
+function AST.Expr.If:evaluate(env)
+	if self.condition:evaluate(env).value then
+		self.ifTrue:evaluate(env)
+	elseif self.ifFalse then
+		self.ifFalse:evaluate(env)
+	end
+end
+
+function AST.Expr.If:resolve(scope)
+	self.condition:resolve(scope)
+	self.ifTrue:resolve(scope)
+	if self.ifFalse then self.ifFalse:resolve(scope) end
+end
+
+function AST.Expr.If:debug(indent)
+	return debug(indent, self.__name, {},
+		{condition = {self.condition}, ["then"] = {self.ifTrue}, ["else"] = {self.ifFalse}})
+end
+
+function AST.Expr.If:__tostring()
+	if self.ifFalse then
+		return string.format("if %s: %s else %s", self.condition, self.ifTrue, self.ifFalse)
+	else
+		return string.format("if %s: %s", self.condition, self.ifTrue)
+	end
+end
+
+setmetatable(AST.Expr.If, {
+	__call = function(_, ...) return AST.Expr.If.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Expr.While = {}
+AST.Expr.While.__index = AST.Expr.While
+AST.Expr.While.__name = "While"
+
+function AST.Expr.While.new(condition, body, loc)
+	local self = {}
+	self.condition = condition
+	self.body = body
+	self.loc = loc
+	return setmetatable(self, AST.Expr.While)
+end
+
+function AST.Expr.While:evaluate(env)
+	while self.condition:evaluate(env).value do
+		local breakVals = catchBreakContinue(self.body, env)
+		if breakVals then return table.unpack(breakVals) end
+	end
+end
+
+function AST.Expr.While:resolve(scope)
+	self.condition:resolve(scope)
+	self.body:resolve(scope)
+end
+
+function AST.Expr.While:debug(indent)
+	return debug(indent, self.__name, {},
+		{condition = {self.condition}, body = {self.body}})
+end
+
+function AST.Expr.While:__tostring()
+	return string.format("while %s: %s", self.condition, self.body)
+end
+
+setmetatable(AST.Expr.While, {
+	__call = function(_, ...) return AST.Expr.While.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
+AST.Expr.For = {}
+AST.Expr.For.__index = AST.Expr.For
+AST.Expr.For.__name = "For"
+
+function AST.Expr.For.new(variable, expr, body, loc)
+	local self = {}
+	self.variable = variable
+	self.expr = expr
+	self.body = body
+	self.loc = loc
+	return setmetatable(self, AST.Expr.For)
+end
+
+function AST.Expr.For:evaluate(env)
+	-- Get iterator from expr
+	local container = self.expr:evaluate(env)
+	local iteratorSource = container:get("iterate")
+	if not Interpreter.isCallable(iteratorSource) then
+		Interpreter.error(string.format("no callable instance 'iterate' on %s value '%s'",
+			container.__name, self.expr), self.loc, container.loc)
+	end
+	local iterator = iteratorSource:call()
+	if not Interpreter.isCallable(iterator) then
+		Interpreter.error("'iterate' returns non-callable type "..iterator.__name,
+			self.loc, iterator.loc)
+	end
+	
+	-- Loop: set variable to iterator result, run body if result was non-nil
+	local block = Interpreter.Block(env)
+	local value = iterator:call()
+	self.variable:set(block)
+	while value and value.__name ~= "Nil" do
+		self.variable:set(block, value)
+		local breakVals = catchBreakContinue(self.body, block)
+		if breakVals then return table.unpack(breakVals) end
+		value = iterator:call()
+	end
+end
+
+function AST.Expr.For:resolve(scope)
+	self.expr:resolve(scope)
+	local childScope = {parent = scope}
+	childScope[self.variable.token.lexeme] = true
+	self.body:resolve(childScope)
+end
+
+function AST.Expr.For:debug(indent)
+	return debug(indent, self.__name, {variable = self.variable},
+		{expression = {self.expr}, body = {self.body}})
+end
+
+function AST.Expr.For:__tostring()
+	return string.format("for %s in %s: %s", self.variable, self.expr, self.body)
+end
+
+setmetatable(AST.Expr.For, {
+	__call = function(_, ...) return AST.Expr.For.new(...) end,
+	__index = AST.Expr.Literal,
+})
+
+
+
 AST.Expr.Literal = {}
 AST.Expr.Literal.__index = AST.Expr.Literal
 AST.Expr.Literal.__name = "Literal"
@@ -612,177 +777,6 @@ end
 setmetatable(AST.Stat.Continue, {
 	__call = function(_, ...) return AST.Stat.Continue.new(...) end,
 	__index = AST.Stat.ControlFlow,
-})
-
-
-
-AST.Stat.If = {}
-AST.Stat.If.__index = AST.Stat.If
-AST.Stat.If.__name = "If"
-
-function AST.Stat.If.new(condition, ifTrue, ifFalse, loc)
-	local self = {}
-	self.condition = condition
-	self.ifTrue = ifTrue
-	self.ifFalse = ifFalse
-	self.loc = loc
-	return setmetatable(self, AST.Stat.If)
-end
-
-function AST.Stat.If:evaluate(env)
-	if self.condition:evaluate(env).value then
-		self.ifTrue:evaluate(env)
-	elseif self.ifFalse then
-		self.ifFalse:evaluate(env)
-	end
-end
-
-function AST.Stat.If:resolve(scope)
-	self.condition:resolve(scope)
-	self.ifTrue:resolve(scope)
-	if self.ifFalse then self.ifFalse:resolve(scope) end
-end
-
-function AST.Stat.If:debug(indent)
-	return debug(indent, self.__name, {},
-		{condition = {self.condition}, ["then"] = {self.ifTrue}, ["else"] = {self.ifFalse}})
-end
-
-function AST.Stat.If:__tostring()
-	if self.ifFalse then
-		return string.format("if %s: %s else %s", self.condition, self.ifTrue, self.ifFalse)
-	else
-		return string.format("if %s: %s", self.condition, self.ifTrue)
-	end
-end
-
-setmetatable(AST.Stat.If, {
-	__call = function(_, ...) return AST.Stat.If.new(...) end,
-	__index = AST.Expr.Literal,
-})
-
-
-
-AST.Stat.While = {}
-AST.Stat.While.__index = AST.Stat.While
-AST.Stat.While.__name = "While"
-
-function AST.Stat.While.new(condition, body, loc)
-	local self = {}
-	self.condition = condition
-	self.body = body
-	self.loc = loc
-	return setmetatable(self, AST.Stat.While)
-end
-
-function AST.Stat.While:evaluate(env)
-	while self.condition:evaluate(env).value do
-		local success, err = pcall(self.body.evaluate, self.body, env)
-		if not success then
-			if type(err) == "table" and err.__name == "Break" then
-				err.level = err.level-1
-				if err.level > 0 then
-					error(err, 0)
-				else
-					return table.unpack(err.values)
-				end
-			elseif type(err) ~= "table" or err.__name ~= "Continue" then
-				error(err, 0)
-			end
-		end
-	end
-end
-
-function AST.Stat.While:resolve(scope)
-	self.condition:resolve(scope)
-	self.body:resolve(scope)
-end
-
-function AST.Stat.While:debug(indent)
-	return debug(indent, self.__name, {},
-		{condition = {self.condition}, body = {self.body}})
-end
-
-function AST.Stat.While:__tostring()
-	return string.format("while %s: %s", self.condition, self.body)
-end
-
-setmetatable(AST.Stat.While, {
-	__call = function(_, ...) return AST.Stat.While.new(...) end,
-	__index = AST.Expr.Literal,
-})
-
-
-
-AST.Stat.For = {}
-AST.Stat.For.__index = AST.Stat.For
-AST.Stat.For.__name = "For"
-
-function AST.Stat.For.new(variable, expr, body, loc)
-	local self = {}
-	self.variable = variable
-	self.expr = expr
-	self.body = body
-	self.loc = loc
-	return setmetatable(self, AST.Stat.For)
-end
-
-function AST.Stat.For:evaluate(env)
-	-- Get iterator from expr
-	local container = self.expr:evaluate(env)
-	local iteratorSource = container:get("iterate")
-	if not Interpreter.isCallable(iteratorSource) then
-		Interpreter.error(string.format("no callable instance 'iterate' on %s value '%s'",
-			container.__name, self.expr), self.loc, container.loc)
-	end
-	local iterator = iteratorSource:call()
-	if not Interpreter.isCallable(iterator) then
-		Interpreter.error("'iterate' returns non-callable type "..iterator.__name,
-			self.loc, iterator.loc)
-	end
-	
-	-- Loop: set variable to iterator result, run body if result was non-nil
-	local block = Interpreter.Block(env)
-	local value = iterator:call()
-	self.variable:set(block)
-	while value and value.__name ~= "Nil" do
-		self.variable:set(block, value)
-		local success, err = pcall(self.body.evaluate, self.body, block)
-		if not success then
-			if type(err) == "table" and err.__name == "Break" then
-				err.level = err.level-1
-				if err.level > 0 then
-					error(err, 0)
-				else
-					return table.unpack(err.values)
-				end
-			elseif type(err) ~= "table" or err.__name ~= "Continue" then
-				error(err, 0)
-			end
-		end
-		value = iterator:call()
-	end
-end
-
-function AST.Stat.For:resolve(scope)
-	self.expr:resolve(scope)
-	local childScope = {parent = scope}
-	childScope[self.variable.token.lexeme] = true
-	self.body:resolve(childScope)
-end
-
-function AST.Stat.For:debug(indent)
-	return debug(indent, self.__name, {variable = self.variable},
-		{expression = {self.expr}, body = {self.body}})
-end
-
-function AST.Stat.For:__tostring()
-	return string.format("for %s in %s: %s", self.variable, self.expr, self.body)
-end
-
-setmetatable(AST.Stat.For, {
-	__call = function(_, ...) return AST.Stat.For.new(...) end,
-	__index = AST.Expr.Literal,
 })
 
 

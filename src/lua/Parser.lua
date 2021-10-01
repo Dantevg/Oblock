@@ -149,14 +149,14 @@ function Parser:ifExpr(loc)
 	if self:match {"else"} then
 		ifFalse = self:assert(self:statement(), "statement")
 	end
-	return AST.Stat.If(condition, ifTrue, ifFalse, loc)
+	return AST.Expr.If(condition, ifTrue, ifFalse, loc)
 end
 
 function Parser:whileExpr(loc)
 	local condition = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
 	local body = self:assert(self:statement(), "statement")
-	return AST.Stat.While(condition, body, loc)
+	return AST.Expr.While(condition, body, loc)
 end
 
 function Parser:forExpr(loc)
@@ -169,7 +169,7 @@ function Parser:forExpr(loc)
 	self:consume("colon", "Expected ':'")
 	local body = self:assert(self:statement(), "statement")
 	
-	return AST.Stat.For(variable, expr, body, loc)
+	return AST.Expr.For(variable, expr, body, loc)
 end
 
 function Parser:func()

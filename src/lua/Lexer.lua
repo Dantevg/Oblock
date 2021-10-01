@@ -229,6 +229,7 @@ Lexer.keywords = {
 	["if"] = true, ["else"] = true,
 	["while"] = true, ["for"] = true, ["in"] = true,
 	["and"] = true, ["or"] = true,
+	["break"] = true, ["continue"] = true,
 	["return"] = true, ["yield"] = true,
 	["var"] = true, ["const"] = true,
 	["static"] = true, ["instance"] = true,

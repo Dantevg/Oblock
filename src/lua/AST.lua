@@ -486,6 +486,35 @@ setmetatable(AST.Expr.Literal, {
 
 AST.Stat = {}
 
+AST.Stat.ControlFlow = {}
+AST.Stat.ControlFlow.__index = AST.Stat.ControlFlow
+
+function AST.Stat.ControlFlow.new(expressions, loc)
+	local self = {}
+	self.expressions = expressions or {}
+	self.loc = loc
+	return setmetatable(self, AST.Stat.ControlFlow)
+end
+
+function AST.Stat.ControlFlow:evaluate(env)
+	self.values = evaluateAll(self.expressions, env)
+	error(self, 0)
+end
+
+function AST.Stat.ControlFlow:resolve(scope)
+	resolveAll(self.expressions, scope)
+end
+
+function AST.Stat.ControlFlow:debug(indent)
+	return debug(indent, self.__name, {}, {expressions = self.expressions})
+end
+
+setmetatable(AST.Stat.ControlFlow, {
+	__call = function(_, ...) return AST.Stat.ControlFlow.new(...) end,
+})
+
+
+
 AST.Stat.Return = {}
 AST.Stat.Return.__index = AST.Stat.Return
 AST.Stat.Return.__name = "Return"
@@ -495,19 +524,6 @@ function AST.Stat.Return.new(expressions, loc)
 	self.expressions = expressions or {}
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Return)
-end
-
-function AST.Stat.Return:evaluate(env)
-	self.values = evaluateAll(self.expressions, env)
-	error(self, 0)
-end
-
-function AST.Stat.Return:resolve(scope)
-	resolveAll(self.expressions, scope)
-end
-
-function AST.Stat.Return:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions})
 end
 
 function AST.Stat.Return:__tostring()
@@ -520,7 +536,7 @@ end
 
 setmetatable(AST.Stat.Return, {
 	__call = function(_, ...) return AST.Stat.Return.new(...) end,
-	__index = AST.Expr.Literal,
+	__index = AST.Stat.ControlFlow,
 })
 
 
@@ -536,19 +552,6 @@ function AST.Stat.Yield.new(expressions, loc)
 	return setmetatable(self, AST.Stat.Yield)
 end
 
-function AST.Stat.Yield:evaluate(env)
-	self.values = evaluateAll(self.expressions, env)
-	error(self, 0)
-end
-
-function AST.Stat.Yield:resolve(scope)
-	resolveAll(self.expressions, scope)
-end
-
-function AST.Stat.Yield:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions})
-end
-
 function AST.Stat.Yield:__tostring()
 	local expressions = {}
 	for _, expr in ipairs(self.expressions) do
@@ -559,7 +562,56 @@ end
 
 setmetatable(AST.Stat.Yield, {
 	__call = function(_, ...) return AST.Stat.Yield.new(...) end,
-	__index = AST.Expr.Literal,
+	__index = AST.Stat.ControlFlow,
+})
+
+
+
+AST.Stat.Break = {}
+AST.Stat.Break.__index = AST.Stat.Break
+AST.Stat.Break.__name = "Break"
+
+function AST.Stat.Break.new(expressions, level, loc)
+	local self = {}
+	self.expressions = expressions or {}
+	self.level = level or 1
+	self.loc = loc
+	return setmetatable(self, AST.Stat.Break)
+end
+
+function AST.Stat.Break:__tostring()
+	local expressions = {}
+	for _, expr in ipairs(self.expressions) do
+		table.insert(expressions, tostring(expr))
+	end
+	return ("break "):rep(self.level)..table.concat(expressions, ", ")
+end
+
+setmetatable(AST.Stat.Break, {
+	__call = function(_, ...) return AST.Stat.Break.new(...) end,
+	__index = AST.Stat.ControlFlow,
+})
+
+
+
+AST.Stat.Continue = {}
+AST.Stat.Continue.__index = AST.Stat.Continue
+AST.Stat.Continue.__name = "Continue"
+
+function AST.Stat.Continue.new(loc)
+	local self = {}
+	self.expressions = {}
+	self.loc = loc
+	return setmetatable(self, AST.Stat.Continue)
+end
+
+function AST.Stat.Continue:__tostring()
+	return "continue"
+end
+
+setmetatable(AST.Stat.Continue, {
+	__call = function(_, ...) return AST.Stat.Continue.new(...) end,
+	__index = AST.Stat.ControlFlow,
 })
 
 
@@ -625,7 +677,19 @@ end
 
 function AST.Stat.While:evaluate(env)
 	while self.condition:evaluate(env).value do
-		self.body:evaluate(env)
+		local success, err = pcall(self.body.evaluate, self.body, env)
+		if not success then
+			if type(err) == "table" and err.__name == "Break" then
+				err.level = err.level-1
+				if err.level > 0 then
+					error(err, 0)
+				else
+					return table.unpack(err.values)
+				end
+			elseif type(err) ~= "table" or err.__name ~= "Continue" then
+				error(err, 0)
+			end
+		end
 	end
 end
 
@@ -683,7 +747,19 @@ function AST.Stat.For:evaluate(env)
 	self.variable:set(block)
 	while value and value.__name ~= "Nil" do
 		self.variable:set(block, value)
-		self.body:evaluate(block)
+		local success, err = pcall(self.body.evaluate, self.body, block)
+		if not success then
+			if type(err) == "table" and err.__name == "Break" then
+				err.level = err.level-1
+				if err.level > 0 then
+					error(err, 0)
+				else
+					return table.unpack(err.values)
+				end
+			elseif type(err) ~= "table" or err.__name ~= "Continue" then
+				error(err, 0)
+			end
+		end
 		value = iterator:call()
 	end
 end

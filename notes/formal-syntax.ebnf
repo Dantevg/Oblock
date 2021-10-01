@@ -1,7 +1,11 @@
 program		= expression ;
-expression	= function ;
+expression	= control ;
 
 (* Expressions *)
+control		= 'if' expression ':' statement ['else' statement]
+			| 'while' expression ':' statement
+			| 'for' Identifier 'in' expression ':' statement
+			| function ;
 function	= fn | disjunction ;
 disjunction	= conjunction {'or' conjunction} ;
 conjunction	= application {'and' application} ;
@@ -20,9 +24,8 @@ block		= '{' statseq '}' ;
 (* Statements *)
 statement	= 'return' [explist]
 			| 'yield' [explist]
-			| 'if' expression ':' statement ['else' statement]
-			| 'while' expression ':' statement
-			| 'for' Identifier 'in' expression ':' statement
+			| 'break' {'break'} [explist]
+			| 'continue'
 			| ';'
 			| assignment ;
 assignment	= {modifier} explist ['=' explist | fn]

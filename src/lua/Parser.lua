@@ -122,11 +122,54 @@ function Parser:parse()
 end
 
 function Parser:expression()
-	return self:func()
+	return self:control()
 end
 
 function Parser:defExpr()
 	return self:assignment(true)
+end
+
+function Parser:control()
+	if self:match {"if"} then
+		return self:ifExpr(self:loc())
+	elseif self:match {"while"} then
+		return self:whileExpr(self:loc())
+	elseif self:match {"for"} then
+		return self:forExpr(self:loc())
+	else
+		return self:func()
+	end
+end
+
+function Parser:ifExpr(loc)
+	local condition = self:assert(self:expression(), "expression")
+	self:consume("colon", "Expected ':'")
+	local ifTrue = self:assert(self:statement(), "statement")
+	local ifFalse
+	if self:match {"else"} then
+		ifFalse = self:assert(self:statement(), "statement")
+	end
+	return AST.Stat.If(condition, ifTrue, ifFalse, loc)
+end
+
+function Parser:whileExpr(loc)
+	local condition = self:assert(self:expression(), "expression")
+	self:consume("colon", "Expected ':'")
+	local body = self:assert(self:statement(), "statement")
+	return AST.Stat.While(condition, body, loc)
+end
+
+function Parser:forExpr(loc)
+	local variable = AST.Expr.Variable(
+		AST.Expr.Literal(self:consume("identifier", "Expected identifier"), nil, self:loc()),
+		self:loc()
+	)
+	self:consume("in", "Expected 'in'")
+	local expr = self:assert(self:expression(), "expression")
+	self:consume("colon", "Expected ':'")
+	local body = self:assert(self:statement(), "statement")
+	
+	return AST.Stat.For(variable, expr, body, loc)
 end
 
 function Parser:func()
@@ -269,13 +312,14 @@ function Parser:statseq()
 end
 
 function Parser:anylist(next, typename, required)
-	local first = required and next(self)
-	local elements = {first}
-	self:assert(not required or first, typename)
-	while (not required and #elements == 0) or self:match {"comma"} do
+	local elements = {next(self)}
+	self.nlSensitive = false
+	self:assert(#elements == 1 or not required, typename)
+	if #elements == 0 then return elements end
+	while self:match {"comma"} do
 		local element = next(self)
 		self:assert(element, typename)
-		if element then table.insert(elements, element) end
+		table.insert(elements, element)
 	end
 	return elements
 end
@@ -285,12 +329,10 @@ function Parser:statement()
 		return self:returnStatement(self:loc())
 	elseif self:match {"yield"} then
 		return self:yieldStatement(self:loc())
-	elseif self:match {"if"} then
-		return self:ifStatement(self:loc())
-	elseif self:match {"while"} then
-		return self:whileStatement(self:loc())
-	elseif self:match {"for"} then
-		return self:forStatement(self:loc())
+	elseif self:match {"break"} then
+		return self:breakStatement(self:loc())
+	elseif self:match {"continue"} then
+		return self:continueStatement(self:loc())
 	elseif self:match {"semicolon"} then
 		return
 	else
@@ -308,35 +350,18 @@ function Parser:yieldStatement(loc)
 	return AST.Stat.Yield(values, loc)
 end
 
-function Parser:ifStatement(loc)
-	local condition = self:assert(self:expression(), "expression")
-	self:consume("colon", "Expected ':'")
-	local ifTrue = self:assert(self:statement(), "statement")
-	local ifFalse
-	if self:match {"else"} then
-		ifFalse = self:assert(self:statement(), "statement")
-	end
-	return AST.Stat.If(condition, ifTrue, ifFalse, loc)
+function Parser:breakStatement(loc)
+	local nl = self.nlSensitive
+	self.nlSensitive = true
+	local level = 1
+	while self:match {"break"} do level = level+1 end
+	local values = self:anylist(self.expression, "expression")
+	self.nlSensitive = nl
+	return AST.Stat.Break(values, level, loc)
 end
 
-function Parser:whileStatement(loc)
-	local condition = self:assert(self:expression(), "expression")
-	self:consume("colon", "Expected ':'")
-	local body = self:assert(self:statement(), "statement")
-	return AST.Stat.While(condition, body, loc)
-end
-
-function Parser:forStatement(loc)
-	local variable = AST.Expr.Variable(
-		AST.Expr.Literal(self:consume("identifier", "Expected identifier"), nil, self:loc()),
-		self:loc()
-	)
-	self:consume("in", "Expected 'in'")
-	local expr = self:assert(self:expression(), "expression")
-	self:consume("colon", "Expected ':'")
-	local body = self:assert(self:statement(), "statement")
-	
-	return AST.Stat.For(variable, expr, body, loc)
+function Parser:continueStatement(loc)
+	return AST.Stat.Continue(loc)
 end
 
 function Parser:assignment(isExpr)

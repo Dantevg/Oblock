@@ -30,10 +30,11 @@ To-Do / roadmap / proposals
   - solution 3: make Block/Object have Map methods
     - `a = {}`, `a.get "x"`
     - con: same as solution 2, does not solve problem 2
-  - solution 4 (radical!): Use symbols for overrides instead of strings
-    - overrides use symbols `a.(Symbol.for "+")` for addition override
-    - needs syntax for symbols
-    - con: does not solve problem 1
+  - solution 4 (radical!): Use symbols for operator overrides instead of strings
+    - operators use symbols `a.(Symbol "+")` for addition override
+    - needs syntax for symbols, `:symbol` seems common: `a.:+`, `a.:x`
+    - con: only partly solves problem 1 (by default, proto is Block/Object, and
+      no string keys there then)
   - solution 5: combine 4 and 2
     - `a = Map()`, `a.x = 42`, `a.x`
     - Map with getter/setter override, only searches prototype for symbol keys

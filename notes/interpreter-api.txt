@@ -74,10 +74,24 @@ Ideas
 ================================================================================
 https://en.wikipedia.org/wiki/Abstract_data_type#Examples_2
 
-2 Libraries for language:
-- Base library: only essentials, always present (for embedding, like Lua)
+Naming: module / package / library ?
+- module: Lua, Python, ...
+- package: Java, Python, Go, Scala, ...
+- library: Javascript, C, ...
+
+Probably: (inspired by Java/Python, in order from small to large)
+- module: single file
+- package: collection of files (directory/folder)
+  - grouping similar functionality
+  - needs main file/module
+- collection/bundle: collection of packages
+  - packages not necessarily offering similar functionality
+  - more about downloading, should be indistinguishable in code
+
+2 Collections/bundles for language:
+- Base collection: only essentials, always present / no need to include (for embedding, like Lua)
   - Nil, Bool, Int, Float, ASCIIString, Math/Random, ...?
-- Standard library: more extensive, optional (for stand-alone usage, like Java/Python)
+- Extended collection: more extensive, optional (for stand-alone usage, like Java/Python)
   - ideas: UnicodeString / UTF8String, Debug, OS/IO/FS, Date, Regex, Socket,
     Json, encoding/decoding, data structures, Thread, ...
 

@@ -28,20 +28,6 @@ function Parser:error(token, message)
 	error(true)
 end
 
-function Parser:synchronise()
-	self:advance()
-	
-	self.nlSensitive = true
-	while self:peek().type ~= "EOF" do
-		local prev, next = self:previous(), self:peek()
-		if prev.type == "semicolon" then return end
-		if next.type == "return" or next.type == "yield" or next.type == "if"
-			or next.type == "for" or next.type == "while" then return end
-		self:advance()
-	end
-	self.nlSensitive = false
-end
-
 function Parser:nextIndex()
 	return (self.nlSensitive or self.tokens[self.current].type ~= "newline")
 		and self.current or self.current+1
@@ -296,8 +282,6 @@ function Parser:statseq()
 		local success, element = pcall(self.statement, self)
 		if success then
 			table.insert(elements, element)
-		elseif element then
-			self:synchronise()
 		else
 			error(element)
 		end

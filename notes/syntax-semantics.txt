@@ -35,7 +35,6 @@ To-Do / roadmap / proposals
     - con: same as solution 2, does not solve problem 2
   - solution 4 (radical!): Use symbols for operator overrides instead of strings
     - operators use symbols `a.(Symbol "+")` for addition override
-    - needs syntax for symbols, `:symbol` seems common: `a.:+`, `a.:x`
     - con: only partly solves problem 1 (by default, proto is Block/Object, and
       no string keys there then)
   - solution 5: combine 4 and 2
@@ -43,6 +42,17 @@ To-Do / roadmap / proposals
     - Map with getter/setter override, only searches prototype for symbol keys
     - con: does not solve problem 1 when used for storing symbol keys,
       need to use methods again then
+- Symbols
+  - can be used for value-less things: enum elements, sentinels, ...
+    `Colours = { RED = :red; GREEN = :green; BLUE = :blue }`,  `Colours.RED == :red`
+    or
+    `Colours = Enum(:red, :green, :blue)`,  `Colours.RED == :red`
+    instead of
+    `Colours = { RED = 1; GREEN = 2; BLUE = 3 }`,  `Colours.RED == 1`
+  - syntax: `:symbol` seems common: `a.:+`, `a.:x`
+  - should symbols be global by name?
+    - Unique: Javascript
+    - Global: Ruby, Scala?, Dart
 - Semi-tuples?
   - Don't like *tuples*; what do you need them for?, less generic because hard-coded data structure
   - Potentially more resource-heavy / wasteful?
@@ -73,6 +83,10 @@ To-Do / roadmap / proposals
       `[10, nil, 20] == [10, 20]`,  `for x in () => { yield 10; yield nil; yield 20 }` loops once
   - Attempting to use keyword kind as value yields value kind (keyword kind == value kind is true)
 - Unary '+' for absolute value (as suggested in the /r/ProgrammingLanguages Discord)
+- Array programming
+  - Arithmetic operators for lists are defined as a map on that list: `a + b == a.map((x,y) => x + y)`
+  - Need other operator for concatenation: `++` like haskell,
+    `..` like lua is already taken by the range operator
 - Getter functions (without parameter list), `=> body`
   - Ambiguous, what is `x => body`?
     - anonymous function with single parameter

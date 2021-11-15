@@ -2,10 +2,13 @@
                                      Syntax
 ================================================================================
 https://wren.io/classes.html
+https://luau-lang.org/
 
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
+- Syntax sugar for classes and constructors
+- Use comma instead of colon for if/for/while condition/body separator (like Jammy)
 - Default parameters
 - Named parameters by `(<arg> = <exp>)`
   - Following C# valid-ness, valid when one of:
@@ -42,6 +45,12 @@ To-Do / roadmap / proposals
     - Map with getter/setter override, only searches prototype for symbol keys
     - con: does not solve problem 1 when used for storing symbol keys,
       need to use methods again then
+  - solution 6: Use symbols for everything instead of strings (also variables)
+    - `a = {}`, `a."x" = 42`, `a."x"`
+    - more radical version of solution 4
+      - symbol indexing: `a.x`
+      - string indexing: `a."x"`
+    - more standard OOP-like separation of code and data
 - Symbols
   - can be used for value-less things: enum elements, sentinels, ...
     `Colours = { RED = :red; GREEN = :green; BLUE = :blue }`,  `Colours.RED == :red`
@@ -50,11 +59,14 @@ To-Do / roadmap / proposals
     instead of
     `Colours = { RED = 1; GREEN = 2; BLUE = 3 }`,  `Colours.RED == 1`
   - syntax: `:symbol` seems common: `a.:+`, `a.:x`
+  - make standard indexing use symbols instead of strings: `a.x` indexes `a`
+    with symbol `x`
   - should symbols be global by name?
     - Unique: Javascript
     - Global: Ruby, Scala?, Dart
 - Semi-tuples?
-  - Don't like *tuples*; what do you need them for?, less generic because hard-coded data structure
+  - Don't like *tuples*; what do you need them for?, less generic because
+    hard-coded data structure
   - Potentially more resource-heavy / wasteful?
   - Evaluating semi-tuple still results in content (otherwise can't do `(1+2)*3`)
     - Therefore, these are not normal tuples
@@ -62,7 +74,7 @@ To-Do / roadmap / proposals
   - Supports named fields: `(x = 10, y = 20)`  
     `y, x from (x = 10, y = 20)`  
     `return (x = 10, y = 20)`  
-    `fn (x = 10, y = 20)`  
+    `fn (x = 10, y = 20)`
   - Problem: when using this for named return values, named fields should still
     "unpack" like normal values, order of named fields needs to be preserved  
     `fn() => { x, y = 10, 20; return x, y }; a, b = fn()`  

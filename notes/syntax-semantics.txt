@@ -64,6 +64,8 @@ To-Do / roadmap / proposals
   - should symbols be global by name?
     - Unique: Javascript
     - Global: Ruby, Scala?, Dart
+    - what makes global-by-name symbols different from strings?
+      essentially creates a separate string domain
 - Semi-tuples?
   - Don't like *tuples*; what do you need them for?, less generic because
     hard-coded data structure

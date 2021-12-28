@@ -7,6 +7,24 @@ https://luau-lang.org/
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
+- How to recognise an object as an instance of a class?
+- Immutable values
+  - Value that cannot change, as opposed to variable that cannot be reassigned
+  - Immutable value means that every containing field is immutable
+    and that no new fields can be added
+  - Primitives like Bool, Int, Float, String are immutable by default
+  - Options for constant variable `a` holding immutable value `{}`:
+    - add `readonly` (C#) / `sealed` (C#) / `immutable` / `immut` modifier:  
+      `const immutable a = {}`  or  `const readonly a = {}`
+    - allow using `const` for values: (confusing)  
+      `const a = const {}`
+    - extend `const` to also apply to values: (confusing for JS/Java users)  
+      `const a = {}`
+    - use `freeze` function: (like JS)  
+      `const a = freeze {}`
+  - Enforce for thread-safety: can only share immutable values
+  - No reassignment by default? -> only use `const` for immutability
+    and `mut`/`var` for reassignable
 - Syntax sugar for classes and constructors
 - Use comma instead of colon for if/for/while condition/body separator (like Jammy)
 - Default parameters

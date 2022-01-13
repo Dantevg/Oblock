@@ -14,6 +14,9 @@ fn.type = function(_, x)
 	return Interpreter.String(nil, x.__name)
 end
 
+-- To turn multiple values into one, like Lua does with `()`
+fn.id = function(_, x) return x end
+
 return function(env)
 	for name, f in pairs(fn) do
 		env:set(name, Interpreter.NativeFunction(env, f), nil, 0)

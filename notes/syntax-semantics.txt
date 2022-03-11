@@ -8,10 +8,16 @@ To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance)
 - How to recognise an object as an instance of a class?
+  - Simple: look in prototype chain
+  - Advanced / more flexible: structural typing
 - Immutable values
   - Value that cannot change, as opposed to variable that cannot be reassigned
   - Immutable value means that every containing field is immutable
     and that no new fields can be added
+    - requires allowing changing modifiers (only var -> const, not the other way!)
+    - override `_Set` method to prevent adding fields
+  - Potential problem with native (C-side) code: should be impossible to change
+    value/pointer via C
   - Primitives like Bool, Int, Float, String are immutable by default
   - Options for constant variable `a` holding immutable value `{}`:
     - add `readonly` (C#) / `sealed` (C#) / `immutable` / `immut` modifier:  
@@ -25,9 +31,13 @@ To-Do / roadmap / proposals
   - Enforce for thread-safety: can only share immutable values
   - No reassignment by default? -> only use `const` for immutability
     and `mut`/`var` for reassignable
+  - Probably: (like JS) no syntax for immutable values, maybe freeze function.
+    Immutability checking (for threads) needs to be a function as well
 - Syntax sugar for classes and constructors
 - Use comma instead of colon for if/for/while condition/body separator (like Jammy)
 - Default parameters
+  - What to do when caller explicitly passes nil?
+    python will use nil/None, not default value
 - Named parameters by `(<arg> = <exp>)`
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
@@ -36,11 +46,14 @@ To-Do / roadmap / proposals
     - possible solution: make group (ephemeral) data structure (introduce "tuples")
 - Named return values, symmetric to named arguments using `from`
   - Probably not. Doubt usefulness, only for few special cases
-- Exceptions
-  - `try <statement> catch <identifier>: <statement>`
-  - other syntax: `try ... handle`,  `... catch`,  `... handle`
-  - maybe try as method on functions:  `myFunction.try()`  like Lua's pcall
+- Error handling
+  - try as method on functions: `fn.try(args)` like Lua's pcall
   - http://joeduffyblog.com/2016/02/07/the-error-model/
+- Pattern matching
+  - match function, function parameter overloading, match operator `~~`?
+  - match against values, number of values, lists, blocks, types, (destructuring), ...
+    - default implementation of match operator `~~` is equality, `within` for ranges, ...
+  - problem: now need to execute match operator functions to decide which function to call
 - Coroutines
 - Problems with using Block/Object as a map
   1. indexing will yield value from prototype if not present in map
@@ -98,7 +111,7 @@ To-Do / roadmap / proposals
   - Problem: when using this for named return values, named fields should still
     "unpack" like normal values, order of named fields needs to be preserved  
     `fn() => { x, y = 10, 20; return x, y }; a, b = fn()`  
-	`a, b = (x = 10, y = 20)`  should be equal to  `a, b = (10, 20)`
+    `a, b = (x = 10, y = 20)`  should be equal to  `a, b = (10, 20)`
 - Multiple values for nothing-ness: nil, null, unit, void, nothing, none?
   - Usage: empty indices in lists while iterating (atm iteration stops at nil)
     - otherwise, iteration could skip empty (not present!) indices,
@@ -115,6 +128,10 @@ To-Do / roadmap / proposals
       `[10, nil, 20] == [10, 20]`,  `for x in () => { yield 10; yield nil; yield 20 }` loops once
   - Attempting to use keyword kind as value yields value kind (keyword kind == value kind is true)
 - Unary '+' for absolute value (as suggested in the /r/ProgrammingLanguages Discord)
+- Imperative function (only side effects, returns nothing):
+  - with explicit return: `() => { ...; return }`
+  - with `do` function: `() => do { ... }`  
+    `do(_) => nil`
 - Array programming
   - Arithmetic operators for lists are defined as a map on that list: `a + b == a.map((x,y) => x + y)`
   - Need other operator for concatenation: `++` like haskell,
@@ -149,11 +166,6 @@ To-Do / roadmap / proposals
 - Blocks as ordered associative arrays?
   - keys are sorted by their addition time
   - what happens when deleting (setting to nil) and re-inserting a key?
-- Pattern matching
-  - match statement, function parameter overloading, match operator `~~`?
-  - match against values, number of values, lists, blocks, types, (destructuring), ...
-    - default implementation of match operator `~~` is equality, `within` for ranges, ...
-  - problem: now need to execute match operator functions to decide which function to call
 - Destructuring / import with `from`
   - maybe renaming with `as`?
   - `*` to include all
@@ -199,7 +211,7 @@ To-Do / roadmap / proposals
   - Problem: what to do when you want to pass a single block parameter? (syntax)
   - Solution: maybe use list/array syntax (which may use `()` already, how convenient!)
   - Problem again: list syntax is syntax sugar for block extending List, still same problem
-- Nullary operator. Doubt usefullnes, only for few special case
+- Nullary operator. Doubt usefulness, only for few special cases
   - ??? like in scala (is it an operator or expression?)
 - Statements as expressions?
   - New style: `var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"`
@@ -223,7 +235,8 @@ To-Do / roadmap / proposals
   - Structural typing is problem for native types
     - Int should be subtype of Float (any int is also a float)
     - Float should not be sybtype of Int, but structure might not differentiate
-	- Solution: only use structural subtyping for non-native / non-external types?
+      - solution: probably methods will differentiate
+    - Solution: only use structural subtyping for non-native / non-external types?
 - Mixins or traits (deriving?) (what's the difference exactly? traits seem more powerful?)
   - Automatic? i.e. can use `!=`, `>` automatically on class defining only `==` and `<=`
   - https://blog.10pines.com/2014/10/14/mixins-or-traits/
@@ -377,7 +390,8 @@ extend List {
 
 Inheritance:
 - Point = Vector { } (call static superclass)
-- Point = extend Vector { } (with `extend` keyword)
+- Point = extend Vector { } (with `extend` keyword/function)
+- Point = Vector.extend { } (with `extend` member function)
 - Point = { @extend Vector } (with @attribute annotation)
 
 Functions
@@ -520,7 +534,8 @@ Blocks serve many purposes at once:
 - Objects (storing values by string keys)
 - Arrays (storing values by numeric keys)
 - Maps? (storing values by any type keys)
-- Classes (objects with constructors and instance variables/methods)
+- Prototypes (objects with constructors and instance variables/methods)
+- Modules (separating values between files)
 - Grouping of code chunks (if, while, for etc)
 - Function contents (code chunks with parameters)
 

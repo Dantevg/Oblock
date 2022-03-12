@@ -89,30 +89,28 @@ Value representation optimisations
 	t : type				e : exponent
 	i : integer				m : mantissa
 
-Normal (unoptimised) value: (just a pointer)  
-	`pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
+### Unoptimised value (just a pointer)
+Type			| Layout
+----------------|---------------------------------------------------------------
+pointer			| `pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
 
-NaN boxing: (using signalling NaN because that never occurs normally)  
-	`ffffffff fffffttt xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
-- float case (64 bits / double)  
-	`seeeeeee eeeemmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm`
-- pointer case  
-	`.1111111 11110010 pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
-- int case (50 bits)  
-	`01111111 111101ii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii`
-- other type case (50 bits)  
-	`11111111 111101xx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
+### NaN boxing (using signalling NaN because that never occurs normally)
+Type			| Layout
+----------------|---------------------------------------------------------------
+general			| `ffffffff fffffttt xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
+float (64 bits)	| `seeeeeee eeeemmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm`
+pointer			| `.1111111 11110010 pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
+int (50 bits)	| `01111111 111101ii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii`
+other (50 bits)	| `11111111 111101xx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
 
-Pointer tagging:  
-	`xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxttt`
-- pointer case  
-	`pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp ppppp000`
-- float case (32 bits)  
-	`seeeeeee emmmmmmm mmmmmmmm mmmmmmmm ........ ........ ........ .....010`
-- int case (63 bits)  
-	`iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiii1`
-- other type case (56 bits)  
-	`xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxx100`
+### Pointer tagging
+Type			| Layout
+----------------|---------------------------------------------------------------
+general			| `xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxttt`
+float (32 bits)	| `seeeeeee emmmmmmm mmmmmmmm mmmmmmmm ........ ........ ........ .....010`
+pointer			| `pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp ppppp000`
+int (63 bits)	| `iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiii1`
+other (56 bits)	| `xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxx100`
 
 
 

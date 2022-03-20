@@ -155,3 +155,7 @@ Probably: (inspired by Java/Python, in order from small to large)
 
 - Modulo int type for automatic calculations modulo n, as a generalisation of
   wrapping int overflow operations
+
+- Iterator type with default stream-like functions (map, filter, ...)
+  - https://github.com/tc39/proposal-iterator-helpers
+  - Get these functions by extending `Iterator` (or `Stream`?)

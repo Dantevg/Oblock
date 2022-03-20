@@ -11,6 +11,20 @@ To-Do / roadmap / proposals
 - How to recognise an object as an instance of a class?
   - Simple: look in prototype chain
   - Advanced / more flexible: structural typing
+  - When any function gets called (both constructor and normal method),
+    set `_Proto` of returning object to `this` and add to scope.
+    For constructors:  
+    
+    	Dog = {
+    		"()" name => {
+    			this.name = name
+    		}
+    		
+    		greet() => {
+    			print("Hello, " + this.name + "!")
+    		}
+    	}
+    Calling `myDog.greet()` will return an empty object with `_Proto = myDog`
 - Immutable values
   - Value that cannot change, as opposed to variable that cannot be reassigned
   - Immutable value means that every containing field is immutable
@@ -83,6 +97,9 @@ To-Do / roadmap / proposals
       - symbol indexing: `a.x`
       - string indexing: `a."x"`
     - more standard OOP-like separation of code and data
+- `with` statement? turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
+- Spread syntax/operator for normal objects/blocks  
+  `a = { x = 10 }; b = { ...a; y = 20 }, b == { x = 10; y = 20 }`
 - Symbols
   - can be used for value-less things: enum elements, sentinels, ...  
     `Colours = { RED = :red; GREEN = :green; BLUE = :blue }`,  `Colours.RED == :red`  
@@ -244,6 +261,7 @@ To-Do / roadmap / proposals
   - https://stackoverflow.com/a/23124968
 - Macros, for "precompiler" / "compile-time" expansion
   - combine with annotations, using `@`?
+    - TypeScript's and Python's annotations seem nice, though not "compile-time"
   - *do it well or don't do it*
   - hygienic, AST based, somehow definable in code without meta-language
     - need some way to jump from logic in macro defining to generated code

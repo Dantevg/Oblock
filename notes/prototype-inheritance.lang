@@ -1,0 +1,104 @@
+{ // Manually
+	Person = {
+		_Proto = Object
+		name = ""
+		
+		greet = () => {
+			print("Hello, " + this.name + "!")
+		}
+	}
+	
+	me = {
+		name = "RedPolygon"
+		_Proto = Person
+	}
+	me.greet()
+	me.name = "World"
+	me.greet()
+}
+
+{ // With clone function like Io
+	Object = {
+		clone = (block) => {
+			block._Proto = this
+			return block
+		}
+	}
+	
+	Person = Object.clone {
+		name = ""
+		
+		greet = () => {
+			print("Hello, " + this.name + "!")
+		}
+	}
+	
+	me = Person.clone { name = "RedPolygon" }
+	me.greet()
+	me.name = "World"
+	me.greet()
+}
+
+{ // With init function
+	Object = {
+		clone = (block) => {
+			block._Proto = this
+			return block
+		}
+		"()" = (...args) => {
+			self = this.clone()
+			self.init(...args)
+			return self
+		}
+	}
+	
+	Person = Object.clone {
+		name = ""
+		
+		init = (name) => {
+			this.name = name
+		}
+		
+		greet = () => {
+			print("Hello, " + this.name + "!")
+		}
+	}
+	
+	me = Person "RedPolygon"
+	me.greet()
+	me.name = "World"
+	me.greet()
+}
+
+{ // With multiple inheritance / traits/mixins?
+	Object = {
+		_Proto = []
+		clone = (block) => {
+			block.addProto(this)
+			return block
+		}
+		addProto = (proto) => {
+			this._Proto.add(proto)
+		}
+	}
+	
+	Person = Object.clone {
+		name = ""
+		
+		greet = () => {
+			print("Hello, " + this.name + "!")
+		}
+	}
+	
+	Welcomer = Object.clone {
+		welcome = () => {
+			print("Welcome, " + this.name + "!")
+		}
+	}
+	
+	me = { name = "RedPolygon" }.addProto Person
+	me.greet()
+	me.addProto Welcomer
+	me.name = "World"
+	me.welcome()
+}

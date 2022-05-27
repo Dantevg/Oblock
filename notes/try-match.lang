@@ -1,0 +1,67 @@
+fn.try(args).match {
+	Ok(element) => elements.insert(element)
+	Error(e) => error(e)
+}
+
+fn.try(args).match [
+	(true, element) -> elements.insert(element)
+	(false, e) -> error(e)
+]
+
+elements.insert(fn()) --> may raise error
+
+elements.insert(fn.try()) --> may insert error object
+
+fn.try().then(elements.insert)
+
+try elements.insert(fn())
+
+try {
+	elements.insert(fn())
+}
+
+fn.try(args).match [
+	(element) -> elements.insert(element)
+	(e: Error) -> error(e)
+]
+
+fn.try(args).match {
+	true(element) => elements.insert(element)
+	false(e) => error(e)
+}
+
+xor(a, b) => match(a, b) {
+	(false, false) => false
+	(false, true) => true
+	(true, false) => true
+	(true, true) => false
+}
+
+xor(false, false) => false
+xor(false, true)  => true
+xor(true, false)  => true
+xor(true, true)   => false
+
+fn.try(args)
+	.then(element => elements.insert(element))
+	.else(x => error(x))
+
+match(thing) {
+	kind1() => {
+		...
+	}
+	kind2() => {
+		
+	}
+}
+
+match(num) {
+	(0..9) => num + " is below ten!"
+	(10..Num.INF) => num + "is above ten!"
+}
+
+fib (0..1) => 1
+fib (n: 0..1) => fib(n-1) + fib(n-2)
+
+add(x: Int, y: Int) => x + y
+add(x: String, y: String) => x ++ y

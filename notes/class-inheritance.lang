@@ -1,0 +1,240 @@
+{
+	Animal = {
+		var nLegs
+		var eats
+		
+		"()" (nLegs_, eats_) => {
+			nLegs = nLegs_
+			eats = eats_
+		}
+		
+		proto makeSound
+	}
+	
+	Dog = Animal !> {
+		super = Animal
+		prototype = { _Proto = super.prototype }
+		
+		var proto colour
+		
+		"()" (eats, colour_) => construct {
+			super(4, eats)
+			_Proto = prototype
+			colour = colour_
+		}
+		
+		"()" (eats) => Dog(eats, "brown")
+		
+		proto makeSound() => print("Woof!")
+		
+		proto describe() => {
+			print(colour + " Dog with " + nLegs + " legs, eats " + eats)
+			makeSound()
+		}
+		
+		proto describe() => {
+			print(this.colour + " Dog with " + this.nLegs + " legs, eats " + this.eats)
+			this.makeSound()
+		}
+		
+		proto describe() => {
+			print(@colour + " Dog with " + @nLegs + " legs, eats " + @eats)
+			@makeSound()
+		}
+	}
+	
+	doggo = Dog("meat", "brown")
+	print(doggo.nLegs)
+	doggo.makeSound()
+}
+
+/*
+	when defining a new class of a superclass:
+	set `super` to superclass
+	set `prototype._Proto` of new to `super.prototype`
+	
+	when creating a new instance of the new class:
+	set `_Proto` of instance to `prototype` of new class
+	
+	problems:
+	how to declare (but not define) instance fields in class? only declaring
+	them without value will set them to nil so they will not stay in prototype
+	object.
+	
+	2 ways:
+	- static (Java): unchangeable, declare instance properties beforehand,
+	  can remove `this`
+	- dynamic (JavaScript, Lua): modifiable, define properties at instance
+	  creation, cannot remove `this`
+	- maybe something inbetween? (best of both worlds): modifiable, declare
+	  instance properties beforehand, add prototype to scope, can remove `this`
+	  - may require separate nil/null/void?
+*/
+
+{
+	Animal = {
+		"()" (nLegs_, eats_) => {
+			nLegs = nLegs_
+			eats = eats_
+		}
+		
+		prototype.makeSound() => null
+	}
+	
+	Dog = {
+		_Proto = Animal
+		
+		"()" (eats, colour_) => {
+			...Animal(4, eats)
+			_Proto = Dog
+			colour = colour_
+		}
+		
+		"()" (eats) => Dog(eats, "brown")
+		
+		makeSound() => print("Woof!")
+		
+		describe() => {
+			print(this.colour + " Dog with " + this.nLegs + " legs, eats " + this.eats)
+			this.makeSound()
+		}
+	}
+	
+	doggo = Dog("meat", "brown")
+	print(doggo.nLegs)
+	doggo.makeSound()
+}
+
+{
+	Object = {
+		"()" (...args) => {
+			const newinstance = { _Proto = this }
+			newinstance.init(...args)
+			return newinstance
+		}
+	}
+	
+	Animal = {
+		prototype = {}
+		
+		prototype.init(nLegs, eats) => {
+			this.nLegs = nLegs
+			this.eats = eats
+		}
+		
+		prototype.makeSound() => null
+	}
+	
+	Dog = {
+		_Proto = Animal
+		prototype = { _Proto = Animal.prototype }
+		
+		prototype.init(eats, colour) => {
+			Animal.init.bind(this)(4, eats)
+			this.colour = colour
+		}
+		
+		prototype.init(eats) => init(eats, "brown")
+		
+		prototype.makeSound() => print("Woof!")
+		
+		prototype.describe() => {
+			print(this.colour + " Dog with " + this.nLegs + " legs, eats " + this.eats)
+			this.makeSound()
+		}
+	}
+	
+	doggo = Dog("meat", "brown")
+	
+	doggo = { _Proto = Dog }
+	doggo.init("meat", "brown")
+	
+	print(doggo.nLegs)
+	doggo.makeSound()
+}
+
+{
+	Object = {
+		"()" (...args) => {
+			const newinstance = { _Proto = this }
+			newinstance.init(...args)
+			return newinstance
+		}
+	}
+	
+	Animal = {
+		init(nLegs, eats) => {
+			this.nLegs = nLegs
+			this.eats = eats
+		}
+		
+		makeSound() => null
+	}
+	
+	Dog = {
+		_Proto = Animal
+		
+		init(eats, colour) => {
+			Animal.init.bind(this)(4, eats)
+			this.colour = colour
+		}
+		
+		init(eats) => init(eats, "brown")
+		
+		makeSound() => print("Woof!")
+		
+		describe() => {
+			print(this.colour + " Dog with " + this.nLegs + " legs, eats " + this.eats)
+			this.makeSound()
+		}
+	}
+	
+	doggo = Dog("meat", "brown")
+	
+	doggo = { _Proto = Dog }
+	doggo.init("meat", "brown")
+	
+	Dog::doggo::init("meat", "brown")
+	
+	Dog.init::doggo("meat", "brown")
+	
+	doggo::Dog.init("meat", "brown")
+	
+	print(doggo.nLegs)
+	doggo.makeSound()
+}
+
+Vector = {
+	init(x, y) => {
+		this.x = x
+		this.y = y
+	}
+	
+	init(x_, y_) => {
+		_Proto = Vector
+		x = x_
+		y = y_
+	}
+	
+	add(that) => {
+		this.x += that.x
+		this.y += that.y
+	}
+	
+	static add(a, b) => Vector(a.x + b.x, a.y + b.y)
+}
+
+Colour = @Class(Vector) {
+	_Proto = Vector
+	
+	init(r, g, b) => {
+		Vector.init.bind(this)(r, g)
+		this.z = b
+	}
+	
+	init(r, g, b) => {
+		self = Vector.init(r, g)
+		_Proto = Colour
+		z = b
+	}
+}

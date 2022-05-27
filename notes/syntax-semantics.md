@@ -49,6 +49,10 @@ To-Do / roadmap / proposals
   - Probably: (like JS) no syntax for immutable values, maybe freeze function.
     Immutability checking (for threads) needs to be a function as well
 - Syntax sugar for classes and constructors
+- Prototypal inheritance
+  - Like Io language, with `clone` function / syntax
+    - Should be syntax (not function) to allow computation with `_Proto`?
+      Not needed? _Proto is known by programmer
 - Use comma instead of colon for if/for/while condition/body separator (like Jammy)
 - Default parameters
   - What to do when caller explicitly passes nil?
@@ -61,15 +65,64 @@ To-Do / roadmap / proposals
     - possible solution: make group (ephemeral) data structure (introduce "tuples")
 - Named return values, symmetric to named arguments using `from`
   - Probably not. Doubt usefulness, only for few special cases
+- Disallow assignment to `nil`?
+  - Making it `const` does not fix: shadowing
+  - Linter cannot catch everything: `a = nil; (a) = 42` will assign to nil
+  - Also `true` and `false`?
 - Error handling
   - try as method on functions: `fn.try(args)` like Lua's pcall
   - http://joeduffyblog.com/2016/02/07/the-error-model/
+  - http://lua-users.org/wiki/FinalizedExceptions
+  - Errors like Lua for bugs / unrecoverable programmer errors
+  - Return values for recoverable errors
+    - On success: `return nil, value, ...`
+    - On failure: `return Error("description")`
+    - `err, val1, val2 = fn()`
 - Pattern matching
   - match function, function parameter overloading, match operator `~~`?
   - match against values, number of values, lists, blocks, types, (destructuring), ...
     - default implementation of match operator `~~` is equality, `within` for ranges, ...
   - problem: now need to execute match operator functions to decide which function to call
 - Coroutines
+- Allow single vararg anywhere in function signature
+  - Important to allow only *one* vararg
+  - Like ipv6 shorthand notation :)
+  - only:     `f(...rest) => ()`
+  - at end:   `f(a, ...rest) => ()`
+  - at start: `f(...rest, a) => ()`
+  - between:  `f(a, ...rest, b) => ()`
+- Monads/functors and haskell-like do-notation?
+  - https://discord.com/channels/530598289813536771/530604512017121290/954101398243520644
+  - Functor: `(Promise<A>, A -> B)          -> Promise<B>`
+  - Monad:   `(Promise<A>, A -> Promise<B>) -> Promise<B>`
+  - For things like Javascript's Promise (which is not always a monad) or Maybe
+    With the example from MDN:
+    
+        fetch("https://github.com")
+    		.then(response => response.json())
+    		.then(data => print(data))
+    With pipe operator:
+    
+        fetch("https://github.com")
+    		|> response => response.json()
+    		|> data => print(data)
+    With pipe operator and holes:
+    
+        fetch("https://github.com")
+    		|> _.json()
+    		|> print(_)
+    In callback style:
+    
+    	fetch("https://github.com", response => {
+    		response.json(data => {
+    			print(data)
+    		})
+    	})
+    With do-notation:
+    
+    	response <- fetch("https://github.com")
+    	data <- response.json()
+    	print(data)
 - Problems with using Block/Object as a map
   1. indexing will yield value from prototype if not present in map
   2. setting certain keys overrides functionality

@@ -8,12 +8,37 @@ https://luau-lang.org/
 To-Do / roadmap / proposals
 ---------------------------
 (*roughly* in order of importance)
+- Classical vs prototypal inheritance
+  - Prototypal is simpler but less flexible: cannot set different methods
+    for static and instance
+    - overriding function call for instances also overrides for static class
+    - Vector class with static vs instance methods
+  - Like Io language, with `clone` function / syntax
+    - Should be syntax (not function) to allow computation with `_Proto`?
+      Not needed? _Proto is known by programmer
+  - `with` keyword? or function? (or both?) Extends nicely to mixins:
+    
+    	Bird = Animal with Walker with Flyer with {
+    		
+    	}
+		
+		-- pro: shorter
+		Bird = with(Animal, Walker, Flyer) {
+			
+		}
+		
+		Cat = Animal with Walker
+		Cat = with(Animal, Walker) {} -- con: looks weird
+		
+		doggo = Dog with { name = "Doggo" }
+		doggo = with Dog { name = "Doggo" }
+- Use comma instead of colon for if/for/while condition/body separator (like Jammy)
 - How to recognise an object as an instance of a class?
   - Simple: look in prototype chain
   - Advanced / more flexible: structural typing
   - When any function gets called (both constructor and normal method),
     set `_Proto` of returning object to `this` and add to scope.
-    For constructors:  
+    For constructors:
     
     	Dog = {
     		"()" name => {
@@ -49,11 +74,6 @@ To-Do / roadmap / proposals
   - Probably: (like JS) no syntax for immutable values, maybe freeze function.
     Immutability checking (for threads) needs to be a function as well
 - Syntax sugar for classes and constructors
-- Prototypal inheritance
-  - Like Io language, with `clone` function / syntax
-    - Should be syntax (not function) to allow computation with `_Proto`?
-      Not needed? _Proto is known by programmer
-- Use comma instead of colon for if/for/while condition/body separator (like Jammy)
 - Default parameters
   - What to do when caller explicitly passes nil?
     python will use nil/None, not default value
@@ -308,10 +328,24 @@ To-Do / roadmap / proposals
     - Float should not be sybtype of Int, but structure might not differentiate
       - solution: probably methods will differentiate
     - Solution: only use structural subtyping for non-native / non-external types?
-- Mixins or traits (deriving?) (what's the difference exactly? traits seem more powerful?)
+- Mixins or traits (deriving?) 
+  - Difference:
+    - traits can define preconditions (methods that need to be present)
+    - mixins make linear chain (a -> B -> C), traits are flattened (A -> (B, C))
   - Automatic? i.e. can use `!=`, `>` automatically on class defining only `==` and `<=`
   - https://blog.10pines.com/2014/10/14/mixins-or-traits/
   - https://stackoverflow.com/a/23124968
+- Annotations with `@annotation`, `@annotation()` or `@annotation = value`
+  - Used for:
+    - adding metadata like documentation, deprecation (removed at compile-time,
+      used by Java, Wren and Rust annotations/attributes)
+    - adding functionality to a value like sealing, adding methods
+      (used by Typescript and Python decorators)
+  - Java's annotations: https://docs.oracle.com/javase/tutorial/java/annotations/basics.html
+  - Wren's attributes: https://wren.io/classes.html#attributes
+  - Rust's attributes: https://doc.rust-lang.org/reference/attributes.html
+  - Typescript's decorators: https://www.typescriptlang.org/docs/handbook/decorators.html
+  - Python's decorators: https://peps.python.org/pep-0318/
 - Macros, for "precompiler" / "compile-time" expansion
   - combine with annotations, using `@`?
     - TypeScript's and Python's annotations seem nice, though not "compile-time"

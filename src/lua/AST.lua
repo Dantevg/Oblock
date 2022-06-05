@@ -50,7 +50,7 @@ local function debug(indent, name, properties, nodelists)
 	
 	local proplist = {}
 	for k, v in pairs(properties) do
-		table.insert(proplist, tostring(k)..": "..pretty(v, true))
+		table.insert(proplist, tostring(k)..": "..pretty(v))
 	end
 	str[1] = indent..tc(tc.fg.red)..name..tc(tc.reset).." { "..table.concat(proplist, ", ").." }"
 	
@@ -368,13 +368,16 @@ function AST.Expr.Function:call(env, arguments)
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
 			env:set(parameter.token.lexeme, argument or Interpreter.Nil(nil, self.loc))
-		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
-				and parameter.right.__name == "Variable" then
+		elseif parameter.__name == "Call"
+				and parameter.expression.__name == "Index"
+				and parameter.expression.expr.__name == "Literal"
+				and parameter.expression.expr.lexeme == "..."
+				and parameter.expression.base.__name == "Variable" then
 			local list = Interpreter.List(env)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
-			env:set(parameter.right.token.lexeme, list)
+			env:set(parameter.expression.base.token.lexeme, list)
 			break
 		else
 			Interpreter.error("invalid parameter type", self.loc)
@@ -389,9 +392,12 @@ function AST.Expr.Function:resolve(scope)
 	for _, parameter in ipairs(self.parameters.expressions) do
 		if parameter.__name == "Variable" then
 			childScope[parameter.token.lexeme] = true
-		elseif parameter.__name == "Unary" and parameter.op.type == "dot dot dot"
-				and parameter.right.__name == "Variable" then
-			childScope[parameter.right.token.lexeme] = true
+		elseif parameter.__name == "Call"
+				and parameter.expression.__name == "Index"
+				and parameter.expression.expr.__name == "Literal"
+				and parameter.expression.expr.lexeme == "..."
+				and parameter.expression.base.__name == "Variable" then
+			childScope[parameter.expression.base.token.lexeme] = true
 			break
 		else
 			Interpreter.error("invalid parameter type", self.loc)
@@ -819,7 +825,13 @@ end
 function AST.Stat.Assignment:resolve(scope)
 	if self.predef then
 		for _, target in ipairs(self.targets) do
-			scope[target.lexeme or target.token.lexeme] = true -- TODO: do something with this
+			if target.__name == "Literal" then
+				scope[target.lexeme] = true
+			elseif target.__name == "Variable" then
+				scope[target.token.lexeme] = true
+			elseif target.__name == "Index" then
+				-- Ignore
+			end
 		end
 	end
 	
@@ -831,7 +843,13 @@ function AST.Stat.Assignment:resolve(scope)
 			resolved = pcall(target.resolve, target, scope)
 		end
 		if not resolved then
-			scope[target.lexeme or target.token.lexeme] = true
+			if target.__name == "Literal" then
+				scope[target.lexeme] = true
+			elseif target.__name == "Variable" then
+				scope[target.token.lexeme] = true
+			elseif target.__name == "Index" then
+				target:resolve(scope)
+			end
 		end
 	end
 end

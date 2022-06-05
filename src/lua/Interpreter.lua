@@ -176,6 +176,11 @@ function Interpreter.Block:pipe(other)
 	return other:call {self}
 end
 
+function Interpreter.Block:clone(other)
+	other:set("_Proto", self, nil, 0)
+	return other
+end
+
 function Interpreter.Block:__tostring()
 	local strings = {}
 	for key, value in pairs(self.environment.env) do
@@ -581,6 +586,10 @@ end
 
 defineProtoNativeFn("Block", "eq", "==")
 defineProtoNativeFn("Block", "pipe", "|>")
+Interpreter.Block.proto:set("clone",
+	Interpreter.NativeFunction(nil, Interpreter.Block.clone, "clone"),
+	nil, 0
+)
 
 Interpreter.NativeFunction.proto:set("()", Interpreter.NativeFunction, nil, 0)
 

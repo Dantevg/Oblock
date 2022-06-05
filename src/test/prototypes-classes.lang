@@ -1,13 +1,10 @@
 {
-	PersonProto = {
-		printDetails() => print(this.name, this.id)
+	Person = {
+		greet() => print("Hello, " + this.name + "!")
 	}
 	
-	me = {
-		name = "RedPolygon"
-		id = 42
-		_Proto = PersonProto
-	}
-	
-	me.printDetails()
+	me = Person.clone { name = "RedPolygon" }
+	me.greet()
+	me.name = "World"
+	me.greet()
 }

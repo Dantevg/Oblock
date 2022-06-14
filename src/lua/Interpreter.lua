@@ -502,16 +502,16 @@ function Interpreter.List.new(parent, elements)
 	local self = Interpreter.Block(parent)
 	elements = elements or {}
 	for i = 1, #elements do
-		self:set(i, elements[i])
+		self:set(i, elements[i], nil, 0)
 	end
-	self:set("length", Interpreter.Number(nil, #elements))
+	self:set("length", Interpreter.Number(nil, #elements), nil, 0)
 	self:set("_Proto", Interpreter.List.proto, nil, 0)
 	return setmetatable(self, Interpreter.List)
 end
 
 function Interpreter.List:push(value)
-	self:set(#self+1, value)
-	self:set("length", Interpreter.Number(nil, #self))
+	self:set(#self+1, value, nil, 0)
+	self:set("length", Interpreter.Number(nil, #self), nil, 0)
 end
 
 function Interpreter.List:add(other)

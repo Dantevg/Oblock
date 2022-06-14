@@ -2,6 +2,7 @@ local Lexer = require "Lexer"
 local Parser = require "Parser"
 local Interpreter = require "Interpreter"
 
+local args = {...}
 local function hasArg(name)
 	for _, arg in ipairs(args) do
 		if arg == name then return true end
@@ -9,7 +10,6 @@ local function hasArg(name)
 	return false
 end
 
-local args = {...}
 local path = args[1]
 local isDemo = hasArg("--demo")
 local isDebug = hasArg("--debug")

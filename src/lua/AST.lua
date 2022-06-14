@@ -817,7 +817,7 @@ function AST.Stat.Assignment:evaluate(env)
 		if target.setSelf then
 			target:setSelf(env, value, self.modifiers)
 		else
-			env:setAtLevel(target:evaluate(env), value, self.modifiers, level)
+			env:setHere(target:evaluate(env), value, self.modifiers)
 		end
 	end
 end

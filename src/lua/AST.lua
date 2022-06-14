@@ -1,6 +1,7 @@
 -- Inspired by https://craftinginterpreters.com/evaluating-expressions.html
 
 local Interpreter = require "Interpreter"
+local stdlib = require "stdlib"
 
 local function evaluateAll(expressions, env)
 	local values = {}
@@ -92,10 +93,10 @@ end
 function AST.Expr.Logical:evaluate(env)
 	local left = self.left:evaluate(env)
 	if self.op.lexeme == "or" then
-		return Interpreter.Boolean.toBoolean(left).value
+		return stdlib.Boolean.toBoolean(left).value
 			and left or self.right:evaluate(env)
 	elseif self.op.lexeme == "and" then
-		return Interpreter.Boolean.toBoolean(left).value
+		return stdlib.Boolean.toBoolean(left).value
 			and self.right:evaluate(env) or left
 	end
 end
@@ -264,7 +265,7 @@ function AST.Expr.Block.new(statements, loc)
 end
 
 function AST.Expr.Block:evaluate(env)
-	local block = Interpreter.Block(env)
+	local block = stdlib.Block(env)
 	for _, statement in ipairs(self.statements) do
 		local success, err = pcall(statement.evaluate, statement, block.environment)
 		if not success then
@@ -315,7 +316,7 @@ function AST.Expr.List.new(expressions, loc)
 end
 
 function AST.Expr.List:evaluate(parent)
-	local list = Interpreter.List(parent)
+	local list = stdlib.List(parent)
 	local values = evaluateAll(self.expressions, list.environment)
 	for _, value in ipairs(values) do list:push(value) end
 	return list
@@ -356,7 +357,7 @@ function AST.Expr.Function.new(parameters, body, loc)
 end
 
 function AST.Expr.Function:evaluate(env)
-	local fn = Interpreter.Function(env, function(environment, args)
+	local fn = stdlib.Function(env, function(environment, args)
 		return self:call(environment, args)
 	end)
 	function fn.__tostring() return self:__tostring() end
@@ -367,13 +368,13 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:set(parameter.token.lexeme, argument or Interpreter.Nil(nil, self.loc))
+			env:set(parameter.token.lexeme, argument or stdlib.Nil(nil, self.loc))
 		elseif parameter.__name == "Call"
 				and parameter.expression.__name == "Index"
 				and parameter.expression.expr.__name == "Literal"
 				and parameter.expression.expr.lexeme == "..."
 				and parameter.expression.base.__name == "Variable" then
-			local list = Interpreter.List(env)
+			local list = stdlib.List(env)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
@@ -578,14 +579,14 @@ function AST.Expr.For:evaluate(env)
 	end
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
-	local block = Interpreter.Block(env)
+	local block = stdlib.Block(env)
 	local values = {iterator:call()}
 	for _, target in ipairs(self.targets) do
 		target:set(block)
 	end
 	while values[1] and values[1].__name ~= "Nil" do
 		for i, target in ipairs(self.targets) do
-			local value = values[i] or Interpreter.Nil(nil, self.loc)
+			local value = values[i] or stdlib.Nil(nil, self.loc)
 			target:set(block, value)
 		end
 		local breakVals = catchBreakContinue(self.body, block)
@@ -638,11 +639,11 @@ end
 
 function AST.Expr.Literal:evaluate(env)
 	if type(self.literal) == "number" then
-		return Interpreter.Number(env, self.literal)
+		return stdlib.Number(env, self.literal)
 	elseif type(self.literal) == "string" then
-		return Interpreter.String(env, self.literal)
+		return stdlib.String(env, self.literal)
 	elseif type(self.literal) == "nil" then
-		return Interpreter.Nil(env, self.loc)
+		return stdlib.Nil(env, self.loc)
 	end
 end
 
@@ -812,7 +813,7 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = evaluateAll(self.expressions, env)
 	
 	for i, target in ipairs(self.targets) do
-		local value = values[i] or Interpreter.Nil(nil, self.loc)
+		local value = values[i] or stdlib.Nil(nil, self.loc)
 		local level = not self.modifiers.empty and 0 or nil
 		if target.set then
 			target:set(env, value, self.modifiers, level)

@@ -270,6 +270,12 @@ end
 function Interpreter.Function:call(args)
 	local environment = Interpreter.Environment(self.environment)
 	if self.this then environment:set("this", self.this, nil, 0) end
+	
+	-- Add arguments to function body indexed by number
+	for i, arg in ipairs(args or {}) do
+		environment:set(i, arg, nil, 0)
+	end
+	
 	local values = {pcall(Interpreter.context, self.loc, tostring(self),
 		self.body, environment, args)}
 	if values[1] then

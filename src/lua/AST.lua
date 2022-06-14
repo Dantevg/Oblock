@@ -223,7 +223,7 @@ end
 
 function AST.Expr.Index:evaluate(env)
 	local value = (self.base and self.base:evaluate(env) or env):get(ref(self.expr, env), self.level)
-	if value.__name == "Nil" and not value.loc then value.loc = self.loc end
+	if value and value.__name == "Nil" and not value.loc then value.loc = self.loc end
 	return value
 end
 

@@ -168,7 +168,7 @@ function Interpreter.Block:set(key, value, modifiers, level)
 end
 
 function Interpreter.Block:eq(other)
-	return self == other
+	return Interpreter.Boolean(nil, self == other)
 end
 
 function Interpreter.Block:pipe(other)
@@ -183,11 +183,16 @@ end
 
 function Interpreter.Block:__tostring()
 	local strings = {}
-	for key, value in pairs(self.environment.env) do
+	
+	for key in pairs(self.environment.env) do
 		-- Hide "_Proto" key
-		if key ~= "_Proto" then
-			table.insert(strings, tostring(key).." = "..tostring(value.value))
-		end
+		if key ~= "_Proto" then table.insert(strings, key) end
+	end
+	table.sort(strings)
+	
+	for i, key in ipairs(strings) do
+		local value = self.environment.env[key].value
+		strings[i] = tostring(key).." = "..tostring(value)
 	end
 	return "{"..table.concat(strings, "; ").."}"
 end

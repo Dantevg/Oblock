@@ -1,0 +1,92 @@
+{
+	Eq = {
+		"=="(a: `T, b: `T) -> Boolean
+	}
+	
+	Eq = {
+		"==" `T`(a: T, b: T) -> Boolean
+	}
+	
+	Eq `T` = {
+		"=="(a: T, b: T) -> Boolean
+	}
+	
+	Ord = {
+		// :: Eq, Eq -> Boolean
+		"<="(a: Eq, b: Eq) -> Boolean
+	}
+	
+	Eq = {
+		@Given("==")
+		"!=" that => !(this == that)
+	}
+	
+	Ord = Eq.clone {
+		@Given("<=")
+		"<" that => this <= that && this != that
+		">" that => !(this <= that)
+		">=" that => !(this < that)
+	}
+	
+	Enum = {
+		succ(a: `T) -> `T
+		pred(a: `T) -> `T
+		to(a: Int) -> `T
+		from(a: `T) -> Int
+	}
+	
+	Enum `T` = {
+		succ(a: T) -> T
+		pred(a: T) -> T
+		to(a: Int) -> T
+		from(a: T) -> Int
+	}
+	
+	Enum = {
+		succ`T`(a: T) -> T
+		pred`T`(a: T) -> T
+		to`T`(a: Int) -> T
+		from[T,Y](a: T) -> Int
+	}
+	
+	add(a: `X, b: `X) -> Int
+	add`X`(a: X, b: X) -> Int
+	add<X>(a: X, b: X) -> Int
+	add[X](a: X, b: X) -> Int
+	add::X::(a: X, b: X) -> Int
+	
+	add(a: `X, b: `Y) -> Int
+	add`X, Y`(a: X, b: Y) -> Int
+	add<X, Y>(a: X, b: Y) -> Int
+	add[X, Y](a: X, b: Y) -> Int
+	add::X, Y::(a: X, b: Y) -> Int
+	
+	add(a: Int, b: Int) => {
+		return a + b
+	}
+	
+	add(a::Int, b::Int) => {
+		return a + b
+	}
+	
+	b = Bag ()
+	b.add "A"
+	b.add "B"
+	b.add "A"
+	
+	c = Bag ("A", "B", "A")
+	
+	x, y from (x = 10, y = 20)
+	x, y from (x: 10, y: 20)
+	x, y from (x :: 10, y :: 20)
+	x, y from (:x: 10, :y: 20)
+	x, y from (10 as x, 20 as y)
+	
+	list = [10, 20]
+	list = [10, x: 20, :x]
+	list = [10, x = 20, =x]
+	
+	return (x = 10)
+	return x: 10
+	return 10 as x
+}

@@ -1,0 +1,38 @@
+{
+	// Current style
+	// State.READY is instance of State
+	Enum = {
+		init(value) => {
+			this.value = value
+		}
+	}
+	
+	State = { _Proto = Enum }
+	State.READY   = State "ready"
+	State.FETCH   = State "fetch"
+	State.EXECUTE = State "execute"
+	
+	// Same behaviour, but with "extend" keyword/function
+	State = extends Enum {
+		READY   = State "ready"
+		FETCH   = State "fetch"
+		EXECUTE = State "execute"
+	}
+	
+	// Creating Enum instance instead of extending Enum
+	// Now, State.READY is not an instance of State, only of Enum
+	Enum = {
+		init(...values) => {
+			for v in values, this.(v) = v
+		}
+	}
+	
+	State = Enum('READY', 'FETCH', 'EXECUTE')
+	
+	// Manual form (like Python)
+	State = {
+		READY   = 1
+		FETCH   = 2
+		EXECUTE = 3
+	}
+}

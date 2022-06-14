@@ -9,7 +9,7 @@ stdlib.Block.__name = "Block"
 function stdlib.Block.new(parent)
 	local self = {}
 	self.environment = Interpreter.Environment(parent)
-	self.environment:set("_Proto", stdlib.Block.proto, nil, 0)
+	self.environment:setHere("_Proto", stdlib.Block.proto)
 	return setmetatable(self, stdlib.Block)
 end
 
@@ -34,8 +34,12 @@ function stdlib.Block:get(key, level)
 	return value or stdlib.Nil()
 end
 
-function stdlib.Block:set(key, value, modifiers, level)
-	return self.environment:set(key, value, modifiers, level)
+function stdlib.Block:setAtLevel(key, value, modifiers, level)
+	return self.environment:setAtLevel(key, value, modifiers, level)
+end
+
+function stdlib.Block:setHere(key, value, modifiers)
+	return self.environment:setHere(key, value, modifiers)
 end
 
 function stdlib.Block:eq(other)
@@ -48,7 +52,7 @@ function stdlib.Block:pipe(other)
 end
 
 function stdlib.Block:clone(other)
-	other:set("_Proto", self, nil, 0)
+	other:setHere("_Proto", self)
 	return other
 end
 
@@ -90,7 +94,7 @@ function stdlib.NativeFunction.new(parent, body, name)
 	local self = stdlib.Block(parent)
 	self.body = body
 	self.name = name
-	self:set("_Proto", stdlib.NativeFunction.proto, nil, 0)
+	self:setHere("_Proto", stdlib.NativeFunction.proto)
 	return setmetatable(self, stdlib.NativeFunction)
 end
 
@@ -127,7 +131,7 @@ function stdlib.Function.new(parent, body, name)
 	local self = stdlib.Block(parent)
 	self.body = body
 	self.name = name
-	self:set("_Proto", stdlib.Function.proto, nil, 0)
+	self:setHere("_Proto", stdlib.Function.proto)
 	return setmetatable(self, stdlib.Function)
 end
 
@@ -140,11 +144,11 @@ end
 
 function stdlib.Function:call(args)
 	local environment = Interpreter.Environment(self.environment)
-	if self.this then environment:set("this", self.this, nil, 0) end
+	if self.this then environment:setHere("this", self.this) end
 	
 	-- Add arguments to function body indexed by number
 	for i, arg in ipairs(args or {}) do
-		environment:set(i, arg, nil, 0)
+		environment:setHere(i, arg)
 	end
 	
 	local values = {pcall(Interpreter.context, self.loc, tostring(self),
@@ -202,7 +206,7 @@ stdlib.Number.proto = stdlib.Block()
 
 function stdlib.Number.new(parent, value)
 	local self = stdlib.Value(parent, tonumber(value))
-	self:set("_Proto", stdlib.Number.proto, nil, 0)
+	self:setHere("_Proto", stdlib.Number.proto)
 	return setmetatable(self, stdlib.Number)
 end
 
@@ -271,7 +275,7 @@ stdlib.String.proto = stdlib.Block()
 
 function stdlib.String.new(parent, value)
 	local self = stdlib.Value(parent, tostring(value))
-	self:set("_Proto", stdlib.String.proto, nil, 0)
+	self:setHere("_Proto", stdlib.String.proto)
 	return setmetatable(self, stdlib.String)
 end
 
@@ -303,7 +307,7 @@ stdlib.Boolean.proto = stdlib.Block()
 
 function stdlib.Boolean.new(parent, value)
 	local self = stdlib.Value(parent, not not value)
-	self:set("_Proto", stdlib.Boolean.proto, nil, 0)
+	self:setHere("_Proto", stdlib.Boolean.proto)
 	return setmetatable(self, stdlib.Boolean)
 end
 
@@ -334,7 +338,7 @@ stdlib.Nil.proto = stdlib.Block()
 function stdlib.Nil.new(parent, loc)
 	local self = stdlib.Value(parent, nil)
 	self.loc = loc
-	self:set("_Proto", stdlib.Nil.proto, nil, 0)
+	self:setHere("_Proto", stdlib.Nil.proto)
 	return setmetatable(self, stdlib.Nil)
 end
 
@@ -373,16 +377,16 @@ function stdlib.List.new(parent, elements)
 	local self = stdlib.Block(parent)
 	elements = elements or {}
 	for i = 1, #elements do
-		self:set(i, elements[i], nil, 0)
+		self:setHere(i, elements[i])
 	end
-	self:set("length", stdlib.Number(nil, #elements), nil, 0)
-	self:set("_Proto", stdlib.List.proto, nil, 0)
+	self:setHere("length", stdlib.Number(nil, #elements))
+	self:setHere("_Proto", stdlib.List.proto)
 	return setmetatable(self, stdlib.List)
 end
 
 function stdlib.List:push(value)
-	self:set(#self+1, value, nil, 0)
-	self:set("length", stdlib.Number(nil, #self), nil, 0)
+	self:setHere(#self+1, value)
+	self:setHere("length", stdlib.Number(nil, #self))
 end
 
 function stdlib.List:add(other)
@@ -393,7 +397,7 @@ function stdlib.List:add(other)
 	for i = 1, #other do
 		table.insert(values, other:get(i))
 	end
-	self:set("length", stdlib.Number(nil, #self), nil, 0)
+	self:setHere("length", stdlib.Number(nil, #self))
 	return self.new(nil, values)
 end
 
@@ -441,9 +445,9 @@ stdlib.Error.proto = stdlib.Block()
 function stdlib.Error.new(parent, message, loc, sourceLoc)
 	local self = stdlib.Block(parent)
 	self.loc, self.sourceLoc = loc, sourceLoc
-	self:set("_Proto", stdlib.Error.proto, nil, 0)
-	self:set("message", stdlib.String(nil, message), nil, 0)
-	self:set("traceback", stdlib.List(), nil, 0)
+	self:setHere("_Proto", stdlib.Error.proto)
+	self:setHere("message", stdlib.String(nil, message))
+	self:setHere("traceback", stdlib.List())
 	return setmetatable(self, stdlib.Error)
 end
 
@@ -460,23 +464,21 @@ setmetatable(stdlib.Error, {
 -- Need to define this below here because NativeFunction needs to be defined
 
 local function defineProtoNativeFn(base, name, key)
-	stdlib[base].proto:set(
+	stdlib[base].proto:setHere(
 		key,
-		stdlib.NativeFunction(nil, stdlib[base][name], name),
-		nil, 0
+		stdlib.NativeFunction(nil, stdlib[base][name], name)
 	)
 end
 
 defineProtoNativeFn("Block", "eq", "==")
 defineProtoNativeFn("Block", "pipe", "|>")
-stdlib.Block.proto:set("clone",
-	stdlib.NativeFunction(nil, stdlib.Block.clone, "clone"),
-	nil, 0
+stdlib.Block.proto:setHere("clone",
+	stdlib.NativeFunction(nil, stdlib.Block.clone, "clone")
 )
 
-stdlib.NativeFunction.proto:set("()", stdlib.NativeFunction, nil, 0)
+stdlib.NativeFunction.proto:setHere("()", stdlib.NativeFunction)
 
-stdlib.Function.proto:set("()", stdlib.Function, nil, 0)
+stdlib.Function.proto:setHere("()", stdlib.Function)
 
 defineProtoNativeFn("Number", "eq", "==")
 defineProtoNativeFn("Number", "neq", "!=")
@@ -491,19 +493,18 @@ defineProtoNativeFn("String", "add", "+")
 defineProtoNativeFn("String", "not_", "!")
 
 defineProtoNativeFn("Boolean", "not_", "!")
-stdlib.Boolean.proto:set("true", stdlib.Boolean(nil, true), nil, 0)
-stdlib.Boolean.proto:set("false", stdlib.Boolean(nil, false), nil, 0)
+stdlib.Boolean.proto:setHere("true", stdlib.Boolean(nil, true))
+stdlib.Boolean.proto:setHere("false", stdlib.Boolean(nil, false))
 
 defineProtoNativeFn("Nil", "eq", "==")
 defineProtoNativeFn("Nil", "neq", "!=")
 defineProtoNativeFn("Nil", "not_", "!")
-stdlib.Nil.proto:set("nil", stdlib.Nil(), nil, 0)
+stdlib.Nil.proto:setHere("nil", stdlib.Nil())
 
 defineProtoNativeFn("List", "add", "+")
 defineProtoNativeFn("List", "spread", "...")
-stdlib.List.proto:set("iterate",
-	stdlib.Function(nil, stdlib.List.iterate, "iterate"),
-	nil, 0
+stdlib.List.proto:setHere("iterate",
+	stdlib.Function(nil, stdlib.List.iterate, "iterate")
 )
 
 
@@ -527,19 +528,19 @@ fn.id = function(_, x) return x end
 
 function stdlib.initEnv(env)
 	for name, f in pairs(fn) do
-		env:set(name, stdlib.NativeFunction(env, f), nil, 0)
+		env:setHere(name, stdlib.NativeFunction(env, f))
 	end
-	env:set("Block", stdlib.Block.proto, nil, 0)
-	env:set("Function", stdlib.Function.proto, nil, 0)
-	env:set("Number", stdlib.Number.proto, nil, 0)
-	env:set("String", stdlib.String.proto, nil, 0)
-	env:set("Boolean", stdlib.Boolean.proto, nil, 0)
-	env:set("Nil", stdlib.Nil.proto, nil, 0)
-	env:set("List", stdlib.List.proto, nil, 0)
+	env:setHere("Block", stdlib.Block.proto)
+	env:setHere("Function", stdlib.Function.proto)
+	env:setHere("Number", stdlib.Number.proto)
+	env:setHere("String", stdlib.String.proto)
+	env:setHere("Boolean", stdlib.Boolean.proto)
+	env:setHere("Nil", stdlib.Nil.proto)
+	env:setHere("List", stdlib.List.proto)
 	
-	env:set("nil", stdlib.Nil.proto:get("nil"), nil, 0)
-	env:set("true", stdlib.Boolean.proto:get("true"), nil, 0)
-	env:set("false", stdlib.Boolean.proto:get("false"), nil, 0)
+	env:setHere("nil", stdlib.Nil.proto:get("nil"))
+	env:setHere("true", stdlib.Boolean.proto:get("true"))
+	env:setHere("false", stdlib.Boolean.proto:get("false"))
 end
 
 return stdlib

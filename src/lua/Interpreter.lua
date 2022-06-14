@@ -92,16 +92,35 @@ function Interpreter.Environment.new(parent)
 	return setmetatable(self, Interpreter.Environment)
 end
 
-function Interpreter.Environment:set(key, value, modifiers, level)
+function Interpreter.Environment:setAtLevel(key, value, modifiers, level)
+	if not level then
+		self:updateAnywhere(key, value)
+	elseif level == 0 then
+		self:setHere(key, value, modifiers)
+	elseif level > 0 then
+		self.parent:setAtLevel(key, value, modifiers)
+	end
+end
+
+function Interpreter.Environment:updateAnywhere(key, value)
 	if type(key) == "table" then key = key.value end
-	if self.env[key] and (not level or level == 0) then
-		if modifiers ~= nil and not modifiers.empty then Interpreter.error("Redefinition of variable "..tostring(key)) end
+	if self.env[key] or not self.parent or not self.parent:has(key) then
+		self:setHere(key, value)
+	else
+		self.parent:updateAnywhere(key, value)
+	end
+end
+
+function Interpreter.Environment:setHere(key, value, modifiers)
+	if type(key) == "table" then key = key.value end
+	if self.env[key] then
+		if modifiers ~= nil and not modifiers.empty then
+			Interpreter.error("Redefinition of variable "..tostring(key))
+		end
 		if self.env[key].modifiers.const then
 			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
-	elseif self.parent and self.parent:has(key) and (not level or level > 0) then
-		self.parent:set(key, value, modifiers, level and level-1)
 	else
 		self.env[key] = {
 			value = value,

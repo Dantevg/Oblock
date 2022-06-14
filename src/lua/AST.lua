@@ -176,8 +176,8 @@ function AST.Expr.Variable:evaluate(env)
 	return value
 end
 
-function AST.Expr.Variable:set(env, value, modifiers, level)
-	env:set(self.token.lexeme, value, modifiers, level or self.level)
+function AST.Expr.Variable:setSelf(env, value, modifiers)
+	env:setAtLevel(self.token.lexeme, value, modifiers, self.level)
 end
 
 function AST.Expr.Variable:resolve(scope)
@@ -228,8 +228,8 @@ function AST.Expr.Index:evaluate(env)
 	return value
 end
 
-function AST.Expr.Index:set(env, value, modifiers)
-	(self.base and self.base:evaluate(env) or env):set(ref(self.expr, env), value, modifiers, self.level)
+function AST.Expr.Index:setSelf(env, value, modifiers)
+	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), value, modifiers, self.level)
 end
 
 function AST.Expr.Index:resolve(scope)
@@ -368,7 +368,7 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:set(parameter.token.lexeme, argument or stdlib.Nil(nil, self.loc))
+			env:setHere(parameter.token.lexeme, argument or stdlib.Nil(nil, self.loc))
 		elseif parameter.__name == "Call"
 				and parameter.expression.__name == "Index"
 				and parameter.expression.expr.__name == "Literal"
@@ -378,7 +378,7 @@ function AST.Expr.Function:call(env, arguments)
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
-			env:set(parameter.expression.base.token.lexeme, list)
+			env:setHere(parameter.expression.base.token.lexeme, list)
 			break
 		else
 			Interpreter.error("invalid parameter type", self.loc)
@@ -582,12 +582,12 @@ function AST.Expr.For:evaluate(env)
 	local block = stdlib.Block(env)
 	local values = {iterator:call()}
 	for _, target in ipairs(self.targets) do
-		target:set(block)
+		target:setSelf(block)
 	end
 	while values[1] and values[1].__name ~= "Nil" do
 		for i, target in ipairs(self.targets) do
 			local value = values[i] or stdlib.Nil(nil, self.loc)
-			target:set(block, value)
+			target:setSelf(block, value)
 		end
 		local breakVals = catchBreakContinue(self.body, block)
 		if breakVals then return table.unpack(breakVals) end
@@ -814,11 +814,10 @@ function AST.Stat.Assignment:evaluate(env)
 	
 	for i, target in ipairs(self.targets) do
 		local value = values[i] or stdlib.Nil(nil, self.loc)
-		local level = not self.modifiers.empty and 0 or nil
-		if target.set then
-			target:set(env, value, self.modifiers, level)
+		if target.setSelf then
+			target:setSelf(env, value, self.modifiers)
 		else
-			env:set(target:evaluate(env), value, self.modifiers, level)
+			env:setAtLevel(target:evaluate(env), value, self.modifiers, level)
 		end
 	end
 end
@@ -846,8 +845,10 @@ function AST.Stat.Assignment:resolve(scope)
 		if not resolved then
 			if target.__name == "Literal" then
 				scope[target.lexeme] = true
+				target.level = 0
 			elseif target.__name == "Variable" then
 				scope[target.token.lexeme] = true
+				target.level = 0
 			elseif target.__name == "Index" then
 				target:resolve(scope)
 			end

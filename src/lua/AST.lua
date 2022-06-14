@@ -478,9 +478,9 @@ end
 
 function AST.Expr.If:evaluate(env)
 	if self.condition:evaluate(env).value then
-		self.ifTrue:evaluate(env)
+		return self.ifTrue:evaluate(env)
 	elseif self.ifFalse then
-		self.ifFalse:evaluate(env)
+		return self.ifFalse:evaluate(env)
 	end
 end
 

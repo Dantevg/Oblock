@@ -2,31 +2,52 @@ local Lexer = require "Lexer"
 local Parser = require "Parser"
 local Interpreter = require "Interpreter"
 
+local function hasArg(name)
+	for _, arg in ipairs(args) do
+		if arg == name then return true end
+	end
+	return false
+end
+
 local args = {...}
 local path = args[1]
-local isDemo = args[1] == "--demo" or args[2] == "--demo" or args[3] == "--demo"
-local isDebug = args[1] == "--debug" or args[2] == "--debug" or args[3] == "--debug"
-local file = path and io.open(path) or io.stdin
+local isDemo = hasArg("--demo")
+local isDebug = hasArg("--debug")
+local isInteractive = hasArg("--interactive") or hasArg("-i")
+local file = (path and not isInteractive) and io.open(path) or io.stdin
+local filename = (file == io.stdin) and "stdin" or string.match(path or "", "/([^/]+)$") or path
 
-if isDemo then print() end
-local content = file:read("a")
-file:close()
-if isDemo then print() end
+local interpreter = Interpreter()
 
-local filename = string.match(path or "", "/([^/]+)$") or path or "stdin"
-
-local tokens = Lexer(content, filename):lex()
-if not tokens then return end
-local program = Parser(tokens, filename):parse()
-if not program then return end
-
-if isDebug then
-	print(program:debug())
+function eval(content)
+	if isDemo then print() end
+	
+	local tokens = Lexer(content, filename):lex()
+	if not tokens then return end
+	local program = Parser(tokens, filename):parse()
+	if not program then return end
+	
+	if isDebug then print(program:debug()) end
+	
+	interpreter.program = program
+	if isDemo then
+		interpreter:interpret()
+		print()
+	else
+		print(interpreter:interpret())
+	end
 end
 
-if isDemo then
-	Interpreter(program):interpret()
-	print()
+if isDemo then print() end
+if isInteractive then
+	while true do
+		io.write("> ")
+		local content = file:read("l")
+		if content == nil then print() break end
+		eval(content)
+	end
 else
-	print(Interpreter(program):interpret())
+	local content = file:read("a")
+	eval(content)
 end
+file:close()

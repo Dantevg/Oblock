@@ -3,20 +3,6 @@
 local Interpreter = require "Interpreter"
 local stdlib = require "stdlib"
 
-local function evaluateAll(expressions, env)
-	local values = {}
-	for _, expr in ipairs(expressions) do
-		for _, value in ipairs({expr:evaluate(env)}) do
-			table.insert(values, value)
-		end
-	end
-	return values
-end
-
-local function resolveAll(expressions, scope)
-	for _, expr in ipairs(expressions) do expr:resolve(scope) end
-end
-
 local function catchBreakContinue(body, env)
 	local success, err = pcall(body.evaluate, body, env)
 	if not success then
@@ -121,24 +107,31 @@ setmetatable(AST.Expr.Logical, {
 
 
 
--- TODO: generalise list of expressions (lot of code duplication atm)
 AST.Expr.Group = {}
 AST.Expr.Group.__index = AST.Expr.Group
 AST.Expr.Group.__name = "Group"
 
 function AST.Expr.Group.new(expressions, loc)
 	local self = {}
-	self.expressions = expressions
+	self.expressions = expressions or {}
 	self.loc = loc
 	return setmetatable(self, AST.Expr.Group)
 end
 
 function AST.Expr.Group:evaluate(env)
-	return table.unpack(evaluateAll(self.expressions, env))
+	local values = {}
+	for _, expr in ipairs(self.expressions) do
+		for _, value in ipairs({expr:evaluate(env)}) do
+			table.insert(values, value)
+		end
+	end
+	return table.unpack(values)
 end
 
 function AST.Expr.Group:resolve(scope)
-	resolveAll(self.expressions, scope)
+	for _, expr in ipairs(self.expressions) do
+		expr:resolve(scope)
+	end
 end
 
 function AST.Expr.Group:debug(indent)
@@ -150,7 +143,7 @@ function AST.Expr.Group:__tostring()
 	for _, expr in ipairs(self.expressions) do
 		table.insert(expressions, tostring(expr))
 	end
-	return "("..table.concat(expressions, ", ")..")"
+	return table.concat(expressions, ", ")
 end
 
 setmetatable(AST.Expr.Group, {
@@ -310,32 +303,28 @@ AST.Expr.List.__name = "List"
 
 function AST.Expr.List.new(expressions, loc)
 	local self = {}
-	self.expressions = expressions
+	self.expressions = AST.Expr.Group(expressions, loc)
 	self.loc = loc
 	return setmetatable(self, AST.Expr.List)
 end
 
 function AST.Expr.List:evaluate(parent)
 	local list = stdlib.List(parent)
-	local values = evaluateAll(self.expressions, list.environment)
+	local values = {self.expressions:evaluate(list.environment)}
 	for _, value in ipairs(values) do list:push(value) end
 	return list
 end
 
 function AST.Expr.List:resolve(scope)
-	resolveAll(self.expressions, {parent = scope})
+	self.expressions:resolve {parent = scope}
 end
 
 function AST.Expr.List:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions})
+	return debug(indent, self.__name, {}, {expressions = self.expressions.expressions})
 end
 
 function AST.Expr.List:__tostring()
-	local strings = {}
-	for _, value in ipairs(self.expressions) do
-		table.insert(strings, tostring(value))
-	end
-	return "["..table.concat(strings, ", ").."]"
+	return "["..self.expressions:__tostring().."]"
 end
 
 setmetatable(AST.Expr.List, {
@@ -670,22 +659,22 @@ AST.Stat.ControlFlow.__index = AST.Stat.ControlFlow
 
 function AST.Stat.ControlFlow.new(expressions, loc)
 	local self = {}
-	self.expressions = expressions or {}
+	self.expressions = AST.Expr.Group(expressions or {}, loc)
 	self.loc = loc
 	return setmetatable(self, AST.Stat.ControlFlow)
 end
 
 function AST.Stat.ControlFlow:evaluate(env)
-	self.values = evaluateAll(self.expressions, env)
+	self.values = {self.expressions:evaluate(env)}
 	error(self, 0)
 end
 
 function AST.Stat.ControlFlow:resolve(scope)
-	resolveAll(self.expressions, scope)
+	self.expressions:resolve(scope)
 end
 
 function AST.Stat.ControlFlow:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions})
+	return debug(indent, self.__name, {}, {expressions = self.expressions.expressions})
 end
 
 setmetatable(AST.Stat.ControlFlow, {
@@ -699,10 +688,7 @@ AST.Stat.Return.__index = AST.Stat.Return
 AST.Stat.Return.__name = "Return"
 
 function AST.Stat.Return.new(expressions, loc)
-	local self = {}
-	self.expressions = expressions or {}
-	self.loc = loc
-	return setmetatable(self, AST.Stat.Return)
+	return setmetatable(AST.Stat.ControlFlow(expressions, loc), AST.Stat.Return)
 end
 
 function AST.Stat.Return:__tostring()
@@ -725,10 +711,7 @@ AST.Stat.Yield.__index = AST.Stat.Yield
 AST.Stat.Yield.__name = "Yield"
 
 function AST.Stat.Yield.new(expressions, loc)
-	local self = {}
-	self.expressions = expressions or {}
-	self.loc = loc
-	return setmetatable(self, AST.Stat.Yield)
+	return setmetatable(AST.Stat.ControlFlow(expressions, loc), AST.Stat.Yield)
 end
 
 function AST.Stat.Yield:__tostring()
@@ -751,11 +734,14 @@ AST.Stat.Break.__index = AST.Stat.Break
 AST.Stat.Break.__name = "Break"
 
 function AST.Stat.Break.new(expressions, level, loc)
-	local self = {}
-	self.expressions = expressions or {}
+	local self = AST.Stat.ControlFlow(expressions, loc)
 	self.level = level or 1
-	self.loc = loc
 	return setmetatable(self, AST.Stat.Break)
+end
+
+function AST.Stat.Break:debug(indent)
+	return debug(indent, self.__name, {level = self.level},
+		{expressions = self.expressions.expressions})
 end
 
 function AST.Stat.Break:__tostring()
@@ -778,10 +764,7 @@ AST.Stat.Continue.__index = AST.Stat.Continue
 AST.Stat.Continue.__name = "Continue"
 
 function AST.Stat.Continue.new(loc)
-	local self = {}
-	self.expressions = {}
-	self.loc = loc
-	return setmetatable(self, AST.Stat.Continue)
+	return setmetatable(AST.Stat.ControlFlow(nil, loc), AST.Stat.Continue)
 end
 
 function AST.Stat.Continue:__tostring()
@@ -802,7 +785,7 @@ AST.Stat.Assignment.__name = "Assignment"
 function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, loc)
 	local self = {}
 	self.targets = targets
-	self.expressions = expressions
+	self.expressions = AST.Expr.Group(expressions, loc)
 	self.modifiers = modifiers
 	self.predef = predef
 	self.loc = loc
@@ -810,7 +793,7 @@ function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, loc)
 end
 
 function AST.Stat.Assignment:evaluate(env)
-	local values = evaluateAll(self.expressions, env)
+	local values = {self.expressions:evaluate(env)}
 	
 	for i, target in ipairs(self.targets) do
 		local value = values[i] or stdlib.Nil(nil, self.loc)
@@ -835,7 +818,7 @@ function AST.Stat.Assignment:resolve(scope)
 		end
 	end
 	
-	resolveAll(self.expressions, scope)
+	self.expressions:resolve(scope)
 	
 	for _, target in ipairs(self.targets) do
 		local resolved
@@ -859,18 +842,15 @@ end
 function AST.Stat.Assignment:debug(indent)
 	return debug(indent, self.__name,
 		{modifiers = self.modifiers, predef = self.predef},
-		{targets = self.targets, expressions = self.expressions})
+		{targets = self.targets, expressions = self.expressions.expressions})
 end
 
 function AST.Stat.Assignment:__tostring()
-	local targets, expressions = {}, {}
+	local targets = {}
 	for _, target in ipairs(self.targets) do
 		table.insert(targets, tostring(target))
 	end
-	for _, expr in ipairs(self.expressions) do
-		table.insert(expressions, tostring(expr))
-	end
-	return table.concat(targets, ", ").." = "..table.concat(expressions, ", ")
+	return table.concat(targets, ", ").." = "..self.expressions:__tostring()
 end
 
 setmetatable(AST.Stat.Assignment, {

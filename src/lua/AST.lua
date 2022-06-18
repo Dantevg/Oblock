@@ -20,7 +20,7 @@ local function catchBreakContinue(body, env)
 end
 
 local pretty, tc
-local function debug(indent, name, properties, nodelists)
+local function debugValue(indent, name, properties, nodelists)
 	if not pretty then
 		local success
 		success, pretty = pcall(require, "pretty")
@@ -93,7 +93,7 @@ function AST.Expr.Logical:resolve(scope)
 end
 
 function AST.Expr.Logical:debug(indent)
-	return debug(indent, self.__name, {op = self.op.lexeme},
+	return debugValue(indent, self.__name, {op = self.op.lexeme},
 		{left = {self.left}, right = {self.right}})
 end
 
@@ -135,7 +135,7 @@ function AST.Expr.Group:resolve(scope)
 end
 
 function AST.Expr.Group:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions})
+	return debugValue(indent, self.__name, {}, {expressions = self.expressions})
 end
 
 function AST.Expr.Group:__tostring()
@@ -184,7 +184,7 @@ function AST.Expr.Variable:resolve(scope)
 end
 
 function AST.Expr.Variable:debug(indent)
-	return debug(indent, self.__name, {token = self.token.lexeme}, {})
+	return debugValue(indent, self.__name, {token = self.token.lexeme}, {})
 end
 
 function AST.Expr.Variable:__tostring()
@@ -233,7 +233,7 @@ function AST.Expr.Index:resolve(scope)
 end
 
 function AST.Expr.Index:debug(indent)
-	return debug(indent, self.__name, {}, {base = {self.base}, expr = {self.expr}})
+	return debugValue(indent, self.__name, {}, {base = {self.base}, expr = {self.expr}})
 end
 
 function AST.Expr.Index:__tostring()
@@ -280,7 +280,7 @@ function AST.Expr.Block:resolve(scope)
 end
 
 function AST.Expr.Block:debug(indent)
-	return debug(indent, self.__name, {}, {statements = self.statements})
+	return debugValue(indent, self.__name, {}, {statements = self.statements})
 end
 
 function AST.Expr.Block:__tostring()
@@ -320,7 +320,7 @@ function AST.Expr.List:resolve(scope)
 end
 
 function AST.Expr.List:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions.expressions})
+	return debugValue(indent, self.__name, {}, {expressions = self.expressions.expressions})
 end
 
 function AST.Expr.List:__tostring()
@@ -357,13 +357,13 @@ function AST.Expr.Function:call(env, arguments)
 	for i, parameter in ipairs(self.parameters.expressions) do
 		local argument = arguments[i]
 		if parameter.__name == "Variable" then
-			env:setHere(parameter.token.lexeme, argument or stdlib.Nil(nil, self.loc))
+			env:setHere(parameter.token.lexeme, argument or stdlib.Nil(self.loc))
 		elseif parameter.__name == "Call"
 				and parameter.expression.__name == "Index"
 				and parameter.expression.expr.__name == "Literal"
 				and parameter.expression.expr.lexeme == "..."
 				and parameter.expression.base.__name == "Variable" then
-			local list = stdlib.List(env)
+			local list = stdlib.List()
 			for j = i, #arguments do
 				list:push(arguments[j])
 			end
@@ -397,7 +397,7 @@ function AST.Expr.Function:resolve(scope)
 end
 
 function AST.Expr.Function:debug(indent)
-	return debug(indent, self.__name, {},
+	return debugValue(indent, self.__name, {},
 		{parameters = self.parameters.expressions, body = {self.body}})
 end
 
@@ -439,7 +439,7 @@ function AST.Expr.Call:resolve(scope)
 end
 
 function AST.Expr.Call:debug(indent)
-	return debug(indent, self.__name, {},
+	return debugValue(indent, self.__name, {},
 		{expression = {self.expression}, args = {self.arglist}})
 end
 
@@ -481,7 +481,7 @@ function AST.Expr.If:resolve(scope)
 end
 
 function AST.Expr.If:debug(indent)
-	return debug(indent, self.__name, {},
+	return debugValue(indent, self.__name, {},
 		{condition = {self.condition}, ["then"] = {self.ifTrue}, ["else"] = {self.ifFalse}})
 end
 
@@ -525,7 +525,7 @@ function AST.Expr.While:resolve(scope)
 end
 
 function AST.Expr.While:debug(indent)
-	return debug(indent, self.__name, {},
+	return debugValue(indent, self.__name, {},
 		{condition = {self.condition}, body = {self.body}})
 end
 
@@ -575,7 +575,7 @@ function AST.Expr.For:evaluate(env)
 	end
 	while values[1] and values[1].__name ~= "Nil" do
 		for i, target in ipairs(self.targets) do
-			local value = values[i] or stdlib.Nil(nil, self.loc)
+			local value = values[i] or stdlib.Nil(self.loc)
 			target:setSelf(block, value)
 		end
 		local breakVals = catchBreakContinue(self.body, block)
@@ -594,7 +594,7 @@ function AST.Expr.For:resolve(scope)
 end
 
 function AST.Expr.For:debug(indent)
-	return debug(indent, self.__name, {variable = self.variable},
+	return debugValue(indent, self.__name, {variable = self.variable},
 		{expression = {self.expr}, body = {self.body}})
 end
 
@@ -628,18 +628,18 @@ end
 
 function AST.Expr.Literal:evaluate(env)
 	if type(self.literal) == "number" then
-		return stdlib.Number(env, self.literal)
+		return stdlib.Number(self.literal)
 	elseif type(self.literal) == "string" then
-		return stdlib.String(env, self.literal)
+		return stdlib.String(self.literal)
 	elseif type(self.literal) == "nil" then
-		return stdlib.Nil(env, self.loc)
+		return stdlib.Nil(self.loc)
 	end
 end
 
 function AST.Expr.Literal.resolve() end
 
 function AST.Expr.Literal:debug(indent)
-	return debug(indent, self.__name, {token = self.lexeme}, {})
+	return debugValue(indent, self.__name, {token = self.lexeme}, {})
 end
 
 function AST.Expr.Literal:__tostring()
@@ -674,7 +674,7 @@ function AST.Stat.ControlFlow:resolve(scope)
 end
 
 function AST.Stat.ControlFlow:debug(indent)
-	return debug(indent, self.__name, {}, {expressions = self.expressions.expressions})
+	return debugValue(indent, self.__name, {}, {expressions = self.expressions.expressions})
 end
 
 setmetatable(AST.Stat.ControlFlow, {
@@ -740,7 +740,7 @@ function AST.Stat.Break.new(expressions, level, loc)
 end
 
 function AST.Stat.Break:debug(indent)
-	return debug(indent, self.__name, {level = self.level},
+	return debugValue(indent, self.__name, {level = self.level},
 		{expressions = self.expressions.expressions})
 end
 
@@ -796,7 +796,7 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = {self.expressions:evaluate(env)}
 	
 	for i, target in ipairs(self.targets) do
-		local value = values[i] or stdlib.Nil(nil, self.loc)
+		local value = values[i] or stdlib.Nil(self.loc)
 		if target.setSelf then
 			target:setSelf(env, value, self.modifiers)
 		else
@@ -840,7 +840,7 @@ function AST.Stat.Assignment:resolve(scope)
 end
 
 function AST.Stat.Assignment:debug(indent)
-	return debug(indent, self.__name,
+	return debugValue(indent, self.__name,
 		{modifiers = self.modifiers, predef = self.predef},
 		{targets = self.targets, expressions = self.expressions.expressions})
 end

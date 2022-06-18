@@ -43,7 +43,7 @@ function stdlib.Block:setHere(key, value, modifiers)
 end
 
 function stdlib.Block:eq(other)
-	return stdlib.Boolean(nil, self == other)
+	return stdlib.Boolean(self == other)
 end
 
 function stdlib.Block:pipe(other)
@@ -52,6 +52,7 @@ function stdlib.Block:pipe(other)
 end
 
 function stdlib.Block:clone(other)
+	other = other or stdlib.Block()
 	other:setHere("_Proto", self)
 	return other
 end
@@ -90,8 +91,8 @@ stdlib.NativeFunction.__name = "NativeFunction"
 
 stdlib.NativeFunction.proto = stdlib.Block()
 
-function stdlib.NativeFunction.new(parent, body, name)
-	local self = stdlib.Block(parent)
+function stdlib.NativeFunction.new(body, name)
+	local self = stdlib.Block()
 	self.body = body
 	self.name = name
 	self:setHere("_Proto", stdlib.NativeFunction.proto)
@@ -177,8 +178,8 @@ stdlib.Value = {}
 stdlib.Value.__index = stdlib.Value
 stdlib.Value.__name = "Value"
 
-function stdlib.Value.new(parent, value)
-	local self = stdlib.Block(parent)
+function stdlib.Value.new(value)
+	local self = stdlib.Block()
 	self.value = value
 	return setmetatable(self, stdlib.Value)
 end
@@ -204,15 +205,15 @@ stdlib.Number.__name = "Number"
 
 stdlib.Number.proto = stdlib.Block()
 
-function stdlib.Number.new(parent, value)
-	local self = stdlib.Value(parent, tonumber(value))
+function stdlib.Number.new(value)
+	local self = stdlib.Value(tonumber(value))
 	self:setHere("_Proto", stdlib.Number.proto)
 	return setmetatable(self, stdlib.Number)
 end
 
 function stdlib.Number:eq(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	return stdlib.Boolean(nil, a == b)
+	return stdlib.Boolean(a == b)
 end
 
 function stdlib.Number:neq(other)
@@ -222,7 +223,7 @@ end
 
 function stdlib.Number:lt(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	return stdlib.Boolean(nil, a < b)
+	return stdlib.Boolean(a < b)
 end
 
 function stdlib.Number:gt(other)
@@ -233,13 +234,13 @@ end
 function stdlib.Number:add(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then Interpreter.error("cannot perform '+' on "..other.__name) end
-	return self.new(nil, a + b)
+	return self.new(a + b)
 end
 
 function stdlib.Number:mul(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then Interpreter.error("cannot perform '*' on "..other.__name) end
-	return self.new(nil, a * b)
+	return self.new(a * b)
 end
 
 function stdlib.Number:sub(other)
@@ -247,14 +248,14 @@ function stdlib.Number:sub(other)
 	if other then
 		local b = tonumber(other.value)
 		if type(b) ~= "number" then Interpreter.error("cannot perform '-' on "..other.__name) end
-		return self.new(nil, a - b)
+		return self.new(a - b)
 	else
-		return self.new(nil, -a)
+		return self.new(-a)
 	end
 end
 
-function stdlib.Number:not_(env)
-	return stdlib.Boolean(env, false)
+function stdlib.Number:not_()
+	return stdlib.Boolean(false)
 end
 
 stdlib.Number.__eq = stdlib.Value.__eq
@@ -273,8 +274,8 @@ stdlib.String.__name = "String"
 
 stdlib.String.proto = stdlib.Block()
 
-function stdlib.String.new(parent, value)
-	local self = stdlib.Value(parent, tostring(value))
+function stdlib.String.new(value)
+	local self = stdlib.Value(tostring(value))
 	self:setHere("_Proto", stdlib.String.proto)
 	return setmetatable(self, stdlib.String)
 end
@@ -282,11 +283,11 @@ end
 function stdlib.String:add(other)
 	local a, b = tostring(self.value), tostring(other.value)
 	if type(b) ~= "string" then Interpreter.error("cannot perform '+' on "..other.__name) end
-	return self.new(nil, a..b)
+	return self.new(a..b)
 end
 
 function stdlib.String:not_()
-	return stdlib.Boolean(nil, false)
+	return stdlib.Boolean(false)
 end
 
 stdlib.String.__eq = stdlib.Value.__eq
@@ -305,18 +306,18 @@ stdlib.Boolean.__name = "Boolean"
 
 stdlib.Boolean.proto = stdlib.Block()
 
-function stdlib.Boolean.new(parent, value)
-	local self = stdlib.Value(parent, not not value)
+function stdlib.Boolean.new(value)
+	local self = stdlib.Value(not not value)
 	self:setHere("_Proto", stdlib.Boolean.proto)
 	return setmetatable(self, stdlib.Boolean)
 end
 
 function stdlib.Boolean.toBoolean(value)
-	return stdlib.Boolean(nil, value.value)
+	return stdlib.Boolean(value.value)
 end
 
 function stdlib.Boolean:not_()
-	return stdlib.Boolean(nil, not self.value)
+	return stdlib.Boolean(not self.value)
 end
 
 stdlib.Boolean.__eq = stdlib.Value.__eq
@@ -335,23 +336,23 @@ stdlib.Nil.__name = "Nil"
 
 stdlib.Nil.proto = stdlib.Block()
 
-function stdlib.Nil.new(parent, loc)
-	local self = stdlib.Value(parent, nil)
+function stdlib.Nil.new(loc)
+	local self = stdlib.Value(nil)
 	self.loc = loc
 	self:setHere("_Proto", stdlib.Nil.proto)
 	return setmetatable(self, stdlib.Nil)
 end
 
 function stdlib.Nil:eq(other)
-	return stdlib.Boolean(nil, other.__name == "Nil")
+	return stdlib.Boolean(other.__name == "Nil")
 end
 
 function stdlib.Nil:neq(other)
-	return stdlib.Boolean(nil, other.__name ~= "Nil")
+	return stdlib.Boolean(other.__name ~= "Nil")
 end
 
 function stdlib.Nil:not_()
-	return stdlib.Boolean(nil, true)
+	return stdlib.Boolean(true)
 end
 
 stdlib.Nil.__eq = stdlib.Value.__eq
@@ -379,14 +380,14 @@ function stdlib.List.new(parent, elements)
 	for i = 1, #elements do
 		self:setHere(i, elements[i])
 	end
-	self:setHere("length", stdlib.Number(nil, #elements))
+	self:setHere("length", stdlib.Number(#elements))
 	self:setHere("_Proto", stdlib.List.proto)
 	return setmetatable(self, stdlib.List)
 end
 
 function stdlib.List:push(value)
 	self:setHere(#self+1, value)
-	self:setHere("length", stdlib.Number(nil, #self))
+	self:setHere("length", stdlib.Number(#self))
 end
 
 function stdlib.List:add(other)
@@ -397,7 +398,7 @@ function stdlib.List:add(other)
 	for i = 1, #other do
 		table.insert(values, other:get(i))
 	end
-	self:setHere("length", stdlib.Number(nil, #self))
+	self:setHere("length", stdlib.Number(#self))
 	return self.new(nil, values)
 end
 
@@ -411,9 +412,9 @@ end
 
 function stdlib.List:iterate()
 	local i = 0
-	return stdlib.Function(self, function()
+	return stdlib.Function(nil, function()
 		i = i+1
-		return self:get("this"):get(i), stdlib.Number(nil, i)
+		return self:get("this"):get(i), stdlib.Number(i)
 	end, "iterator")
 end
 
@@ -442,11 +443,11 @@ stdlib.Error.__name = "Error"
 
 stdlib.Error.proto = stdlib.Block()
 
-function stdlib.Error.new(parent, message, loc, sourceLoc)
-	local self = stdlib.Block(parent)
+function stdlib.Error.new(message, loc, sourceLoc)
+	local self = stdlib.Block()
 	self.loc, self.sourceLoc = loc, sourceLoc
 	self:setHere("_Proto", stdlib.Error.proto)
-	self:setHere("message", stdlib.String(nil, message))
+	self:setHere("message", stdlib.String(message))
 	self:setHere("traceback", stdlib.List())
 	return setmetatable(self, stdlib.Error)
 end
@@ -461,19 +462,24 @@ setmetatable(stdlib.Error, {
 })
 
 
+
 -- Need to define this below here because NativeFunction needs to be defined
 
 local function defineProtoNativeFn(base, name, key)
 	stdlib[base].proto:setHere(
 		key,
-		stdlib.NativeFunction(nil, stdlib[base][name], name)
+		stdlib.NativeFunction(stdlib[base][name], name)
 	)
+	stdlib[base]["__"..name] = function(l, r)
+		local fn = l:get(key)
+		if fn then return fn:call {r} end
+	end
 end
 
 defineProtoNativeFn("Block", "eq", "==")
 defineProtoNativeFn("Block", "pipe", "|>")
 stdlib.Block.proto:setHere("clone",
-	stdlib.NativeFunction(nil, stdlib.Block.clone, "clone")
+	stdlib.NativeFunction(stdlib.Block.clone, "clone")
 )
 
 stdlib.NativeFunction.proto:setHere("()", stdlib.NativeFunction)
@@ -493,8 +499,8 @@ defineProtoNativeFn("String", "add", "+")
 defineProtoNativeFn("String", "not_", "!")
 
 defineProtoNativeFn("Boolean", "not_", "!")
-stdlib.Boolean.proto:setHere("true", stdlib.Boolean(nil, true))
-stdlib.Boolean.proto:setHere("false", stdlib.Boolean(nil, false))
+stdlib.Boolean.proto:setHere("true", stdlib.Boolean(true))
+stdlib.Boolean.proto:setHere("false", stdlib.Boolean(false))
 
 defineProtoNativeFn("Nil", "eq", "==")
 defineProtoNativeFn("Nil", "neq", "!=")
@@ -511,7 +517,7 @@ stdlib.List.proto:setHere("iterate",
 
 local fn = {}
 
-fn.clock = function() return stdlib.Number(nil, os.clock()) end
+fn.clock = function() return stdlib.Number(os.clock()) end
 fn.print = function(_, ...)
 	-- Pass-through variables
 	print(...)
@@ -520,7 +526,7 @@ end
 
 fn.type = function(_, x)
 	if not x then return "Nil" end
-	return stdlib.String(nil, x.__name)
+	return stdlib.String(x.__name)
 end
 
 -- To turn multiple values into one, like Lua does with `()`
@@ -528,7 +534,7 @@ fn.id = function(_, x) return x end
 
 function stdlib.initEnv(env)
 	for name, f in pairs(fn) do
-		env:setHere(name, stdlib.NativeFunction(env, f))
+		env:setHere(name, stdlib.NativeFunction(f))
 	end
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)

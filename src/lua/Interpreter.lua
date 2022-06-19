@@ -3,28 +3,27 @@ local tc = require "terminalcolours"
 local Interpreter = {}
 Interpreter.__index = Interpreter
 
-function Interpreter.new(program)
+function Interpreter.new()
 	local self = {}
-	self.program = program
 	self.environment = Interpreter.Environment()
 	require("stdlib").initEnv(self.environment)
 	return setmetatable(self, Interpreter)
 end
 
-function Interpreter:interpret()
+function Interpreter:interpret(program)
 	-- Resolve
 	local globalScope = {}
 	for k in pairs(self.environment.env) do
 		globalScope[k] = true
 	end
-	local success, err = pcall(self.program.resolve, self.program, globalScope)
+	local success, err = pcall(program.resolve, program, globalScope)
 	if not success then
 		if type(err) == "table" then Interpreter.printError(err) else error(err, 0) end
 		return
 	end
 	
 	-- Run
-	local results = {pcall(self.program.evaluate, self.program, self.environment)}
+	local results = {pcall(program.evaluate, program, self.environment)}
 	if results[1] then
 		return table.unpack(results, 2)
 	else

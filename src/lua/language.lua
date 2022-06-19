@@ -29,12 +29,11 @@ function eval(content)
 	
 	if isDebug then print(program:debug()) end
 	
-	interpreter.program = program
 	if isDemo then
-		interpreter:interpret()
+		interpreter:interpret(program)
 		print()
 	else
-		print(interpreter:interpret())
+		print(interpreter:interpret(program))
 	end
 end
 

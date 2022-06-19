@@ -532,6 +532,12 @@ end
 -- To turn multiple values into one, like Lua does with `()`
 fn.id = function(_, x) return x end
 
+fn.import = function(_, modname)
+	local langModule = require("lang")(Interpreter(), tostring(modname)..".lang")
+	local hasLuaModule, luaModule = pcall(require, tostring(modname))
+	return hasLuaModule and luaModule(langModule) or langModule
+end
+
 function stdlib.initEnv(env)
 	for name, f in pairs(fn) do
 		env:setHere(name, stdlib.NativeFunction(f))

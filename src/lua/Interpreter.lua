@@ -42,7 +42,7 @@ function Interpreter.isCallable(fn)
 end
 
 function Interpreter.error(message, loc, sourceLoc)
-	error(require("stdlib").Error(nil, message, loc, sourceLoc), 0)
+	error(require("stdlib").Error(message, loc, sourceLoc), 0)
 end
 
 function Interpreter.printError(err)

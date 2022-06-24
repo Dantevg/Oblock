@@ -46,6 +46,11 @@ function stdlib.Block:eq(other)
 	return stdlib.Boolean(self == other)
 end
 
+function stdlib.Block:neq(other)
+	local val = self:get("=="):call {other}
+	return val:get("!"):call()
+end
+
 function stdlib.Block:pipe(other)
 	if not Interpreter.isCallable(other) then Interpreter.error("cannot pipe into "..other.__name) end
 	return other:call {self}
@@ -55,6 +60,12 @@ function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
 	other:setHere("_Proto", self)
 	return other
+end
+
+function stdlib.Block:keys()
+	local keys = {}
+	for k in pairs(self.environment.env) do table.insert(keys, stdlib.String(k)) end
+	return stdlib.List(nil, keys)
 end
 
 function stdlib.Block:__tostring()
@@ -85,43 +96,6 @@ setmetatable(stdlib.Block, {
 
 
 
-stdlib.NativeFunction = {}
-stdlib.NativeFunction.__index = stdlib.NativeFunction
-stdlib.NativeFunction.__name = "NativeFunction"
-
-stdlib.NativeFunction.proto = stdlib.Block()
-
-function stdlib.NativeFunction.new(body, name)
-	local self = stdlib.Block()
-	self.body = body
-	self.name = name
-	self:setHere("_Proto", stdlib.NativeFunction.proto)
-	return setmetatable(self, stdlib.NativeFunction)
-end
-
-function stdlib.NativeFunction:bind(block)
-	local new = {}
-	for k, v in pairs(self) do new[k] = v end
-	new.this = block
-	return setmetatable(new, stdlib.NativeFunction)
-end
-
-function stdlib.NativeFunction:call(args)
-	table.insert(args, 1, self.this)
-	return self.body(table.unpack(args))
-end
-
-function stdlib.NativeFunction:__tostring()
-	return self.name and "<native function: "..self.name..">" or "<native function>"
-end
-
-setmetatable(stdlib.NativeFunction, {
-	__call = function(_, ...) return stdlib.NativeFunction.new(...) end,
-	__index = stdlib.Block,
-})
-
-
-
 stdlib.Function = {}
 stdlib.Function.__index = stdlib.Function
 stdlib.Function.__name = "Function"
@@ -140,7 +114,7 @@ function stdlib.Function:bind(block)
 	local new = {}
 	for k, v in pairs(self) do new[k] = v end
 	new.this = block
-	return setmetatable(new, stdlib.Function)
+	return setmetatable(new, getmetatable(self))
 end
 
 function stdlib.Function:call(args)
@@ -163,6 +137,20 @@ function stdlib.Function:call(args)
 	end
 end
 
+function stdlib.Function:compose(other)
+	return stdlib.NativeFunction(function(_, ...)
+		return self:call {other:call {...}}
+	end)
+end
+
+function stdlib.Function:curry(...)
+	local args = {...}
+	return stdlib.NativeFunction(function(_, ...)
+		for _, arg in ipairs {...} do table.insert(args, arg) end
+		return self:call(args)
+	end)
+end
+
 function stdlib.Function:__tostring()
 	return self.name and "<function: "..self.name..">" or "<function>"
 end
@@ -170,6 +158,34 @@ end
 setmetatable(stdlib.Function, {
 	__call = function(_, ...) return stdlib.Function.new(...) end,
 	__index = stdlib.Block,
+})
+
+
+
+stdlib.NativeFunction = {}
+stdlib.NativeFunction.__index = stdlib.NativeFunction
+stdlib.NativeFunction.__name = "NativeFunction"
+
+stdlib.NativeFunction.proto = stdlib.Function.proto:clone()
+
+function stdlib.NativeFunction.new(body, name)
+	local self = stdlib.Function(nil, body, name)
+	return setmetatable(self, stdlib.NativeFunction)
+end
+
+function stdlib.NativeFunction:call(args)
+	args = args or {}
+	table.insert(args, 1, self.this)
+	return self.body(table.unpack(args))
+end
+
+function stdlib.NativeFunction:__tostring()
+	return self.name and "<native function: "..self.name..">" or "<native function>"
+end
+
+setmetatable(stdlib.NativeFunction, {
+	__call = function(_, ...) return stdlib.NativeFunction.new(...) end,
+	__index = stdlib.Function,
 })
 
 
@@ -214,11 +230,6 @@ end
 function stdlib.Number:eq(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	return stdlib.Boolean(a == b)
-end
-
-function stdlib.Number:neq(other)
-	local val = self:get("=="):call {self, other}
-	return val:get("!"):call {val}
 end
 
 function stdlib.Number:lt(other)
@@ -347,10 +358,6 @@ function stdlib.Nil:eq(other)
 	return stdlib.Boolean(other.__name == "Nil")
 end
 
-function stdlib.Nil:neq(other)
-	return stdlib.Boolean(other.__name ~= "Nil")
-end
-
 function stdlib.Nil:not_()
 	return stdlib.Boolean(true)
 end
@@ -412,9 +419,9 @@ end
 
 function stdlib.List:iterate()
 	local i = 0
-	return stdlib.Function(nil, function()
+	return stdlib.NativeFunction(function()
 		i = i+1
-		return self:get("this"):get(i), stdlib.Number(i)
+		return self:get(i), stdlib.Number(i)
 	end, "iterator")
 end
 
@@ -467,9 +474,13 @@ setmetatable(stdlib.Error, {
 
 local function defineProtoNativeFn(base, name, key)
 	stdlib[base].proto:setHere(
-		key,
+		key or name,
 		stdlib.NativeFunction(stdlib[base][name], name)
 	)
+end
+
+local function defineOperator(base, name, key)
+	defineProtoNativeFn(base, name, key)
 	stdlib[base]["__"..name] = function(l, r)
 		local fn = l:get(key)
 		if fn then return fn:call {r} end
@@ -477,25 +488,24 @@ local function defineProtoNativeFn(base, name, key)
 end
 
 defineProtoNativeFn("Block", "eq", "==")
+defineProtoNativeFn("Block", "neq", "!=")
 defineProtoNativeFn("Block", "pipe", "|>")
-stdlib.Block.proto:setHere("clone",
-	stdlib.NativeFunction(stdlib.Block.clone, "clone")
-)
-
-stdlib.NativeFunction.proto:setHere("()", stdlib.NativeFunction)
+defineProtoNativeFn("Block", "clone")
+defineProtoNativeFn("Block", "keys")
 
 stdlib.Function.proto:setHere("()", stdlib.Function)
+defineProtoNativeFn("Function", "compose", "o")
+defineProtoNativeFn("Function", "curry")
 
-defineProtoNativeFn("Number", "eq", "==")
-defineProtoNativeFn("Number", "neq", "!=")
-defineProtoNativeFn("Number", "lt", "<")
-defineProtoNativeFn("Number", "gt", ">")
-defineProtoNativeFn("Number", "add", "+")
-defineProtoNativeFn("Number", "sub", "-")
-defineProtoNativeFn("Number", "mul", "*")
+defineOperator("Number", "eq", "==")
+defineOperator("Number", "lt", "<")
+defineOperator("Number", "gt", ">")
+defineOperator("Number", "add", "+")
+defineOperator("Number", "sub", "-")
+defineOperator("Number", "mul", "*")
 defineProtoNativeFn("Number", "not_", "!")
 
-defineProtoNativeFn("String", "add", "+")
+defineOperator("String", "add", "+")
 defineProtoNativeFn("String", "not_", "!")
 
 defineProtoNativeFn("Boolean", "not_", "!")
@@ -503,45 +513,46 @@ stdlib.Boolean.proto:setHere("true", stdlib.Boolean(true))
 stdlib.Boolean.proto:setHere("false", stdlib.Boolean(false))
 
 defineProtoNativeFn("Nil", "eq", "==")
-defineProtoNativeFn("Nil", "neq", "!=")
 defineProtoNativeFn("Nil", "not_", "!")
 stdlib.Nil.proto:setHere("nil", stdlib.Nil())
 
-defineProtoNativeFn("List", "add", "+")
+defineOperator("List", "add", "+")
 defineProtoNativeFn("List", "spread", "...")
-stdlib.List.proto:setHere("iterate",
-	stdlib.Function(nil, stdlib.List.iterate, "iterate")
-)
+defineProtoNativeFn("List", "push")
+defineProtoNativeFn("List", "iterate")
 
 
 
-local fn = {}
-
-fn.clock = function() return stdlib.Number(os.clock()) end
-fn.print = function(_, ...)
+stdlib.clock = function() return stdlib.Number(os.clock()) end
+stdlib.print = function(_, ...)
 	-- Pass-through variables
 	print(...)
 	return ...
 end
 
-fn.type = function(_, x)
+stdlib.type = function(_, x)
 	if not x then return "Nil" end
 	return stdlib.String(x.__name)
 end
 
 -- To turn multiple values into one, like Lua does with `()`
-fn.id = function(_, x) return x end
+stdlib.id = function(_, x) return x end
 
-fn.import = function(_, modname)
-	local langModule = require("lang")(Interpreter(), tostring(modname)..".lang")
+stdlib.import = function(_, modname)
+	package.path = package.path..";src/lua/lib/?.lua;src/test/?.lua"
+	local langModule = require("lang")(Interpreter(), "src/test/"..tostring(modname)..".lang")
+		or require("lang")(Interpreter(), "src/lua/lib/"..tostring(modname)..".lang")
 	local hasLuaModule, luaModule = pcall(require, tostring(modname))
-	return hasLuaModule and luaModule(langModule) or langModule
+	return hasLuaModule and luaModule(langModule or stdlib.Block()) or langModule or stdlib.Nil()
 end
 
 function stdlib.initEnv(env)
-	for name, f in pairs(fn) do
-		env:setHere(name, stdlib.NativeFunction(f))
-	end
+	env:setHere("clock", stdlib.NativeFunction(stdlib.clock))
+	env:setHere("print", stdlib.NativeFunction(stdlib.print))
+	env:setHere("type", stdlib.NativeFunction(stdlib.type))
+	env:setHere("id", stdlib.NativeFunction(stdlib.id))
+	env:setHere("import", stdlib.NativeFunction(stdlib.import))
+	
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)
 	env:setHere("Number", stdlib.Number.proto)

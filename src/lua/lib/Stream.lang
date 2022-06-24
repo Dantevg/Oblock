@@ -1,0 +1,29 @@
+{
+	"()" source => {
+		iterator = source.iterate()
+		return this.clone {
+			read = id.o iterator
+		}
+	}
+	
+	iterate() => {
+		const self = this
+		return () => self.read()
+	}
+	
+	"..." () => {
+		const values = []
+		for value in this: values.push value
+		return ...values
+	}
+	
+	map(fn) => {
+		const self = this
+		return this.clone {
+			read() => {
+				val = self.read()
+				return if val != nil: fn(val)
+			}
+		}
+	}
+}

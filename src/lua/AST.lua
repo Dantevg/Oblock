@@ -165,7 +165,7 @@ end
 
 function AST.Expr.Variable:evaluate(env)
 	local value = env:get(self.token.lexeme, self.level)
-	if value.__name == "Nil" and not value.loc then value.loc = self.loc end
+	if value and value.__name == "Nil" and not value.loc then value.loc = self.loc end
 	return value
 end
 
@@ -427,7 +427,7 @@ function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
 	if not Interpreter.isCallable(fn) then
 		Interpreter.error("Attempt to call non-callable type "
-			..(fn and fn.__name or "Nil"), self.loc, fn.loc)
+			..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
 	end
 	local arguments = {self.arglist:evaluate(env)}
 	return fn:call(arguments)

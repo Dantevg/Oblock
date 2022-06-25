@@ -429,8 +429,7 @@ function AST.Expr.Call:evaluate(env)
 		Interpreter.error("Attempt to call non-callable type "
 			..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
 	end
-	local arguments = {self.arglist:evaluate(env)}
-	return fn:call(arguments)
+	return fn:call(self.arglist:evaluate(env))
 end
 
 function AST.Expr.Call:resolve(scope)

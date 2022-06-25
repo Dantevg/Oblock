@@ -68,6 +68,30 @@ function stdlib.Block:keys()
 	return stdlib.List(nil, keys)
 end
 
+function stdlib.Block:protos()
+	local protos = {}
+	local proto = self.environment:get("_Proto", 0)
+	while proto do
+		table.insert(protos, proto)
+		proto = proto.environment:get("_Proto", 0)
+	end
+	return stdlib.List(nil, protos)
+end
+
+function stdlib.Block:is(other)
+	-- Check prototype chain
+	local proto = self:get("_Proto")
+	while proto and proto ~= other:get("_Proto") do
+		proto = proto:get("_Proto")
+		if proto == other:get("_Proto") then return stdlib.Boolean(true) end
+	end
+	
+	for k, v in pairs(other.environment.env) do
+		if not self:has(k) then return stdlib.Boolean(false) end
+	end
+	return stdlib.Boolean(true)
+end
+
 function stdlib.Block:__tostring()
 	local strings = {}
 	
@@ -117,12 +141,13 @@ function stdlib.Function:bind(block)
 	return setmetatable(new, getmetatable(self))
 end
 
-function stdlib.Function:call(args)
+function stdlib.Function:call(...)
+	local args = {...}
 	local environment = Interpreter.Environment(self.environment)
 	if self.this then environment:setHere("this", self.this) end
 	
 	-- Add arguments to function body indexed by number
-	for i, arg in ipairs(args or {}) do
+	for i, arg in ipairs(args) do
 		environment:setHere(i, arg)
 	end
 	
@@ -147,7 +172,7 @@ function stdlib.Function:curry(...)
 	local args = {...}
 	return stdlib.NativeFunction(function(_, ...)
 		for _, arg in ipairs {...} do table.insert(args, arg) end
-		return self:call(args)
+		return self:call(table.unpack(args))
 	end)
 end
 
@@ -173,10 +198,8 @@ function stdlib.NativeFunction.new(body, name)
 	return setmetatable(self, stdlib.NativeFunction)
 end
 
-function stdlib.NativeFunction:call(args)
-	args = args or {}
-	table.insert(args, 1, self.this)
-	return self.body(table.unpack(args))
+function stdlib.NativeFunction:call(...)
+	return self.body(self.this, ...)
 end
 
 function stdlib.NativeFunction:__tostring()
@@ -483,7 +506,7 @@ local function defineOperator(base, name, key)
 	defineProtoNativeFn(base, name, key)
 	stdlib[base]["__"..name] = function(l, r)
 		local fn = l:get(key)
-		if fn then return fn:call {r} end
+		if fn then return fn:call(r) end
 	end
 end
 
@@ -492,8 +515,10 @@ defineProtoNativeFn("Block", "neq", "!=")
 defineProtoNativeFn("Block", "pipe", "|>")
 defineProtoNativeFn("Block", "clone")
 defineProtoNativeFn("Block", "keys")
+defineProtoNativeFn("Block", "protos")
+defineProtoNativeFn("Block", "is")
 
-stdlib.Function.proto:setHere("()", stdlib.Function)
+defineProtoNativeFn("Function", "call", "()")
 defineProtoNativeFn("Function", "compose", "o")
 defineProtoNativeFn("Function", "curry")
 

@@ -4,7 +4,7 @@ expression	= control ;
 (* Expressions *)
 control		= 'if' expression ':' statement ['else' statement]
 			| 'while' expression ':' statement
-			| 'for' paramlist 'in' expression ':' statement
+			| 'for' patlist 'in' expression ':' statement
 			| function ;
 function	= fn | disjunction ;
 disjunction	= conjunction {'or' conjunction} ;
@@ -27,15 +27,26 @@ statement	= 'return' [explist]
 			| 'break' {'break'} [explist]
 			| 'continue'
 			| ';'
+			| definition ;
+definition	= {modifier} (Identifier {',' Identifier}) ['=' explist | fn]
 			| assignment ;
-assignment	= {modifier} explist ['=' explist | fn]
+assignment	= patlist ['=' explist | fn]
 			| expression ;
 
+(* Patterns *)
+pattern		= Identifier | Number | String | grouppat | listpat | blockpat ;
+grouppat	= '(' patexpseq [restpat] patexpseq ')' ;
+listpat		= '[' patexpseq [restpat] patexpseq ']' ;
+blockpat	= '{' patstatseq [restpat] patstatseq '}' ;
+# varpat		= '\(' Identifier ')' ;
+restpat		= '...' Identifier ;
+patexpseq	= {pattern | ','} ;
+patstatseq	= {Identifier '=' expression | Identifier | ';'} ;
+
 (* Smaller components *)
-fn			= (Identifier | '(' paramlist ')') '=>' expression ;
+fn			= pattern '=>' expression ;
 expseq		= {primary '=' expression | expression | ','} ;
 statseq		= {statement} ;
 explist		= expression {',' expression} ;
-paramlist	= param {',' param} ;
-param		= ['...'] Identifier ;
-modifier	= 'var' | 'const' | 'static' | 'instance' ;
+patlist		= pattern {',' pattern} ;
+modifier	= 'var' | 'const' ;

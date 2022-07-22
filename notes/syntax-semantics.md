@@ -8,6 +8,8 @@ https://luau-lang.org/
 To-Do / roadmap / proposals
 ---------------------------
 (*roughly* in order of importance)
+- Set `this` on all functions
+  - "global" functions and functions in current scope get current block as `this`
 - Classical vs prototypal inheritance
   - Prototypal is simpler but less flexible: cannot set different methods
     for static and instance
@@ -103,6 +105,19 @@ To-Do / roadmap / proposals
   - match against values, number of values, lists, blocks, types, (destructuring), ...
     - default implementation of match operator `~~` is equality, `within` for ranges, ...
   - problem: now need to execute match operator functions to decide which function to call
+    - solution: no match operator, so not overloadable
+  - value:                `42 -> ...`
+  - variable:             `x -> ...`
+  - multiple variables:   `(x, y) -> ...`
+  - all variables:        `(...x) -> ...`
+  - var with rest:        `(x, ...y, z) -> ...`
+  - variable as value:    `\(x) -> ...`
+  - lists:                `[x, y] -> ...`
+  - blocks:               `{ x, y } -> ...`
+  - blocks with values    `{ x = 10 } -> ...`
+  - blocks with renaming? `{ x = a } -> ...` (don't know if this or swapped: `a = x`)
+  - types?                `(x: String) -> ...`
+  - composite structures: `[{x1, y1}, {x2, y2}] -> ...`,  `[10, x] -> ...`,  `[\(x)] -> ...`
 - Coroutines
 - Allow single vararg anywhere in function signature
   - Important to allow only *one* vararg

@@ -354,45 +354,13 @@ function AST.Expr.Function:evaluate(env)
 end
 
 function AST.Expr.Function:call(env, arguments)
-	for i, parameter in ipairs(self.parameters.expressions) do
-		local argument = arguments[i]
-		if parameter.__name == "Variable" then
-			env:setHere(parameter.token.lexeme, argument or stdlib.Nil(self.loc))
-		elseif parameter.__name == "Call"
-				and parameter.expression.__name == "Index"
-				and parameter.expression.expr.__name == "Literal"
-				and parameter.expression.expr.lexeme == "..."
-				and parameter.expression.base.__name == "Variable" then
-			local list = stdlib.List()
-			for j = i, #arguments do
-				list:push(arguments[j])
-			end
-			env:setHere(parameter.expression.base.token.lexeme, list)
-			break
-		else
-			Interpreter.error("invalid parameter type", self.loc)
-		end
-	end
-	
+	self.parameters:evaluate(env, arguments)
 	return self.body:evaluate(env)
 end
 
 function AST.Expr.Function:resolve(scope)
 	local childScope = {this = true, parent = {parent = scope}}
-	for _, parameter in ipairs(self.parameters.expressions) do
-		if parameter.__name == "Variable" then
-			childScope[parameter.token.lexeme] = true
-		elseif parameter.__name == "Call"
-				and parameter.expression.__name == "Index"
-				and parameter.expression.expr.__name == "Literal"
-				and parameter.expression.expr.lexeme == "..."
-				and parameter.expression.base.__name == "Variable" then
-			childScope[parameter.expression.base.token.lexeme] = true
-			break
-		else
-			Interpreter.error("invalid parameter type", self.loc)
-		end
-	end
+	self.parameters:resolve(childScope)
 	self.body:resolve(childScope)
 end
 
@@ -494,7 +462,6 @@ end
 
 setmetatable(AST.Expr.If, {
 	__call = function(_, ...) return AST.Expr.If.new(...) end,
-	__index = AST.Expr.Literal,
 })
 
 
@@ -534,7 +501,6 @@ end
 
 setmetatable(AST.Expr.While, {
 	__call = function(_, ...) return AST.Expr.While.new(...) end,
-	__index = AST.Expr.Literal,
 })
 
 
@@ -603,7 +569,6 @@ end
 
 setmetatable(AST.Expr.For, {
 	__call = function(_, ...) return AST.Expr.For.new(...) end,
-	__index = AST.Expr.Literal,
 })
 
 
@@ -781,9 +746,9 @@ AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(targets, expressions, modifiers, predef, loc)
+function AST.Stat.Assignment.new(pattern, expressions, modifiers, predef, loc)
 	local self = {}
-	self.targets = targets
+	self.pattern = pattern
 	self.expressions = AST.Expr.Group(expressions, loc)
 	self.modifiers = modifiers
 	self.predef = predef
@@ -794,66 +759,358 @@ end
 function AST.Stat.Assignment:evaluate(env)
 	local values = {self.expressions:evaluate(env)}
 	
-	for i, target in ipairs(self.targets) do
-		local value = values[i] or stdlib.Nil(self.loc)
-		if target.setSelf then
-			target:setSelf(env, value, self.modifiers)
-		else
-			env:setHere(target:evaluate(env), value, self.modifiers)
-		end
-	end
+	self.pattern:evaluate(env, values)
+	
+	-- TODO: handle converting to nil
+	-- for i, target in ipairs(self.targets) do
+	-- 	local value = values[i] or stdlib.Nil(self.loc)
+	-- 	if target.setSelf then
+	-- 		target:setSelf(env, value, self.modifiers)
+	-- 	else
+	-- 		env:setHere(target:evaluate(env), value, self.modifiers)
+	-- 	end
+	-- end
 end
 
 function AST.Stat.Assignment:resolve(scope)
 	if self.predef then
-		for _, target in ipairs(self.targets) do
-			if target.__name == "Literal" then
-				scope[target.lexeme] = true
-			elseif target.__name == "Variable" then
-				scope[target.token.lexeme] = true
-			elseif target.__name == "Index" then
-				-- Ignore
-			end
-		end
+		self.pattern:resolve(scope)
+		-- for _, target in ipairs(self.targets) do
+		-- 	if target.__name == "Literal" then
+		-- 		scope[target.lexeme] = true
+		-- 	elseif target.__name == "Variable" then
+		-- 		scope[target.token.lexeme] = true
+		-- 	elseif target.__name == "Index" then
+		-- 		-- Ignore
+		-- 	end
+		-- end
 	end
 	
 	self.expressions:resolve(scope)
 	
-	for _, target in ipairs(self.targets) do
-		local resolved
-		if self.modifiers.empty then
-			resolved = pcall(target.resolve, target, scope)
-		end
-		if not resolved then
-			if target.__name == "Literal" then
-				scope[target.lexeme] = true
-				target.level = 0
-			elseif target.__name == "Variable" then
-				scope[target.token.lexeme] = true
-				target.level = 0
-			elseif target.__name == "Index" then
-				target:resolve(scope)
-			end
-		end
-	end
+	self.pattern:resolve(scope)
+	
+	-- for _, target in ipairs(self.targets) do
+	-- 	local resolved
+	-- 	if self.modifiers.empty then
+	-- 		resolved = pcall(target.resolve, target, scope)
+	-- 	end
+	-- 	if not resolved then
+	-- 		if target.__name == "Literal" then
+	-- 			scope[target.lexeme] = true
+	-- 			target.level = 0
+	-- 		elseif target.__name == "Variable" then
+	-- 			scope[target.token.lexeme] = true
+	-- 			target.level = 0
+	-- 		elseif target.__name == "Index" then
+	-- 			target:resolve(scope)
+	-- 		end
+	-- 	end
+	-- end
 end
 
 function AST.Stat.Assignment:debug(indent)
 	return debugValue(indent, self.__name,
 		{modifiers = self.modifiers, predef = self.predef},
-		{targets = self.targets, expressions = self.expressions.expressions})
+		{target = {self.pattern}, expressions = self.expressions.expressions})
 end
 
 function AST.Stat.Assignment:__tostring()
-	local targets = {}
-	for _, target in ipairs(self.targets) do
-		table.insert(targets, tostring(target))
-	end
-	return table.concat(targets, ", ").." = "..self.expressions:__tostring()
+	return self.pattern:__tostring().." = "..self.expressions:__tostring()
 end
 
 setmetatable(AST.Stat.Assignment, {
 	__call = function(_, ...) return AST.Stat.Assignment.new(...) end,
+})
+
+
+
+AST.Pattern = {}
+AST.Pattern.__index = AST.Pattern
+AST.Pattern.__name = "Pattern"
+
+function AST.Pattern.new(expr)
+	if expr.__name == "Variable" then
+		return AST.Pattern.Variable(expr.token, expr.loc)
+	elseif expr.__name == "Literal" then
+		return AST.Pattern.Literal(expr.literal, expr.loc)
+	elseif expr.__name == "Group" then
+		return AST.Pattern.Group(expr.expressions, expr.loc)
+	elseif expr.__name == "List" then
+		return AST.Pattern.List(expr.expressions.expressions, expr.loc)
+	elseif expr.__name == "Block" then
+		return AST.Pattern.Block(expr.statements, expr.loc)
+	elseif expr.__name == "Call"
+			and expr.expression.__name == "Index"
+			and expr.expression.expr.__name == "Literal"
+			and expr.expression.expr.lexeme == "..."
+			and expr.expression.base.__name == "Variable" then
+		return AST.Pattern.Rest(expr.expression.base.token, expr.expression.base.loc)
+	end
+end
+
+setmetatable(AST.Pattern, {
+	__call = function(_, ...) return AST.Pattern.new(...) end,
+})
+
+
+
+AST.Pattern.Variable = {}
+AST.Pattern.Variable.__index = AST.Pattern.Variable
+AST.Pattern.Variable.__name = "VariablePattern"
+
+function AST.Pattern.Variable.new(token, loc)
+	local self = {}
+	self.token = token
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.Variable)
+end
+
+function AST.Pattern.Variable:evaluate(env, arguments)
+	env:setAtLevel(self.token.lexeme, table.remove(arguments, 1), nil, 0)
+	return true
+end
+
+function AST.Pattern.Variable:resolve(scope)
+	scope[self.token.lexeme] = true
+end
+
+function AST.Pattern.Variable:setSelf(env, value, modifiers)
+	env:setAtLevel(self.token.lexeme, value, modifiers, 0)
+end
+
+function AST.Pattern.Variable:debug(indent)
+	return debugValue(indent, self.__name, {token = self.token.lexeme}, {})
+end
+
+AST.Pattern.Variable.__tostring = AST.Expr.Variable.__tostring
+
+setmetatable(AST.Pattern.Variable, {
+	__call = function(_, ...) return AST.Pattern.Variable.new(...) end,
+})
+
+
+
+AST.Pattern.Literal = {}
+AST.Pattern.Literal.__index = AST.Pattern.Literal
+AST.Pattern.Literal.__name = "LiteralPattern"
+
+function AST.Pattern.Literal.new(literal, loc)
+	local self = {}
+	self.literal = literal
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.Literal)
+end
+
+function AST.Pattern.Literal:evaluate(env, arguments)
+	if arguments[1].__name == "Literal" and arguments[1].literal == self.literal then
+		-- TODO: argue whether this is correct behaviour (e.g. for function parameters)
+		env:setAtLevel(self.literal, table.remove(arguments, 1), nil, 0)
+	end
+end
+
+function AST.Pattern.Literal:resolve(scope) end
+
+function AST.Pattern.Literal:setSelf(env, value, modifiers)
+	env:setAtLevel(self.literal, value, modifiers, 0)
+end
+
+function AST.Pattern.Literal:debug(indent)
+	return debugValue(indent, self.__name, {literal = self.literal}, {})
+end
+
+AST.Pattern.Literal.__tostring = AST.Expr.Literal.__tostring
+
+setmetatable(AST.Pattern.Literal, {
+	__call = function(_, ...) return AST.Pattern.Literal.new(...) end,
+})
+
+
+
+AST.Pattern.Group = {}
+AST.Pattern.Group.__index = AST.Pattern.Group
+AST.Pattern.Group.__name = "GroupPattern"
+
+function AST.Pattern.Group.new(patterns, loc)
+	local self = {}
+	self.patterns = {}
+	for i, pattern in ipairs(patterns) do
+		self.patterns[i] = AST.Pattern(pattern)
+	end
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.Group)
+end
+
+function AST.Pattern.Group:evaluate(env, arguments)
+	for _, pattern in ipairs(self.patterns) do
+		if not pattern:evaluate(env, arguments) then return false end
+	end
+	return true
+end
+
+function AST.Pattern.Group:resolve(scope)
+	for _, pattern in ipairs(self.patterns) do
+		pattern:resolve(scope)
+	end
+end
+
+function AST.Pattern.Group:setSelf(env, value, modifiers)
+	for i, pattern in ipairs(self.patterns) do
+		pattern:setSelf(env, value[i], modifiers)
+	end
+end
+
+function AST.Pattern.Group:debug(indent)
+	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
+end
+
+function AST.Pattern.Group:__tostring()
+	local patterns = {}
+	for _, expr in ipairs(self.patterns) do
+		table.insert(patterns, tostring(expr))
+	end
+	return table.concat(patterns, ", ")
+end
+
+setmetatable(AST.Pattern.Group, {
+	__call = function(_, ...) return AST.Pattern.Group.new(...) end,
+})
+
+
+
+AST.Pattern.List = {}
+AST.Pattern.List.__index = AST.Pattern.List
+AST.Pattern.List.__name = "ListPattern"
+
+function AST.Pattern.List.new(patterns, loc)
+	local self = {}
+	self.patterns = {}
+	for i, pattern in ipairs(patterns) do
+		self.patterns[i] = AST.Pattern(pattern)
+	end
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.List)
+end
+
+function AST.Pattern.List:evaluate(env, arguments)
+	local arg = arguments[1]
+	if not arg then return end
+	local values = {}
+	for _, value in ipairs(arg.environment.env) do
+		table.insert(values, value.value)
+	end
+	for _, pattern in ipairs(self.patterns) do
+		if not pattern:evaluate(env, values) then return false end
+	end
+	return true
+end
+
+function AST.Pattern.List:resolve(scope)
+	for _, pattern in ipairs(self.patterns) do
+		pattern:resolve(scope)
+	end
+end
+
+function AST.Pattern.List:debug(indent)
+	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
+end
+
+function AST.Pattern.Group:__tostring()
+	local patterns = {}
+	for _, expr in ipairs(self.patterns) do
+		table.insert(patterns, tostring(expr))
+	end
+	return "["..table.concat(patterns, ", ").."]"
+end
+
+setmetatable(AST.Pattern.List, {
+	__call = function(_, ...) return AST.Pattern.List.new(...) end,
+})
+
+
+
+AST.Pattern.Block = {}
+AST.Pattern.Block.__index = AST.Pattern.Block
+AST.Pattern.Block.__name = "BlockPattern"
+
+function AST.Pattern.Block.new(patterns, loc)
+	local self = {}
+	self.patterns = {}
+	for i, pattern in ipairs(patterns) do
+		self.patterns[i] = AST.Pattern(pattern)
+		if not self.patterns[i] then return nil end
+		if self.patterns[i].__name ~= "VariablePattern" then
+			Interpreter.error("invalid pattern", self.patterns[i].loc)
+		end
+	end
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.Block)
+end
+
+function AST.Pattern.Block:evaluate(env, arguments)
+	local arg = arguments[1]
+	for i, pattern in ipairs(self.patterns) do
+		if not pattern:evaluate(env, {arg:get(pattern.token.lexeme)}) then return false end
+	end
+	return true
+end
+
+function AST.Pattern.Block:resolve(scope)
+	for _, pattern in ipairs(self.patterns) do
+		pattern:resolve(scope)
+	end
+end
+
+function AST.Pattern.Block:debug(indent)
+	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
+end
+
+function AST.Pattern.Group:__tostring()
+	local patterns = {}
+	for _, expr in ipairs(self.patterns) do
+		table.insert(patterns, tostring(expr))
+	end
+	return "{"..table.concat(patterns, ", ").."}"
+end
+
+setmetatable(AST.Pattern.Block, {
+	__call = function(_, ...) return AST.Pattern.Block.new(...) end,
+})
+
+
+
+AST.Pattern.Rest = {}
+AST.Pattern.Rest.__index = AST.Pattern.Rest
+AST.Pattern.Rest.__name = "RestPattern"
+
+function AST.Pattern.Rest.new(token, loc)
+	local self = {}
+	self.token = token
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.Rest)
+end
+
+function AST.Pattern.Rest:evaluate(env, arguments)
+	local list = stdlib.List()
+	for _, value in ipairs(arguments) do list:push(value) end
+	env:setAtLevel(self.token.lexeme, list, nil, 0)
+	return true
+end
+
+function AST.Pattern.Rest:resolve(scope)
+	scope[self.token.lexeme] = true
+end
+
+function AST.Pattern.Rest:debug(indent)
+	return debugValue(indent, self.__name, {token = self.token}, {})
+end
+
+function AST.Pattern.Rest:__tostring()
+	return "..."..self.token.lexeme
+end
+
+setmetatable(AST.Pattern.Rest, {
+	__call = function(_, ...) return AST.Pattern.Rest.new(...) end,
 })
 
 

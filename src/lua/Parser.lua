@@ -146,6 +146,7 @@ function Parser:whileExpr(loc)
 end
 
 function Parser:forExpr(loc)
+	-- TODO: use patterns
 	local variables = self:expseq("in")
 	local expr = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
@@ -154,25 +155,42 @@ function Parser:forExpr(loc)
 end
 
 function Parser:func()
-	local loc = self:loc(self:peek())
 	local expr = self:disjunction()
+	local pattern = AST.Pattern(expr)
 	
-	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
+	if expr and self:match {"equal greater"} then
 		local arrow = self:previous()
-		local body = self:expression()
-		-- Check if expression is variable or group of variables
-		if expr.__name == "Variable" then -- arg => body
-			return AST.Expr.Function(AST.Expr.Group({expr}, loc), body, self:loc(arrow))
-		elseif expr.__name == "Group" then -- (arg, arg) => body
-			return AST.Expr.Function(expr, body, self:loc(arrow))
-		else
-			self:error(arrow, "Invalid function parameter: "..expr.__name)
+		if not pattern then
+			self:error(arrow, "Invalid function pattern: "..expr.__name)
 		end
+		local body = self:expression()
+		
+		return AST.Expr.Function(pattern, body, self:loc(arrow))
 	end
-	-- other case: name arg => body  or  name(arg, arg) => body
 	
 	return expr
 end
+
+-- function Parser:func()
+-- 	local loc = self:loc(self:peek())
+-- 	local expr = self:disjunction()
+	
+-- 	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
+-- 		local arrow = self:previous()
+-- 		local body = self:expression()
+-- 		-- Check if expression is variable or group of variables
+-- 		if expr.__name == "Variable" then -- arg => body
+-- 			return AST.Expr.Function(AST.Expr.Group({expr}, loc), body, self:loc(arrow))
+-- 		elseif expr.__name == "Group" then -- (arg, arg) => body
+-- 			return AST.Expr.Function(expr, body, self:loc(arrow))
+-- 		else
+-- 			self:error(arrow, "Invalid function parameter: "..expr.__name)
+-- 		end
+-- 	end
+-- 	-- other case: name arg => body  or  name(arg, arg) => body
+	
+-- 	return expr
+-- end
 
 function Parser:disjunction()
 	return self:binary({"or"}, Parser.conjunction, AST.Expr.Logical)
@@ -348,8 +366,8 @@ function Parser:assignment(isExpr)
 	local isAssignment, isFunction = false, false
 	local loc = self:loc(self:peek())
 	
-	-- Match modifiers: `var`, `const`, `static`, `instance`
-	while self:match {"var", "const", "static", "instance"} do
+	-- Match modifiers: `var`, `const`
+	while self:match {"var", "const"} do
 		local mod = self:previous().type
 		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
 		modifiers[mod] = true
@@ -357,10 +375,11 @@ function Parser:assignment(isExpr)
 	end
 	
 	-- Match assignment target
-	local variables = isExpr
+	local patterns = isExpr
 		and {self:expression()}
 		or self:anylist(self.expression, "expression", true)
-	local expr = variables[1]
+	local pattern = AST.Pattern.Group(patterns)
+	local expr = patterns[1]
 	
 	if self:match {"equal"} then -- a = b
 		isAssignment = true
@@ -368,8 +387,8 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()
-	elseif modifiers.var or modifiers.const or modifiers.static or modifiers.instance then -- var a
-		return AST.Stat.Assignment(variables, {}, modifiers, false, loc)
+	elseif not modifiers.empty then -- var a, const a
+		return AST.Stat.Assignment(pattern, {}, modifiers, false, loc)
 	end
 	
 	if isAssignment or isFunction then
@@ -379,16 +398,16 @@ function Parser:assignment(isExpr)
 			and {self:expression()}
 			or self:anylist(self.expression, "expression", true)
 		if isAssignment then
-			return AST.Stat.Assignment(variables, values, modifiers, false, loc)
-		elseif isFunction and expr.__name == "Call" and #variables == 1 then
+			return AST.Stat.Assignment(pattern, values, modifiers, false, loc)
+		elseif isFunction and expr.__name == "Call" and #patterns == 1 then
 			local name, parameters = expr.expression, expr.arglist
-			if parameters.__name == "Variable" then -- name arg => body
-				parameters = AST.Expr.Group({parameters}, loc)
-			elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
-				self:error(equal, "Invalid function parameter: "..parameters.__name)
-			end
+			-- if parameters.__name == "Variable" then -- name arg => body
+			-- 	parameters = AST.Expr.Group({parameters}, loc)
+			-- elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
+			-- 	self:error(equal, "Invalid function parameter: "..parameters.__name)
+			-- end
 			return AST.Stat.Assignment(
-				{name}, {AST.Expr.Function(parameters, values[1], loc)},
+				AST.Pattern(name), {AST.Expr.Function(parameters, values[1], loc)},
 				modifiers, true, loc)
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)

@@ -1,6 +1,9 @@
 local lfs = require "lfs"
 local has_tc, tc = pcall(require, "terminalcolours")
 
+local TIMEOUT = 0.5
+local MAX_LINES = 10
+
 local status = {}
 local checkmark = "\xE2\x9C\x93"
 local cross = "\xE2\x9C\x98"
@@ -39,6 +42,22 @@ local function check(file)
 	end
 end
 
+local function truncate(output, lines)
+	if #output > lines then
+		return true, table.concat(output, nil, 1, lines//2)
+				.."[..."..(#output-lines).." lines skipped...]\n"
+				..table.concat(output, nil, #output - lines//2 + 1)
+	else
+		return false, table.concat(output)
+	end
+end
+
+local function makeWatchdogFunction(timeout)
+	return function()
+		if os.clock() > timeout then error "timeout" end
+	end
+end
+
 local run = loadfile(basePath.."/lua/language.lua", "bt", setmetatable({}, {
 	__index = function(_, k)
 		return k == "print" and function() end or _G[k]
@@ -57,14 +76,16 @@ for test in lfs.dir(basePath.."/test/") do
 			correct, output, print = check(file)
 		end
 		
-		local success, err = pcall(run, path)
+		local runCoro = coroutine.create(run)
+		debug.sethook(runCoro, makeWatchdogFunction(os.clock() + TIMEOUT), "", 1e6)
+		local success, err = coroutine.resume(runCoro, path)
 		if not success then print(err) end
 		
 		if output then
-			output = table.concat(output)
-			if output ~= correct then
+			if table.concat(output) ~= correct then
+				local truncated, output = truncate(output, MAX_LINES)
 				oldPrint(status.fail..test)
-				oldPrint("output:\n"..output)
+				oldPrint("output:"..(truncated and " (truncated)\n" or "\n")..output)
 				oldPrint("correct:\n"..correct)
 			else
 				oldPrint(status.succeed..test)

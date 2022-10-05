@@ -32,7 +32,11 @@ To-Do / roadmap / proposals
 		
 		doggo = Dog with { name = "Doggo" }
 		doggo = with Dog { name = "Doggo" }
-- Use comma instead of colon for if/for/while condition/body separator (like Jammy)
+- Separator for if/for/while condition and body
+  - Words (Lua):    `if condition then body`,  `for var in val do body`
+  - Colon (Python): `if condition: body`,      `for var in val: body`
+  - Comma (Jammy):  `if condition, body`,      `for var in val, body`
+  - Brackets (C):   `if (condition) body`,     `for (var in val) body`
 - How to recognise an object as an instance of a class?
   - Simple: look in prototype chain
   - Advanced / more flexible: structural typing

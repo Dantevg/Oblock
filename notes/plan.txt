@@ -14,6 +14,9 @@ Generalised semi-OOP language with optional typing
 Versions:
 0.0.1 Basic blocks, basic statements, basic expressions
 0.1   Functions, control flow, rest of blocks, statements and expressions
-0.2   Classes and instances, operators and overloading
+0.2   Prototypes, operators and overloading
 0.3   Modifiers and syntax sugar, parameter things
-0.4   Optional types, standard library
+0.4   Standard library
+0.5   Pattern matching, destructuring, compound assignment
+0.5   Coroutines
+...   Optional types?

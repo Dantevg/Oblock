@@ -38,7 +38,7 @@ pattern		= Identifier | Number | String | grouppat | listpat | blockpat ;
 grouppat	= '(' patexpseq [restpat] patexpseq ')' ;
 listpat		= '[' patexpseq [restpat] patexpseq ']' ;
 blockpat	= '{' patstatseq [restpat] patstatseq '}' ;
-# varpat		= '\(' Identifier ')' ;
+(* varpat		= '\(' Identifier ')' ; *)
 restpat		= '...' Identifier ;
 patexpseq	= {pattern | ','} ;
 patstatseq	= {Identifier '=' expression | Identifier | ';'} ;

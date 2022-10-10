@@ -126,10 +126,11 @@ stdlib.Function.__name = "Function"
 
 stdlib.Function.proto = stdlib.Block()
 
-function stdlib.Function.new(parent, body, name)
+function stdlib.Function.new(parent, body, name, parameters)
 	local self = stdlib.Block(parent)
 	self.body = body
 	self.name = name
+	self.parameters = parameters
 	self:setHere("_Proto", stdlib.Function.proto)
 	return setmetatable(self, stdlib.Function)
 end
@@ -193,8 +194,8 @@ stdlib.NativeFunction.__name = "NativeFunction"
 
 stdlib.NativeFunction.proto = stdlib.Function.proto:clone()
 
-function stdlib.NativeFunction.new(body, name)
-	local self = stdlib.Function(nil, body, name)
+function stdlib.NativeFunction.new(body, name, parameters)
+	local self = stdlib.Function(nil, body, name, parameters)
 	return setmetatable(self, stdlib.NativeFunction)
 end
 

@@ -56,6 +56,14 @@ To-Do / roadmap / proposals
     		}
     	}
     Calling `myDog.greet()` will return an empty object with `_Proto = myDog`
+- Variables immutable by default (`const` by default)
+  - Most variables can be `const`
+  - Shorthand notation for mutable blocks: (`a` and `b` are `var` here)
+    
+    	obj = var {
+    		a = 10
+    		b = 20
+    	}
 - Immutable values
   - Value that cannot change, as opposed to variable that cannot be reassigned
   - Immutable value means that every containing field is immutable

@@ -158,7 +158,7 @@ function Parser:func()
 	local expr = self:disjunction()
 	local pattern = AST.Pattern(expr)
 	
-	if expr and self:match {"equal greater"} then
+	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
 		local arrow = self:previous()
 		if not pattern then
 			self:error(arrow, "Invalid function pattern: "..expr.__name)
@@ -400,7 +400,7 @@ function Parser:assignment(isExpr)
 		if isAssignment then
 			return AST.Stat.Assignment(pattern, values, modifiers, false, loc)
 		elseif isFunction and expr.__name == "Call" and #patterns == 1 then
-			local name, parameters = expr.expression, expr.arglist
+			local name, parameters = expr.expression, AST.Pattern(expr.arglist)
 			-- if parameters.__name == "Variable" then -- name arg => body
 			-- 	parameters = AST.Expr.Group({parameters}, loc)
 			-- elseif parameters.__name ~= "Group" then -- name(arg, arg) => body

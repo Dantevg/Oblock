@@ -24,7 +24,11 @@ local function debugValue(indent, name, properties, nodelists)
 	if not pretty then
 		local success
 		success, pretty = pcall(require, "pretty")
-		if not success then pretty = tostring end
+		if success then
+			pretty = pretty.new {deep = 5}
+		else
+			pretty = tostring
+		end
 	end
 	if not tc then
 		local success
@@ -348,13 +352,13 @@ end
 function AST.Expr.Function:evaluate(env)
 	local fn = stdlib.Function(env, function(environment, args)
 		return self:call(environment, args)
-	end)
+	end, nil, self.parameters)
 	function fn.__tostring() return self:__tostring() end
 	return fn
 end
 
 function AST.Expr.Function:call(env, arguments)
-	self.parameters:evaluate(env, arguments)
+	self.parameters:matchEvaluate(env, arguments)
 	return self.body:evaluate(env)
 end
 
@@ -366,7 +370,7 @@ end
 
 function AST.Expr.Function:debug(indent)
 	return debugValue(indent, self.__name, {},
-		{parameters = self.parameters.expressions, body = {self.body}})
+		{parameters = {self.parameters}, body = {self.body}})
 end
 
 function AST.Expr.Function:__tostring()
@@ -397,7 +401,14 @@ function AST.Expr.Call:evaluate(env)
 		Interpreter.error("Attempt to call non-callable type "
 			..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
 	end
-	return fn:call(self.arglist:evaluate(env))
+	local args = {self.arglist:evaluate(env)}
+	local argsToMatch = {}
+	for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
+	if fn.parameters and not fn.parameters:match(env, argsToMatch) then
+		Interpreter.error("function parameters do not match parameter signature "..tostring(fn.parameters), self.loc)
+		return stdlib.Nil(self.loc)
+	end
+	return fn:call(table.unpack(args))
 end
 
 function AST.Expr.Call:resolve(scope)
@@ -832,6 +843,8 @@ AST.Pattern.__name = "Pattern"
 function AST.Pattern.new(expr)
 	if expr.__name == "Variable" then
 		return AST.Pattern.Variable(expr.token, expr.loc)
+	elseif expr.__name == "Index" then
+		return AST.Pattern.Index(expr.base, expr.expr, expr.loc)
 	elseif expr.__name == "Literal" then
 		return AST.Pattern.Literal(expr.literal, expr.loc)
 	elseif expr.__name == "Group" then
@@ -867,12 +880,21 @@ function AST.Pattern.Variable.new(token, loc)
 end
 
 function AST.Pattern.Variable:evaluate(env, arguments)
-	env:setAtLevel(self.token.lexeme, table.remove(arguments, 1), nil, 0)
+	env:setAtLevel(self.token.lexeme, table.remove(arguments, 1), nil, self.level)
 	return true
 end
 
-function AST.Pattern.Variable:resolve(scope)
-	scope[self.token.lexeme] = true
+function AST.Pattern.Variable:match(env, arguments)
+	return not not table.remove(arguments, 1)
+end
+
+function AST.Pattern.Variable:resolve(scope, inMatch)
+	if inMatch then
+		scope[self.token.lexeme] = true
+		self.level = 0
+	else
+		AST.Expr.Variable.resolve(self, scope)
+	end
 end
 
 function AST.Pattern.Variable:setSelf(env, value, modifiers)
@@ -891,6 +913,61 @@ setmetatable(AST.Pattern.Variable, {
 
 
 
+AST.Pattern.Index = {}
+AST.Pattern.Index.__index = AST.Pattern.Index
+AST.Pattern.Index.__name = "IndexPattern"
+
+function AST.Pattern.Index.new(base, expr, loc)
+	local self = {}
+	self.base = base
+	self.expr = expr
+	self.loc = loc
+	return setmetatable(self, AST.Pattern.Index)
+end
+
+function AST.Pattern.Index:evaluate(env, arguments)
+	local arg = table.remove(arguments, 1); -- require ';' because next line starts with '('
+	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), arg, nil, 0)
+	return true
+end
+
+function AST.Pattern.Index:matchEvaluate(env, arguments)
+	local arg = table.remove(arguments, 1); -- require ';' because next line starts with '('
+	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), arg, nil, 0)
+	return true
+end
+
+function AST.Pattern.Index:match(env, arguments)
+	-- TODO: implement index matching
+	return false
+end
+
+function AST.Pattern.Index:setSelf(env, value, modifiers)
+	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), value, modifiers, 0)
+end
+
+function AST.Pattern.Index:resolve(scope, inMatch)
+	if inMatch then
+		if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
+	else
+		AST.Expr.Index.resolve(self, scope)
+	end
+end
+
+function AST.Pattern.Index:debug(indent)
+	return debugValue(indent, self.__name, {}, {base = {self.base}, expr = {self.expr}})
+end
+
+function AST.Pattern.Index:__tostring()
+	return tostring(self.base or "").."."..tostring(self.expr)
+end
+
+setmetatable(AST.Pattern.Index, {
+	__call = function(_, ...) return AST.Pattern.Index.new(...) end,
+})
+
+
+
 AST.Pattern.Literal = {}
 AST.Pattern.Literal.__index = AST.Pattern.Literal
 AST.Pattern.Literal.__name = "LiteralPattern"
@@ -903,10 +980,13 @@ function AST.Pattern.Literal.new(literal, loc)
 end
 
 function AST.Pattern.Literal:evaluate(env, arguments)
-	if arguments[1].__name == "Literal" and arguments[1].literal == self.literal then
-		-- TODO: argue whether this is correct behaviour (e.g. for function parameters)
-		env:setAtLevel(self.literal, table.remove(arguments, 1), nil, 0)
-	end
+	env:setAtLevel(self.literal, table.remove(arguments, 1), nil, 0)
+	return true
+end
+
+function AST.Pattern.Literal:match(env, arguments)
+	local value = table.remove(arguments, 1)
+	return value and value.__name == "Literal" and value.literal == self.literal
 end
 
 function AST.Pattern.Literal:resolve(scope) end
@@ -948,9 +1028,16 @@ function AST.Pattern.Group:evaluate(env, arguments)
 	return true
 end
 
-function AST.Pattern.Group:resolve(scope)
+function AST.Pattern.Group:match(env, arguments)
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope)
+		if not pattern:match(env, arguments) then return false end
+	end
+	return true
+end
+
+function AST.Pattern.Group:resolve(scope, inMatch)
+	for _, pattern in ipairs(self.patterns) do
+		pattern:resolve(scope, inMatch)
 	end
 end
 
@@ -993,7 +1080,7 @@ function AST.Pattern.List.new(patterns, loc)
 end
 
 function AST.Pattern.List:evaluate(env, arguments)
-	local arg = arguments[1]
+	local arg = table.remove(arguments, 1)
 	if not arg then return end
 	local values = {}
 	for _, value in ipairs(arg.environment.env) do
@@ -1005,9 +1092,22 @@ function AST.Pattern.List:evaluate(env, arguments)
 	return true
 end
 
-function AST.Pattern.List:resolve(scope)
+function AST.Pattern.List:match(env, arguments)
+	local arg = table.remove(arguments, 1)
+	if not arg or arg.__name ~= "List" then return false end
+	local values = {}
+	for _, value in ipairs(arg.environment.env) do
+		table.insert(values, value.value)
+	end
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope)
+		if not pattern:match(env, values) then return false end
+	end
+	return true
+end
+
+function AST.Pattern.List:resolve(scope, inMatch)
+	for _, pattern in ipairs(self.patterns) do
+		pattern:resolve(scope, inMatch)
 	end
 end
 
@@ -1048,16 +1148,24 @@ function AST.Pattern.Block.new(patterns, loc)
 end
 
 function AST.Pattern.Block:evaluate(env, arguments)
-	local arg = arguments[1]
+	local arg = table.remove(arguments, 1)
 	for i, pattern in ipairs(self.patterns) do
 		if not pattern:evaluate(env, {arg:get(pattern.token.lexeme)}) then return false end
 	end
 	return true
 end
 
-function AST.Pattern.Block:resolve(scope)
+function AST.Pattern.Block:match(env, arguments)
+	local arg = table.remove(arguments, 1)
+	for i, pattern in ipairs(self.patterns) do
+		if not pattern:match(env, {arg:get(pattern.token.lexeme)}) then return false end
+	end
+	return true
+end
+
+function AST.Pattern.Block:resolve(scope, inMatch)
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope)
+		pattern:resolve(scope, inMatch)
 	end
 end
 
@@ -1070,7 +1178,7 @@ function AST.Pattern.Group:__tostring()
 	for _, expr in ipairs(self.patterns) do
 		table.insert(patterns, tostring(expr))
 	end
-	return "{"..table.concat(patterns, ", ").."}"
+	return "("..table.concat(patterns, ", ")..")"
 end
 
 setmetatable(AST.Pattern.Block, {
@@ -1092,8 +1200,12 @@ end
 
 function AST.Pattern.Rest:evaluate(env, arguments)
 	local list = stdlib.List()
-	for _, value in ipairs(arguments) do list:push(value) end
+	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
 	env:setAtLevel(self.token.lexeme, list, nil, 0)
+	return true
+end
+
+function AST.Pattern.Rest:match(env, arguments)
 	return true
 end
 

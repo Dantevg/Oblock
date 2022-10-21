@@ -93,13 +93,13 @@ function Parser:binary(tokens, next, fn)
 end
 
 function Parser:parse()
-	local success, result = pcall(function()
+	local success, result = xpcall(function()
 		local expr = self:expression()
 		if self:peek().type ~= "EOF" then
 			self:error(self:peek(), "Expected EOF")
 		end
 		return expr
-	end)
+	end, function(msg) print(debug.traceback(tostring(msg))) end)
 	if success then
 		return result
 	elseif result ~= true then
@@ -156,7 +156,7 @@ end
 
 function Parser:func()
 	local expr = self:disjunction()
-	local pattern = AST.Pattern(expr)
+	local pattern = expr and AST.Pattern(expr)
 	
 	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
 		local arrow = self:previous()

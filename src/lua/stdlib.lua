@@ -99,7 +99,7 @@ function stdlib.Block:__tostring()
 		-- Hide "_Proto" key
 		if key ~= "_Proto" then table.insert(strings, key) end
 	end
-	table.sort(strings)
+	table.sort(strings, function(a, b) return tostring(a) < tostring(b) end)
 	
 	for i, key in ipairs(strings) do
 		local value = self.environment.env[key].value

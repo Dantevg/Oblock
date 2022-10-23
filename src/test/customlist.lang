@@ -1,0 +1,31 @@
+{
+	List_ = {
+		length = 0
+		
+		add(item) => {
+			this.length = this.length + 1
+			this.(this.length) = item
+		}
+		
+		iterate() => {
+			i = 0
+			const self = this
+			return () => {
+				i = i + 1
+				return self.(i), i
+			}
+		}
+		
+		toString() => {
+			str = "["
+			for item in this: str = str + item + ", "
+			return str + "]"
+		}
+	}
+	
+	l = List_.clone()
+	l.add("hey")
+	l.add(10)
+	print(l.toString())
+	print ["hey", 10]
+}

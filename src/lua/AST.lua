@@ -520,9 +520,9 @@ AST.Expr.For = {}
 AST.Expr.For.__index = AST.Expr.For
 AST.Expr.For.__name = "For"
 
-function AST.Expr.For.new(targets, expr, body, loc)
+function AST.Expr.For.new(pattern, expr, body, loc)
 	local self = {}
-	self.targets = targets
+	self.pattern = pattern
 	self.expr = expr
 	self.body = body
 	self.loc = loc
@@ -544,16 +544,10 @@ function AST.Expr.For:evaluate(env)
 	end
 	
 	-- Loop: set variable to iterator result, run body if result was non-nil
-	local block = stdlib.Block(env)
 	local values = {iterator:call()}
-	for _, target in ipairs(self.targets) do
-		target:setSelf(block)
-	end
 	while values[1] and values[1].__name ~= "Nil" do
-		for i, target in ipairs(self.targets) do
-			local value = values[i] or stdlib.Nil(self.loc)
-			target:setSelf(block, value)
-		end
+		local block = stdlib.Block(env)
+		self.pattern:define(block, values, {const = true})
 		local breakVals = catchBreakContinue(self.body, block)
 		if breakVals then return table.unpack(breakVals) end
 		values = {iterator:call()}
@@ -563,19 +557,17 @@ end
 function AST.Expr.For:resolve(scope)
 	self.expr:resolve(scope)
 	local childScope = {parent = scope}
-	for _, target in ipairs(self.targets) do
-		childScope[target.token.lexeme] = true
-	end
+	self.pattern:resolve(childScope)
 	self.body:resolve(childScope)
 end
 
 function AST.Expr.For:debug(indent)
-	return debugValue(indent, self.__name, {variable = self.variable},
-		{expression = {self.expr}, body = {self.body}})
+	return debugValue(indent, self.__name, {},
+		{expression = {self.expr}, body = {self.body}, pattern = {self.pattern}})
 end
 
 function AST.Expr.For:__tostring()
-	return string.format("for %s in %s: %s", self.variable, self.expr, self.body)
+	return string.format("for %s in %s: %s", self.pattern, self.expr, self.body)
 end
 
 setmetatable(AST.Expr.For, {
@@ -1168,7 +1160,7 @@ function AST.Pattern.List:debug(indent)
 	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
 end
 
-function AST.Pattern.Group:__tostring()
+function AST.Pattern.List:__tostring()
 	local patterns = {}
 	for _, expr in ipairs(self.patterns) do
 		table.insert(patterns, tostring(expr))
@@ -1244,12 +1236,12 @@ function AST.Pattern.Block:debug(indent)
 	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
 end
 
-function AST.Pattern.Group:__tostring()
+function AST.Pattern.Block:__tostring()
 	local patterns = {}
 	for _, expr in ipairs(self.patterns) do
 		table.insert(patterns, tostring(expr))
 	end
-	return "("..table.concat(patterns, ", ")..")"
+	return "{"..table.concat(patterns, ", ").."}"
 end
 
 setmetatable(AST.Pattern.Block, {

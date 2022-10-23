@@ -146,12 +146,12 @@ function Parser:whileExpr(loc)
 end
 
 function Parser:forExpr(loc)
-	-- TODO: use patterns
-	local variables = self:expseq("in")
+	local pattern = AST.Pattern.Group(self:anylist(self.expression, "expression", true))
+	self:consume("in", "Expected 'in'")
 	local expr = self:assert(self:expression(), "expression")
 	self:consume("colon", "Expected ':'")
 	local body = self:assert(self:statement(), "statement")
-	return AST.Expr.For(variables, expr, body, loc)
+	return AST.Expr.For(pattern, expr, body, loc)
 end
 
 function Parser:func()
@@ -170,27 +170,6 @@ function Parser:func()
 	
 	return expr
 end
-
--- function Parser:func()
--- 	local loc = self:loc(self:peek())
--- 	local expr = self:disjunction()
-	
--- 	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
--- 		local arrow = self:previous()
--- 		local body = self:expression()
--- 		-- Check if expression is variable or group of variables
--- 		if expr.__name == "Variable" then -- arg => body
--- 			return AST.Expr.Function(AST.Expr.Group({expr}, loc), body, self:loc(arrow))
--- 		elseif expr.__name == "Group" then -- (arg, arg) => body
--- 			return AST.Expr.Function(expr, body, self:loc(arrow))
--- 		else
--- 			self:error(arrow, "Invalid function parameter: "..expr.__name)
--- 		end
--- 	end
--- 	-- other case: name arg => body  or  name(arg, arg) => body
-	
--- 	return expr
--- end
 
 function Parser:disjunction()
 	return self:binary({"or"}, Parser.conjunction, AST.Expr.Logical)

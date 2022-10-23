@@ -87,6 +87,7 @@ Interpreter.Environment.__index = Interpreter.Environment
 function Interpreter.Environment.new(parent)
 	local self = {}
 	self.parent = parent
+	self.mutable = true
 	self.env = {}
 	return setmetatable(self, Interpreter.Environment)
 end
@@ -111,6 +112,10 @@ function Interpreter.Environment:updateAnywhere(key, value)
 end
 
 function Interpreter.Environment:setHere(key, value, modifiers)
+	if not self.mutable then
+		Interpreter.error("Attempt to mutate immutable value")
+	end
+	
 	if type(key) == "table" then key = key.value end
 	if self.env[key] then
 		if modifiers ~= nil and not modifiers.empty then
@@ -141,6 +146,10 @@ function Interpreter.Environment:get(key, level)
 		return self.parent:get(key, level and level-1)
 	end
 	-- Not found, don't return anything (not a value of Nil) to allow inheritance
+end
+
+function Interpreter.Environment:freeze()
+	self.mutable = false
 end
 
 setmetatable(Interpreter.Environment, {

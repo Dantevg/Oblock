@@ -103,7 +103,11 @@ function stdlib.Block:__tostring()
 	
 	for i, key in ipairs(strings) do
 		local value = self.environment.env[key].value
-		strings[i] = tostring(key).." = "..tostring(value)
+		if value ~= nil then
+			strings[i] = tostring(key).." = "..tostring(value)
+		else
+			strings[i] = tostring(key)
+		end
 	end
 	return "{"..table.concat(strings, "; ").."}"
 end
@@ -248,6 +252,7 @@ stdlib.Number.proto = stdlib.Block()
 function stdlib.Number.new(value)
 	local self = stdlib.Value(tonumber(value))
 	self:setHere("_Proto", stdlib.Number.proto)
+	self.environment:freeze()
 	return setmetatable(self, stdlib.Number)
 end
 
@@ -312,6 +317,7 @@ stdlib.String.proto = stdlib.Block()
 function stdlib.String.new(value)
 	local self = stdlib.Value(tostring(value))
 	self:setHere("_Proto", stdlib.String.proto)
+	self.environment:freeze()
 	return setmetatable(self, stdlib.String)
 end
 
@@ -344,6 +350,7 @@ stdlib.Boolean.proto = stdlib.Block()
 function stdlib.Boolean.new(value)
 	local self = stdlib.Value(not not value)
 	self:setHere("_Proto", stdlib.Boolean.proto)
+	self.environment:freeze()
 	return setmetatable(self, stdlib.Boolean)
 end
 
@@ -375,6 +382,7 @@ function stdlib.Nil.new(loc)
 	local self = stdlib.Value(nil)
 	self.loc = loc
 	self:setHere("_Proto", stdlib.Nil.proto)
+	self.environment:freeze()
 	return setmetatable(self, stdlib.Nil)
 end
 
@@ -562,7 +570,8 @@ stdlib.type = function(_, x)
 end
 
 -- To turn multiple values into one, like Lua does with `()`
-stdlib.id = function(_, x) return x end
+-- TODO: decide on whether no-value / nothing (not even nil) should be allowed
+stdlib.id = function(_, x) return x or stdlib.Nil() end
 
 stdlib.import = function(_, modname)
 	package.path = package.path..";src/lua/lib/?.lua;src/test/?.lua"

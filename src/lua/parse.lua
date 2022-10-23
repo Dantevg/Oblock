@@ -14,4 +14,4 @@ local program = Parser(tokens, filename):parse()
 if not program then return end
 
 print(program)
-print(program:debug())
+print( (program:debug()) )

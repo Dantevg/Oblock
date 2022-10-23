@@ -245,6 +245,7 @@ To-Do / roadmap / proposals
     - behave like nothing was present, removed in lists, stops iteration  
       `[10, nil, 20] == [10, 20]`,  `for x in () => { yield 10; yield nil; yield 20 }` loops once
   - Attempting to use keyword kind as value yields value kind (keyword kind == value kind is true)
+  - How to check if a variable is nil or nothing?
 - Unary '+' for absolute value (as suggested in the /r/ProgrammingLanguages Discord)
 - Imperative function (only side effects, returns nothing):
   - with explicit return: `() => { ...; return }`

@@ -5,15 +5,16 @@ Interpreter.__index = Interpreter
 
 function Interpreter.new()
 	local self = {}
-	self.environment = Interpreter.Environment()
-	require("stdlib").initEnv(self.environment)
+	local stdlib = require "stdlib"
+	self.environment = Interpreter.Environment(nil, stdlib.Block())
+	stdlib.initEnv(self.environment)
 	return setmetatable(self, Interpreter)
 end
 
 function Interpreter:interpret(program)
 	-- Resolve
 	local globalScope = {}
-	for k in pairs(self.environment.env) do
+	for k in pairs(self.environment.block.env) do
 		globalScope[k] = true
 	end
 	local success, err = pcall(program.resolve, program, globalScope)
@@ -82,13 +83,14 @@ end
 
 
 Interpreter.Environment = {}
+Interpreter.Environment.__name = "Environment"
 Interpreter.Environment.__index = Interpreter.Environment
 
-function Interpreter.Environment.new(parent)
+function Interpreter.Environment.new(parent, block)
 	local self = {}
 	self.parent = parent
 	self.mutable = true
-	self.env = {}
+	self.block = block
 	return setmetatable(self, Interpreter.Environment)
 end
 
@@ -103,9 +105,8 @@ function Interpreter.Environment:setAtLevel(key, value, modifiers, level)
 end
 
 function Interpreter.Environment:updateAnywhere(key, value)
-	if type(key) == "table" then key = key.value end
-	if self.env[key] or not self.parent or not self.parent:has(key) then
-		self:setHere(key, value)
+	if self.block:has(key) or not self.parent or not self.parent:has(key) then
+		self.block:set(key, value)
 	else
 		self.parent:updateAnywhere(key, value)
 	end
@@ -116,32 +117,17 @@ function Interpreter.Environment:setHere(key, value, modifiers)
 		Interpreter.error("Attempt to mutate immutable value")
 	end
 	
-	if type(key) == "table" then key = key.value end
-	if self.env[key] then
-		if modifiers ~= nil and not modifiers.empty then
-			Interpreter.error("Redefinition of variable "..tostring(key))
-		end
-		if self.env[key].modifiers.const then
-			Interpreter.error("Attempt to mutate const variable "..tostring(key))
-		end
-		self.env[key].value = value
-	else
-		self.env[key] = {
-			value = value,
-			modifiers = modifiers or {}
-		}
-	end
+	self.block:set(key, value, modifiers)
 end
 
+-- TODO: check how 'has' should work with parent envs and protos
 function Interpreter.Environment:has(key)
-	if type(key) == "table" then key = key.value end
-	return self.env[key] or (self.parent and self.parent:has(key))
+	return self.block:has(key) or (self.parent and self.parent:has(key))
 end
 
 function Interpreter.Environment:get(key, level)
-	if type(key) == "table" then key = key.value end
-	if self.env[key] and (not level or level == 0) then
-		return self.env[key].value
+	if self.block:has(key) and (not level or level == 0) then
+		return self.block:get(key)
 	elseif self.parent and (not level or level > 0) then
 		return self.parent:get(key, level and level-1)
 	end

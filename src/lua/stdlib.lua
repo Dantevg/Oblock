@@ -6,27 +6,38 @@ stdlib.Block = {}
 stdlib.Block.__index = stdlib.Block
 stdlib.Block.__name = "Block"
 
-function stdlib.Block.new(parent)
-	local self = {}
-	self.environment = Interpreter.Environment(parent)
-	self.environment:setHere("_Proto", stdlib.Block.proto)
-	return setmetatable(self, stdlib.Block)
+function stdlib.Block.new()
+	local self = setmetatable({}, stdlib.Block)
+	self.env = {}
+	self.protos = {stdlib.Block.proto}
+	self:set("_Proto", stdlib.Block.proto)
+	return self
 end
 
+-- TODO: check how 'has' should work with parent envs and protos
 function stdlib.Block:has(key)
-	local has = self.environment:has(key)
-	if not has then
-		local proto = self.environment:get("_Proto", 0)
-		has = proto and proto:has(key)
+	if type(key) == "table" then key = key.value end
+	if self.env[key] then return true end
+	
+	for _, proto in ipairs(self.protos) do
+		if proto:has(key) then return true end
 	end
-	return has
+	return false
 end
 
-function stdlib.Block:get(key, level)
-	local value = self.environment:get(key, level)
+function stdlib.Block:get(key)
+	if type(key) == "table" then key = key.value end
+	if key == "_Protos" then
+		return stdlib.List(nil, self.protos)
+	end
+	
+	local value = self.env[key] and self.env[key].value
+	
 	if not value then
-		local proto = self.environment:get("_Proto", 0)
-		value = proto and proto:get(key)
+		for _, proto in ipairs(self.protos) do
+			value = proto:get(key)
+			if value ~= nil then break end
+		end
 	end
 	if value and (value.__name == "Function" or value.__name == "NativeFunction") then
 		value = value:bind(self)
@@ -34,12 +45,31 @@ function stdlib.Block:get(key, level)
 	return value or stdlib.Nil()
 end
 
-function stdlib.Block:setAtLevel(key, value, modifiers, level)
-	return self.environment:setAtLevel(key, value, modifiers, level)
+-- TODO: continue refactoring rename
+function stdlib.Block:setHere(key, value, modifiers)
+	return self:set(key, value, modifiers)
 end
 
-function stdlib.Block:setHere(key, value, modifiers)
-	return self.environment:setHere(key, value, modifiers)
+function stdlib.Block:set(key, value, modifiers)
+	if type(key) == "table" then key = key.value end
+	
+	-- TODO: somehow allow setting / adding protos
+	if key == "_Protos" then Interpreter.error("cannot set _Protos field yet") end
+	
+	if self.env[key] then
+		if modifiers ~= nil and not modifiers.empty then
+			Interpreter.error("Redefinition of variable "..tostring(key))
+		end
+		if self.env[key].modifiers.const then
+			Interpreter.error("Attempt to mutate const variable "..tostring(key))
+		end
+		self.env[key].value = value
+	else
+		self.env[key] = {
+			value = value,
+			modifiers = modifiers or {}
+		}
+	end
 end
 
 function stdlib.Block:eq(other)
@@ -58,22 +88,23 @@ end
 
 function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
+	other.protos = {self}
 	other:setHere("_Proto", self)
 	return other
 end
 
 function stdlib.Block:keys()
 	local keys = {}
-	for k in pairs(self.environment.env) do table.insert(keys, stdlib.String(k)) end
+	for k in pairs(self.env) do table.insert(keys, stdlib.String(k)) end
 	return stdlib.List(nil, keys)
 end
 
 function stdlib.Block:protos()
 	local protos = {}
-	local proto = self.environment:get("_Proto", 0)
+	local proto = self:get("_Proto")
 	while proto do
 		table.insert(protos, proto)
-		proto = proto.environment:get("_Proto", 0)
+		proto = proto:get("_Proto")
 	end
 	return stdlib.List(nil, protos)
 end
@@ -86,7 +117,7 @@ function stdlib.Block:is(other)
 		if proto == other:get("_Proto") then return stdlib.Boolean(true) end
 	end
 	
-	for k, v in pairs(other.environment.env) do
+	for k, v in pairs(other.env) do
 		if not self:has(k) then return stdlib.Boolean(false) end
 	end
 	return stdlib.Boolean(true)
@@ -95,14 +126,14 @@ end
 function stdlib.Block:__tostring()
 	local strings = {}
 	
-	for key in pairs(self.environment.env) do
+	for key in pairs(self.env) do
 		-- Hide "_Proto" key
 		if key ~= "_Proto" then table.insert(strings, key) end
 	end
 	table.sort(strings, function(a, b) return tostring(a) < tostring(b) end)
 	
 	for i, key in ipairs(strings) do
-		local value = self.environment.env[key].value
+		local value = self.env[key].value
 		if value ~= nil then
 			strings[i] = tostring(key).." = "..tostring(value)
 		else
@@ -130,11 +161,13 @@ stdlib.Function.__name = "Function"
 
 stdlib.Function.proto = stdlib.Block()
 
-function stdlib.Function.new(parent, body, name, parameters)
-	local self = stdlib.Block(parent)
+function stdlib.Function.new(env, body, name, parameters)
+	local self = stdlib.Block(env)
+	self.parentEnv = env
 	self.body = body
 	self.name = name
 	self.parameters = parameters
+	self.protos = {stdlib.Function.proto}
 	self:setHere("_Proto", stdlib.Function.proto)
 	return setmetatable(self, stdlib.Function)
 end
@@ -148,7 +181,7 @@ end
 
 function stdlib.Function:call(...)
 	local args = {...}
-	local environment = Interpreter.Environment(self.environment)
+	local environment = Interpreter.Environment(self.parentEnv, stdlib.Block())
 	if self.this then environment:setHere("this", self.this) end
 	
 	-- Add arguments to function body indexed by number
@@ -251,8 +284,10 @@ stdlib.Number.proto = stdlib.Block()
 
 function stdlib.Number.new(value)
 	local self = stdlib.Value(tonumber(value))
+	self.protos = {stdlib.Number.proto}
 	self:setHere("_Proto", stdlib.Number.proto)
-	self.environment:freeze()
+	-- TODO: re-add this
+	-- self.environment:freeze()
 	return setmetatable(self, stdlib.Number)
 end
 
@@ -316,8 +351,9 @@ stdlib.String.proto = stdlib.Block()
 
 function stdlib.String.new(value)
 	local self = stdlib.Value(tostring(value))
+	self.protos = {stdlib.String.proto}
 	self:setHere("_Proto", stdlib.String.proto)
-	self.environment:freeze()
+	-- self.environment:freeze()
 	return setmetatable(self, stdlib.String)
 end
 
@@ -349,8 +385,9 @@ stdlib.Boolean.proto = stdlib.Block()
 
 function stdlib.Boolean.new(value)
 	local self = stdlib.Value(not not value)
+	self.protos = {stdlib.Boolean.proto}
 	self:setHere("_Proto", stdlib.Boolean.proto)
-	self.environment:freeze()
+	-- self.environment:freeze()
 	return setmetatable(self, stdlib.Boolean)
 end
 
@@ -381,8 +418,9 @@ stdlib.Nil.proto = stdlib.Block()
 function stdlib.Nil.new(loc)
 	local self = stdlib.Value(nil)
 	self.loc = loc
+	self.protos = {stdlib.Nil.proto}
 	self:setHere("_Proto", stdlib.Nil.proto)
-	self.environment:freeze()
+	-- self.environment:freeze()
 	return setmetatable(self, stdlib.Nil)
 end
 
@@ -420,6 +458,7 @@ function stdlib.List.new(parent, elements)
 		self:setHere(i, elements[i])
 	end
 	self:setHere("length", stdlib.Number(#elements))
+	self.protos = {stdlib.List.proto}
 	self:setHere("_Proto", stdlib.List.proto)
 	return setmetatable(self, stdlib.List)
 end
@@ -458,7 +497,7 @@ function stdlib.List:iterate()
 end
 
 function stdlib.List:__len()
-	return #self.environment.env
+	return #self.env
 end
 
 function stdlib.List:__tostring()
@@ -485,6 +524,7 @@ stdlib.Error.proto = stdlib.Block()
 function stdlib.Error.new(message, loc, sourceLoc)
 	local self = stdlib.Block()
 	self.loc, self.sourceLoc = loc, sourceLoc
+	self.protos = {stdlib.Error.proto}
 	self:setHere("_Proto", stdlib.Error.proto)
 	self:setHere("message", stdlib.String(message))
 	self:setHere("traceback", stdlib.List())

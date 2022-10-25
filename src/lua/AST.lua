@@ -147,7 +147,7 @@ function AST.Expr.Group:__tostring()
 	for _, expr in ipairs(self.expressions) do
 		table.insert(expressions, tostring(expr))
 	end
-	return table.concat(expressions, ", ")
+	return "("..table.concat(expressions, ", ")..")"
 end
 
 setmetatable(AST.Expr.Group, {
@@ -262,9 +262,9 @@ function AST.Expr.Block.new(statements, loc)
 end
 
 function AST.Expr.Block:evaluate(env)
-	local block = stdlib.Block(env)
+	local environment = Interpreter.Environment(env, stdlib.Block())
 	for _, statement in ipairs(self.statements) do
-		local success, err = pcall(statement.evaluate, statement, block.environment)
+		local success, err = pcall(statement.evaluate, statement, environment)
 		if not success then
 			if type(err) == "table" and err.__name == "Yield" then
 				return table.unpack(err.values)
@@ -273,11 +273,11 @@ function AST.Expr.Block:evaluate(env)
 			end
 		end
 	end
-	return block
+	return environment.block
 end
 
 function AST.Expr.Block:resolve(scope)
-	local childScope = {parent = scope}
+	local childScope = {_Proto = true, parent = scope}
 	for i = 1, #self.statements do
 		self.statements[i]:resolve(childScope)
 	end
@@ -312,15 +312,16 @@ function AST.Expr.List.new(expressions, loc)
 	return setmetatable(self, AST.Expr.List)
 end
 
-function AST.Expr.List:evaluate(parent)
-	local list = stdlib.List(parent)
-	local values = {self.expressions:evaluate(list.environment)}
-	for _, value in ipairs(values) do list:push(value) end
-	return list
+function AST.Expr.List:evaluate(env)
+	local environment = Interpreter.Environment(env, stdlib.List())
+	-- local list = stdlib.List(env)
+	local values = {self.expressions:evaluate(environment)}
+	for _, value in ipairs(values) do environment.block:push(value) end
+	return environment.block
 end
 
 function AST.Expr.List:resolve(scope)
-	self.expressions:resolve {parent = scope}
+	self.expressions:resolve {_Proto = true, parent = scope}
 end
 
 function AST.Expr.List:debug(indent)
@@ -363,7 +364,7 @@ function AST.Expr.Function:call(env, arguments)
 end
 
 function AST.Expr.Function:resolve(scope)
-	local childScope = {this = true, parent = {parent = scope}}
+	local childScope = {this = true, parent = scope}
 	self.parameters:resolve(childScope, true)
 	self.body:resolve(childScope)
 end
@@ -546,9 +547,9 @@ function AST.Expr.For:evaluate(env)
 	-- Loop: set variable to iterator result, run body if result was non-nil
 	local values = {iterator:call()}
 	while values[1] and values[1].__name ~= "Nil" do
-		local block = stdlib.Block(env)
-		self.pattern:define(block, values, {const = true})
-		local breakVals = catchBreakContinue(self.body, block)
+		local environment = Interpreter.Environment(env, stdlib.Block())
+		self.pattern:define(environment, values, {const = true})
+		local breakVals = catchBreakContinue(self.body, environment)
 		if breakVals then return table.unpack(breakVals) end
 		values = {iterator:call()}
 	end
@@ -851,7 +852,7 @@ function AST.Pattern.Variable:assign(env, arguments)
 end
 
 function AST.Pattern.Variable:define(env, arguments, modifiers)
-	env:setAtLevel(self.token.lexeme, table.remove(arguments, 1), modifiers, 0)
+	env:setHere(self.token.lexeme, table.remove(arguments, 1), modifiers)
 	return true
 end
 
@@ -910,13 +911,13 @@ end
 
 function AST.Pattern.Index:evaluate(env, arguments)
 	local arg = table.remove(arguments, 1); -- require ';' because next line starts with '('
-	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), arg, nil, 0)
+	(self.base and self.base:evaluate(env) or env):setHere(ref(self.expr, env), arg, nil)
 	return true
 end
 
 function AST.Pattern.Index:assign(env, arguments)
 	local arg = table.remove(arguments, 1); -- require ';' because next line starts with '('
-	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), arg, nil, self.level)
+	(self.base and self.base:evaluate(env) or env):setHere(ref(self.expr, env), arg, nil)
 	return true
 end
 
@@ -931,7 +932,7 @@ function AST.Pattern.Index:match(env, arguments)
 end
 
 function AST.Pattern.Index:setSelf(env, value, modifiers)
-	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), value, modifiers, 0)
+	(self.base and self.base:evaluate(env) or env):setHere(ref(self.expr, env), value, modifiers)
 end
 
 function AST.Pattern.Index:resolve(scope, isDef)

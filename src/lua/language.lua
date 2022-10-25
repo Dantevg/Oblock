@@ -42,7 +42,7 @@ if file == io.stdin then
 			tc.colour(tc.bg.rgb(55, 27, 112)),
 		})..tc.parse(" {reset}{bg.grey} "..version.." {reset}"))
 		
-		print(withGradient("░▒▓ oblock ", {
+		print(withGradient("░░░ oblock ", {
 			tc.colour(tc.fg.rgb(0, 102, 204)),
 			tc.colour(tc.fg.rgb(23, 94, 195)),
 			tc.colour(tc.fg.rgb(34, 87, 186)),

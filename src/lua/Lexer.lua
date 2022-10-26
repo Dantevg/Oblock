@@ -232,7 +232,6 @@ Lexer.keywords = {
 	["break"] = true, ["continue"] = true,
 	["return"] = true, ["yield"] = true,
 	["var"] = true, ["const"] = true,
-	["static"] = true, ["instance"] = true,
 }
 
 Lexer.longTokens = {["dot dot dot"] = true}

@@ -10,6 +10,7 @@ function stdlib.Block.new()
 	local self = setmetatable({}, stdlib.Block)
 	self.env = {}
 	self.protos = {stdlib.Block.proto}
+	self.mutable = true
 	self:set("_Proto", stdlib.Block.proto)
 	return self
 end
@@ -45,13 +46,11 @@ function stdlib.Block:get(key)
 	return value or stdlib.Nil()
 end
 
--- TODO: continue refactoring rename
-function stdlib.Block:setHere(key, value, modifiers)
-	return self:set(key, value, modifiers)
-end
-
 function stdlib.Block:set(key, value, modifiers)
 	if type(key) == "table" then key = key.value end
+	if not self.mutable then
+		Interpreter.error("Attempt to mutate immutable value "..tostring(self))
+	end
 	
 	-- TODO: somehow allow setting / adding protos
 	if key == "_Protos" then Interpreter.error("cannot set _Protos field yet") end
@@ -89,7 +88,7 @@ end
 function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
 	other.protos = {self}
-	other:setHere("_Proto", self)
+	other:set("_Proto", self)
 	return other
 end
 
@@ -168,7 +167,7 @@ function stdlib.Function.new(env, body, name, parameters)
 	self.name = name
 	self.parameters = parameters
 	self.protos = {stdlib.Function.proto}
-	self:setHere("_Proto", stdlib.Function.proto)
+	self:set("_Proto", stdlib.Function.proto)
 	return setmetatable(self, stdlib.Function)
 end
 
@@ -285,9 +284,8 @@ stdlib.Number.proto = stdlib.Block()
 function stdlib.Number.new(value)
 	local self = stdlib.Value(tonumber(value))
 	self.protos = {stdlib.Number.proto}
-	self:setHere("_Proto", stdlib.Number.proto)
-	-- TODO: re-add this
-	-- self.environment:freeze()
+	self:set("_Proto", stdlib.Number.proto)
+	self.mutable = false
 	return setmetatable(self, stdlib.Number)
 end
 
@@ -352,8 +350,8 @@ stdlib.String.proto = stdlib.Block()
 function stdlib.String.new(value)
 	local self = stdlib.Value(tostring(value))
 	self.protos = {stdlib.String.proto}
-	self:setHere("_Proto", stdlib.String.proto)
-	-- self.environment:freeze()
+	self:set("_Proto", stdlib.String.proto)
+	self.mutable = false
 	return setmetatable(self, stdlib.String)
 end
 
@@ -386,8 +384,8 @@ stdlib.Boolean.proto = stdlib.Block()
 function stdlib.Boolean.new(value)
 	local self = stdlib.Value(not not value)
 	self.protos = {stdlib.Boolean.proto}
-	self:setHere("_Proto", stdlib.Boolean.proto)
-	-- self.environment:freeze()
+	self:set("_Proto", stdlib.Boolean.proto)
+	self.mutable = false
 	return setmetatable(self, stdlib.Boolean)
 end
 
@@ -419,8 +417,8 @@ function stdlib.Nil.new(loc)
 	local self = stdlib.Value(nil)
 	self.loc = loc
 	self.protos = {stdlib.Nil.proto}
-	self:setHere("_Proto", stdlib.Nil.proto)
-	-- self.environment:freeze()
+	self:set("_Proto", stdlib.Nil.proto)
+	self.mutable = false
 	return setmetatable(self, stdlib.Nil)
 end
 
@@ -455,17 +453,17 @@ function stdlib.List.new(parent, elements)
 	local self = stdlib.Block(parent)
 	elements = elements or {}
 	for i = 1, #elements do
-		self:setHere(i, elements[i])
+		self:set(i, elements[i])
 	end
-	self:setHere("length", stdlib.Number(#elements))
+	self:set("length", stdlib.Number(#elements))
 	self.protos = {stdlib.List.proto}
-	self:setHere("_Proto", stdlib.List.proto)
+	self:set("_Proto", stdlib.List.proto)
 	return setmetatable(self, stdlib.List)
 end
 
 function stdlib.List:push(value)
-	self:setHere(#self+1, value)
-	self:setHere("length", stdlib.Number(#self))
+	self:set(#self+1, value)
+	self:set("length", stdlib.Number(#self))
 end
 
 function stdlib.List:add(other)
@@ -476,7 +474,7 @@ function stdlib.List:add(other)
 	for i = 1, #other do
 		table.insert(values, other:get(i))
 	end
-	self:setHere("length", stdlib.Number(#self))
+	self:set("length", stdlib.Number(#self))
 	return self.new(nil, values)
 end
 
@@ -525,9 +523,9 @@ function stdlib.Error.new(message, loc, sourceLoc)
 	local self = stdlib.Block()
 	self.loc, self.sourceLoc = loc, sourceLoc
 	self.protos = {stdlib.Error.proto}
-	self:setHere("_Proto", stdlib.Error.proto)
-	self:setHere("message", stdlib.String(message))
-	self:setHere("traceback", stdlib.List())
+	self:set("_Proto", stdlib.Error.proto)
+	self:set("message", stdlib.String(message))
+	self:set("traceback", stdlib.List())
 	return setmetatable(self, stdlib.Error)
 end
 
@@ -545,7 +543,7 @@ setmetatable(stdlib.Error, {
 -- Need to define this below here because NativeFunction needs to be defined
 
 local function defineProtoNativeFn(base, name, key)
-	stdlib[base].proto:setHere(
+	stdlib[base].proto:set(
 		key or name,
 		stdlib.NativeFunction(stdlib[base][name], name)
 	)
@@ -583,12 +581,12 @@ defineOperator("String", "add", "+")
 defineProtoNativeFn("String", "not_", "!")
 
 defineProtoNativeFn("Boolean", "not_", "!")
-stdlib.Boolean.proto:setHere("true", stdlib.Boolean(true))
-stdlib.Boolean.proto:setHere("false", stdlib.Boolean(false))
+stdlib.Boolean.proto:set("true", stdlib.Boolean(true))
+stdlib.Boolean.proto:set("false", stdlib.Boolean(false))
 
 defineProtoNativeFn("Nil", "eq", "==")
 defineProtoNativeFn("Nil", "not_", "!")
-stdlib.Nil.proto:setHere("nil", stdlib.Nil())
+stdlib.Nil.proto:set("nil", stdlib.Nil())
 
 defineOperator("List", "add", "+")
 defineProtoNativeFn("List", "spread", "...")

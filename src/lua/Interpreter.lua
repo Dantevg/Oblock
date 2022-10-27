@@ -89,53 +89,28 @@ Interpreter.Environment.__index = Interpreter.Environment
 function Interpreter.Environment.new(parent, block)
 	local self = {}
 	self.parent = parent
-	self.mutable = true
 	self.block = block
 	return setmetatable(self, Interpreter.Environment)
 end
 
 function Interpreter.Environment:setAtLevel(key, value, modifiers, level)
-	if not level then
-		self:updateAnywhere(key, value)
-	elseif level == 0 then
+	if level == 0 then
 		self:setHere(key, value, modifiers)
-	elseif level > 0 then
-		self.parent:setAtLevel(key, value, modifiers)
-	end
-end
-
-function Interpreter.Environment:updateAnywhere(key, value)
-	if self.block:has(key) or not self.parent or not self.parent:has(key) then
-		self.block:set(key, value)
-	else
-		self.parent:updateAnywhere(key, value)
+	elseif self.parent then
+		self.parent:setAtLevel(key, value, modifiers, level - 1)
 	end
 end
 
 function Interpreter.Environment:setHere(key, value, modifiers)
-	if not self.mutable then
-		Interpreter.error("Attempt to mutate immutable value")
-	end
-	
 	self.block:set(key, value, modifiers)
 end
 
--- TODO: check how 'has' should work with parent envs and protos
-function Interpreter.Environment:has(key)
-	return self.block:has(key) or (self.parent and self.parent:has(key))
-end
-
 function Interpreter.Environment:get(key, level)
-	if self.block:has(key) and (not level or level == 0) then
+	if level == 0 and self.block:has(key) then
 		return self.block:get(key)
-	elseif self.parent and (not level or level > 0) then
+	elseif self.parent then
 		return self.parent:get(key, level and level-1)
 	end
-	-- Not found, don't return anything (not a value of Nil) to allow inheritance
-end
-
-function Interpreter.Environment:freeze()
-	self.mutable = false
 end
 
 setmetatable(Interpreter.Environment, {

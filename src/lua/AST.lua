@@ -882,7 +882,7 @@ function AST.Pattern.Variable:resolve(scope, isDef)
 end
 
 function AST.Pattern.Variable:setSelf(env, value, modifiers)
-	env:setAtLevel(self.token.lexeme, value, modifiers, 0)
+	env:setHere(self.token.lexeme, value, modifiers)
 end
 
 function AST.Pattern.Variable:debug(indent)
@@ -910,14 +910,22 @@ function AST.Pattern.Index.new(base, expr, loc)
 end
 
 function AST.Pattern.Index:evaluate(env, arguments)
-	local arg = table.remove(arguments, 1); -- require ';' because next line starts with '('
-	(self.base and self.base:evaluate(env) or env):setHere(ref(self.expr, env), arg, nil)
+	local arg = table.remove(arguments, 1)
+	if self.base then
+		self.base:evaluate(env):set(ref(self.expr, env), arg)
+	else
+		env:setHere(ref(self.expr, env), arg)
+	end
 	return true
 end
 
 function AST.Pattern.Index:assign(env, arguments)
-	local arg = table.remove(arguments, 1); -- require ';' because next line starts with '('
-	(self.base and self.base:evaluate(env) or env):setHere(ref(self.expr, env), arg, nil)
+	local arg = table.remove(arguments, 1)
+	if self.base then
+		self.base:evaluate(env):set(ref(self.expr, env), arg)
+	else
+		env:setHere(ref(self.expr, env), arg)
+	end
 	return true
 end
 
@@ -929,10 +937,6 @@ end
 function AST.Pattern.Index:match(env, arguments)
 	-- TODO: implement index matching
 	return false
-end
-
-function AST.Pattern.Index:setSelf(env, value, modifiers)
-	(self.base and self.base:evaluate(env) or env):setHere(ref(self.expr, env), value, modifiers)
 end
 
 function AST.Pattern.Index:resolve(scope, isDef)
@@ -971,17 +975,17 @@ function AST.Pattern.Literal.new(literal, loc)
 end
 
 function AST.Pattern.Literal:evaluate(env, arguments)
-	env:setAtLevel(self.literal, table.remove(arguments, 1), nil, 0)
+	env:setHere(self.literal, table.remove(arguments, 1))
 	return true
 end
 
 function AST.Pattern.Literal:assign(env, arguments)
-	env:setAtLevel(self.literal, table.remove(arguments, 1), nil, self.level)
+	env:setHere(self.literal, table.remove(arguments, 1))
 	return true
 end
 
 function AST.Pattern.Literal:define(env, arguments, modifiers)
-	env:setAtLevel(self.literal, table.remove(arguments, 1), modifiers, 0)
+	env:setHere(self.literal, table.remove(arguments, 1), modifiers)
 	return true
 end
 
@@ -998,7 +1002,7 @@ function AST.Pattern.Literal:resolve(scope, isDef)
 end
 
 function AST.Pattern.Literal:setSelf(env, value, modifiers)
-	env:setAtLevel(self.literal, value, modifiers, 0)
+	env:setHere(self.literal, value, modifiers)
 end
 
 function AST.Pattern.Literal:debug(indent)
@@ -1265,21 +1269,21 @@ end
 function AST.Pattern.Rest:evaluate(env, arguments)
 	local list = stdlib.List()
 	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
-	env:setAtLevel(self.token.lexeme, list, nil, 0)
+	env:setHere(self.token.lexeme, list)
 	return true
 end
 
 function AST.Pattern.Rest:assign(env, arguments)
 	local list = stdlib.List()
 	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
-	env:setAtLevel(self.token.lexeme, list, nil, 0)
+	env:setHere(self.token.lexeme, list)
 	return true
 end
 
 function AST.Pattern.Rest:define(env, arguments, modifiers)
 	local list = stdlib.List()
 	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
-	env:setAtLevel(self.token.lexeme, list, modifiers, 0)
+	env:setHere(self.token.lexeme, list, modifiers)
 	return true
 end
 
@@ -1317,17 +1321,17 @@ function AST.Pattern.Expression.new(expression, loc)
 end
 
 function AST.Pattern.Expression:evaluate(env, arguments)
-	env:setAtLevel(self.expression:evaluate(env), table.remove(arguments, 1), nil, 0)
+	env:setHere(self.expression:evaluate(env), table.remove(arguments, 1))
 	return true
 end
 
 function AST.Pattern.Expression:assign(env, arguments)
-	env:setAtLevel(self.expression:evaluate(env), table.remove(arguments, 1), nil, 0)
+	env:setHere(self.expression:evaluate(env), table.remove(arguments, 1))
 	return true
 end
 
 function AST.Pattern.Expression:define(env, arguments, modifiers)
-	env:setAtLevel(self.expression:evaluate(env), table.remove(arguments, 1), modifiers, 0)
+	env:setHere(self.expression:evaluate(env), table.remove(arguments, 1), modifiers)
 	return true
 end
 

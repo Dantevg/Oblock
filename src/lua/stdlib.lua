@@ -11,6 +11,8 @@ function stdlib.Block.new()
 	self.env = {}
 	self.protos = {stdlib.Block.proto}
 	self.mutable = true
+	
+	-- TODO: remove _Proto key (replaced by _Protos)
 	self:set("_Proto", stdlib.Block.proto)
 	return self
 end
@@ -18,7 +20,7 @@ end
 -- TODO: check how 'has' should work with parent envs and protos
 function stdlib.Block:has(key)
 	if type(key) == "table" then key = key.value end
-	if self.env[key] then return true end
+	if self.env[key] or key == "_Protos" then return true end
 	
 	for _, proto in ipairs(self.protos) do
 		if proto:has(key) then return true end
@@ -28,9 +30,9 @@ end
 
 function stdlib.Block:get(key)
 	if type(key) == "table" then key = key.value end
-	if key == "_Protos" then
-		return stdlib.List(nil, self.protos)
-	end
+	
+	-- TODO: either make protos list immutable (unnatural) or somehow propagate changes
+	if key == "_Protos" then return stdlib.List(self.protos) end
 	
 	local value = self.env[key] and self.env[key].value
 	
@@ -95,7 +97,7 @@ end
 function stdlib.Block:keys()
 	local keys = {}
 	for k in pairs(self.env) do table.insert(keys, stdlib.String(k)) end
-	return stdlib.List(nil, keys)
+	return stdlib.List(keys)
 end
 
 function stdlib.Block:protos()
@@ -105,7 +107,7 @@ function stdlib.Block:protos()
 		table.insert(protos, proto)
 		proto = proto:get("_Proto")
 	end
-	return stdlib.List(nil, protos)
+	return stdlib.List(protos)
 end
 
 function stdlib.Block:is(other)
@@ -161,7 +163,7 @@ stdlib.Function.__name = "Function"
 stdlib.Function.proto = stdlib.Block()
 
 function stdlib.Function.new(env, body, name, parameters)
-	local self = stdlib.Block(env)
+	local self = stdlib.Block()
 	self.parentEnv = env
 	self.body = body
 	self.name = name
@@ -449,8 +451,8 @@ stdlib.List.__name = "List"
 
 stdlib.List.proto = stdlib.Block()
 
-function stdlib.List.new(parent, elements)
-	local self = stdlib.Block(parent)
+function stdlib.List.new(elements)
+	local self = stdlib.Block()
 	elements = elements or {}
 	for i = 1, #elements do
 		self:set(i, elements[i])

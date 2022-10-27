@@ -173,10 +173,6 @@ function AST.Expr.Variable:evaluate(env)
 	return value
 end
 
-function AST.Expr.Variable:setSelf(env, value, modifiers)
-	env:setAtLevel(self.token.lexeme, value, modifiers, self.level)
-end
-
 function AST.Expr.Variable:resolve(scope)
 	if self.level then Interpreter.error("resolving already-resolved variable "..tostring(self), self.loc) end
 	local level = 0
@@ -223,10 +219,6 @@ function AST.Expr.Index:evaluate(env)
 	local value = (self.base and self.base:evaluate(env) or env):get(ref(self.expr, env), self.level)
 	if value and value.__name == "Nil" and not value.loc then value.loc = self.loc end
 	return value
-end
-
-function AST.Expr.Index:setSelf(env, value, modifiers)
-	(self.base and self.base:evaluate(env) or env):setAtLevel(ref(self.expr, env), value, modifiers, self.level)
 end
 
 function AST.Expr.Index:resolve(scope)
@@ -277,7 +269,7 @@ function AST.Expr.Block:evaluate(env)
 end
 
 function AST.Expr.Block:resolve(scope)
-	local childScope = {_Proto = true, parent = scope}
+	local childScope = {_Proto = true, _Protos = true, parent = scope}
 	for i = 1, #self.statements do
 		self.statements[i]:resolve(childScope)
 	end
@@ -314,14 +306,13 @@ end
 
 function AST.Expr.List:evaluate(env)
 	local environment = Interpreter.Environment(env, stdlib.List())
-	-- local list = stdlib.List(env)
 	local values = {self.expressions:evaluate(environment)}
 	for _, value in ipairs(values) do environment.block:push(value) end
 	return environment.block
 end
 
 function AST.Expr.List:resolve(scope)
-	self.expressions:resolve {_Proto = true, parent = scope}
+	self.expressions:resolve {_Proto = true, _Protos = true, parent = scope}
 end
 
 function AST.Expr.List:debug(indent)
@@ -881,10 +872,6 @@ function AST.Pattern.Variable:resolve(scope, isDef)
 	end
 end
 
-function AST.Pattern.Variable:setSelf(env, value, modifiers)
-	env:setHere(self.token.lexeme, value, modifiers)
-end
-
 function AST.Pattern.Variable:debug(indent)
 	return debugValue(indent, self.__name, {token = self.token.lexeme}, {})
 end
@@ -1001,10 +988,6 @@ function AST.Pattern.Literal:resolve(scope, isDef)
 	scope[self.literal] = true
 end
 
-function AST.Pattern.Literal:setSelf(env, value, modifiers)
-	env:setHere(self.literal, value, modifiers)
-end
-
 function AST.Pattern.Literal:debug(indent)
 	return debugValue(indent, self.__name, {literal = self.literal}, {})
 end
@@ -1062,12 +1045,6 @@ end
 function AST.Pattern.Group:resolve(scope, isDef)
 	for _, pattern in ipairs(self.patterns) do
 		pattern:resolve(scope, isDef)
-	end
-end
-
-function AST.Pattern.Group:setSelf(env, value, modifiers)
-	for i, pattern in ipairs(self.patterns) do
-		pattern:setSelf(env, value[i], modifiers)
 	end
 end
 

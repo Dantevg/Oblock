@@ -1,7 +1,7 @@
 local stdlib = require "stdlib"
 
 return function(Stream)
-	Stream:setHere("toString", stdlib.NativeFunction(function(self)
+	Stream:set("toString", stdlib.NativeFunction(function(self)
 		local strings = {}
 		local value = self:get("read"):call()
 		while value.__name ~= "Nil" do

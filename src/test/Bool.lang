@@ -1,0 +1,15 @@
+{
+	var Bool
+	Bool = {
+		"true" = .clone()
+		"false" = .clone()
+		
+		"!" () => if this == Bool.true: Bool.false else Bool.true
+		toString() => if this == Bool.true: "Bool:true" else "Bool:false"
+	}
+	
+	print(Bool.true.toString())
+	print(Bool.false.toString())
+	print((!Bool.true).toString())
+	print(!Bool.true == Bool.false)
+}

@@ -11,9 +11,6 @@ function stdlib.Block.new()
 	self.env = {}
 	self.protos = {stdlib.Block.proto}
 	self.mutable = true
-	
-	-- TODO: remove _Proto key (replaced by _Protos)
-	self:set("_Proto", stdlib.Block.proto)
 	return self
 end
 
@@ -90,7 +87,6 @@ end
 function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
 	other.protos = {self}
-	other:set("_Proto", self)
 	return other
 end
 
@@ -100,22 +96,28 @@ function stdlib.Block:keys()
 	return stdlib.List(keys)
 end
 
-function stdlib.Block:protos()
+function stdlib.Block:allProtos()
+	local function contains(tbl, value)
+		for _, v in pairs(tbl) do
+			if v == value then return true end
+		end
+		return false
+	end
+	
 	local protos = {}
-	local proto = self:get("_Proto")
-	while proto do
+	for _, proto in ipairs(self.protos) do
 		table.insert(protos, proto)
-		proto = proto:get("_Proto")
+		for _, p in ipairs {proto:allProtos():spread()} do
+			if not contains(protos, p) then table.insert(protos, p) end
+		end
 	end
 	return stdlib.List(protos)
 end
 
 function stdlib.Block:is(other)
 	-- Check prototype chain
-	local proto = self:get("_Proto")
-	while proto and proto ~= other:get("_Proto") do
-		proto = proto:get("_Proto")
-		if proto == other:get("_Proto") then return stdlib.Boolean(true) end
+	for _, proto in ipairs(self.protos) do
+		if other == proto then return stdlib.Boolean(true) end
 	end
 	
 	for k, v in pairs(other.env) do
@@ -128,8 +130,7 @@ function stdlib.Block:__tostring()
 	local strings = {}
 	
 	for key in pairs(self.env) do
-		-- Hide "_Proto" key
-		if key ~= "_Proto" then table.insert(strings, key) end
+		table.insert(strings, key)
 	end
 	table.sort(strings, function(a, b) return tostring(a) < tostring(b) end)
 	
@@ -169,7 +170,6 @@ function stdlib.Function.new(env, body, name, parameters)
 	self.name = name
 	self.parameters = parameters
 	self.protos = {stdlib.Function.proto}
-	self:set("_Proto", stdlib.Function.proto)
 	return setmetatable(self, stdlib.Function)
 end
 
@@ -286,7 +286,6 @@ stdlib.Number.proto = stdlib.Block()
 function stdlib.Number.new(value)
 	local self = stdlib.Value(tonumber(value))
 	self.protos = {stdlib.Number.proto}
-	self:set("_Proto", stdlib.Number.proto)
 	self.mutable = false
 	return setmetatable(self, stdlib.Number)
 end
@@ -352,7 +351,6 @@ stdlib.String.proto = stdlib.Block()
 function stdlib.String.new(value)
 	local self = stdlib.Value(tostring(value))
 	self.protos = {stdlib.String.proto}
-	self:set("_Proto", stdlib.String.proto)
 	self.mutable = false
 	return setmetatable(self, stdlib.String)
 end
@@ -386,7 +384,6 @@ stdlib.Boolean.proto = stdlib.Block()
 function stdlib.Boolean.new(value)
 	local self = stdlib.Value(not not value)
 	self.protos = {stdlib.Boolean.proto}
-	self:set("_Proto", stdlib.Boolean.proto)
 	self.mutable = false
 	return setmetatable(self, stdlib.Boolean)
 end
@@ -419,7 +416,6 @@ function stdlib.Nil.new(loc)
 	local self = stdlib.Value(nil)
 	self.loc = loc
 	self.protos = {stdlib.Nil.proto}
-	self:set("_Proto", stdlib.Nil.proto)
 	self.mutable = false
 	return setmetatable(self, stdlib.Nil)
 end
@@ -459,7 +455,6 @@ function stdlib.List.new(elements)
 	end
 	self:set("length", stdlib.Number(#elements))
 	self.protos = {stdlib.List.proto}
-	self:set("_Proto", stdlib.List.proto)
 	return setmetatable(self, stdlib.List)
 end
 
@@ -525,7 +520,6 @@ function stdlib.Error.new(message, loc, sourceLoc)
 	local self = stdlib.Block()
 	self.loc, self.sourceLoc = loc, sourceLoc
 	self.protos = {stdlib.Error.proto}
-	self:set("_Proto", stdlib.Error.proto)
 	self:set("message", stdlib.String(message))
 	self:set("traceback", stdlib.List())
 	return setmetatable(self, stdlib.Error)
@@ -564,7 +558,7 @@ defineProtoNativeFn("Block", "neq", "!=")
 defineProtoNativeFn("Block", "pipe", "|>")
 defineProtoNativeFn("Block", "clone")
 defineProtoNativeFn("Block", "keys")
-defineProtoNativeFn("Block", "protos")
+defineProtoNativeFn("Block", "allProtos", "protos")
 defineProtoNativeFn("Block", "is")
 
 defineProtoNativeFn("Function", "call", "()")

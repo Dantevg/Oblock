@@ -269,7 +269,7 @@ function AST.Expr.Block:evaluate(env)
 end
 
 function AST.Expr.Block:resolve(scope)
-	local childScope = {_Proto = true, _Protos = true, parent = scope}
+	local childScope = {_Protos = true, parent = scope}
 	for i = 1, #self.statements do
 		self.statements[i]:resolve(childScope)
 	end
@@ -312,7 +312,7 @@ function AST.Expr.List:evaluate(env)
 end
 
 function AST.Expr.List:resolve(scope)
-	self.expressions:resolve {_Proto = true, _Protos = true, parent = scope}
+	self.expressions:resolve {_Protos = true, parent = scope}
 end
 
 function AST.Expr.List:debug(indent)

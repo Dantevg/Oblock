@@ -20,8 +20,7 @@
 		
 		add(a, b) => Vector(a.x + b.x, a.y + b.y)
 		
-		"()" (x, y) => {
-			_Proto = prototype
+		"()" (x, y) => prototype.clone {
 			var x, y = x, y
 		}
 	}

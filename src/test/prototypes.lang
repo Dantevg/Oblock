@@ -1,7 +1,7 @@
 {
 	a = {x = 10}
-	b = {_Proto = a}
+	b = a.clone()
 	print b
-	print(b._Proto)
+	print(b._Protos.1)
 	print(b.x)
 }

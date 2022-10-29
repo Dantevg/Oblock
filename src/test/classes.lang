@@ -2,9 +2,8 @@
 	Person = {
 		prototype = {}
 		
-		"()" name => {
+		"()" name => prototype.clone {
 			var name = name
-			_Proto = prototype
 		}
 		
 		prototype.greet = () => {

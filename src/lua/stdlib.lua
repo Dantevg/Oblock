@@ -621,12 +621,21 @@ stdlib.import = function(_, modname)
 	return hasLuaModule and luaModule(langModule or stdlib.Block()) or langModule or stdlib.Nil()
 end
 
+stdlib.clone = function(_, ...)
+	local prototypes = {...}
+	return stdlib.NativeFunction(function(_, block)
+		block.protos = prototypes
+		return block
+	end)
+end
+
 function stdlib.initEnv(env)
 	env:setHere("clock", stdlib.NativeFunction(stdlib.clock))
 	env:setHere("print", stdlib.NativeFunction(stdlib.print))
 	env:setHere("type", stdlib.NativeFunction(stdlib.type))
 	env:setHere("id", stdlib.NativeFunction(stdlib.id))
 	env:setHere("import", stdlib.NativeFunction(stdlib.import))
+	env:setHere("clone", stdlib.NativeFunction(stdlib.clone))
 	
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)

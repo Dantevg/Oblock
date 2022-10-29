@@ -23,17 +23,18 @@ To-Do / roadmap / proposals
     	Bird = Animal with Walker with Flyer with {
     		
     	}
-		
-		-- pro: shorter
-		Bird = with(Animal, Walker, Flyer) {
-			
-		}
-		
-		Cat = Animal with Walker
-		Cat = with(Animal, Walker) {} -- con: looks weird
-		
-		doggo = Dog with { name = "Doggo" }
-		doggo = with Dog { name = "Doggo" }
+    	
+    	-- pro: shorter
+    	Bird = clone(Animal, Walker, Flyer) {
+    		
+    	}
+    	
+    	Cat = Animal with Walker
+    	Cat = clone(Animal, Walker) {} -- con: looks weird, longer
+    	
+    	doggo = Dog with { name = "Doggo" }
+    	doggo = clone Dog { name = "Doggo" }
+    	doggo = Dog.clone { name = "Doggo" }
 - Separator for if/for/while condition and body
   - Words (Lua):    `if condition then body`,  `for var in val do body`
   - Colon (Python): `if condition: body`,      `for var in val: body`

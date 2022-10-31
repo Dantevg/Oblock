@@ -84,7 +84,7 @@ function Parser:binary(tokens, next, fn)
 			-- Desugar normal binary operator into function call
 			expr = AST.Expr.Call(
 				AST.Expr.Index(expr, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
-				right, self:loc(op)
+				right, self:loc(op), true
 			)
 		end
 	end
@@ -212,7 +212,7 @@ function Parser:unary()
 		local right = self:unary()
 		return AST.Expr.Call(
 				AST.Expr.Index(right, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
-				AST.Expr.Group({}, self:loc(op)), self:loc(op)
+				AST.Expr.Group({}, self:loc(op)), self:loc(op), true
 			)
 	else
 		return self:varcall()

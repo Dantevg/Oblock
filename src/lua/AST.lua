@@ -375,19 +375,25 @@ AST.Expr.Call = {}
 AST.Expr.Call.__index = AST.Expr.Call
 AST.Expr.Call.__name = "Call"
 
-function AST.Expr.Call.new(expression, arglist, loc)
+function AST.Expr.Call.new(expression, arglist, loc, isOperator)
 	local self = {}
 	self.expression = expression
 	self.arglist = arglist
 	self.loc = loc
+	self.isOperator = isOperator
 	return setmetatable(self, AST.Expr.Call)
 end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
 	if not Interpreter.isCallable(fn) then
-		Interpreter.error("Attempt to call non-callable type "
-			..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
+		if self.isOperator then
+			Interpreter.error("No callable operator '"..self.expression.expr.lexeme
+				.."' on this value", self.loc, fn and fn.loc)
+		else
+			Interpreter.error("Attempt to call non-callable type "
+				..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
+		end
 	end
 	local args = {self.arglist:evaluate(env)}
 	local argsToMatch = {}

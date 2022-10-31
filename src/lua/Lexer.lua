@@ -174,10 +174,26 @@ function Lexer:whitespace(char)
 	if hasNewline then self:addToken("newline") end
 end
 
+function Lexer:lineComment()
+	while self:advance() ~= "\n" do end
+	if self:peek() == "\n" then self:nextLine() end
+end
+
+function Lexer:blockComment()
+	while self:advance() ~= ":" or self:peek() ~= ")" do
+		if self:peek() == "\n" then self:nextLine() end
+	end
+	self:advance() -- Closing )
+end
+
 function Lexer:scanToken()
 	local char = self:advance()
 	if char:match("[ \r\t\n]") then
 		self:whitespace(char)
+	elseif char == "-" and self:peek() == "-" then
+		self:lineComment()
+	elseif char == "(" and self:peek() == ":" then
+		self:blockComment()
 	elseif Lexer.tokens[char] then
 		self:combine(Lexer.tokens[char])
 	elseif char == '"' or char == "'" then
@@ -211,7 +227,7 @@ Lexer.tokens = {
 	["-"] = {"minus", '='},
 	["."] = {"dot", '.'},
 	["/"] = {"slash", '='},
-	[":"] = {"colon", '='},
+	[":"] = {"colon"},
 	[";"] = {"semicolon"},
 	["<"] = {"less", '=', '<'},
 	["="] = {"equal", '=', '>'},

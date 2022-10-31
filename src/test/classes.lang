@@ -7,7 +7,7 @@
 		}
 		
 		prototype.greet = () => {
-			print("Hello, " + this.name + "!")
+			print("Hello, " ++ this.name ++ "!")
 		}
 	}
 	

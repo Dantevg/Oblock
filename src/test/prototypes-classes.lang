@@ -1,6 +1,6 @@
 {
 	Person = {
-		greet() => print("Hello, " + this.name + "!")
+		greet() => print("Hello, " ++ this.name ++ "!")
 	}
 	
 	me = Person.clone { name = "RedPolygon" }

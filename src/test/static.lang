@@ -11,7 +11,7 @@
 				this.y = this.y + that.y
 			}
 			
-			toString() => "Vector (" + this.x + ", " + this.y + ")"
+			toString() => "Vector (" ++ this.x ++ ", " ++ this.y ++ ")"
 		}
 		
 		add(a, b) => {

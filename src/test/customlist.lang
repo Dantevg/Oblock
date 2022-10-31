@@ -18,8 +18,8 @@
 		
 		toString() => {
 			str = "["
-			for item in this: str = str + item + ", "
-			return str + "]"
+			for item in this: str = str ++ item ++ ", "
+			return str ++ "]"
 		}
 	}
 	

@@ -93,13 +93,13 @@ function Parser:binary(tokens, next, fn)
 end
 
 function Parser:parse()
-	local success, result = xpcall(function()
+	local success, result = pcall(function()
 		local expr = self:expression()
 		if self:peek().type ~= "EOF" then
 			self:error(self:peek(), "Expected EOF")
 		end
 		return expr
-	end, function(msg) print(debug.traceback(tostring(msg))) end)
+	end)
 	if success then
 		return result
 	elseif result ~= true then
@@ -180,7 +180,11 @@ function Parser:conjunction()
 end
 
 function Parser:pipe()
-	return self:binary({"bar greater"}, Parser.comparison)
+	return self:binary({"bar greater"}, Parser.lowpredop)
+end
+
+function Parser:lowpredop()
+	return self:binary({"plus plus"}, Parser.comparison)
 end
 
 function Parser:comparison()

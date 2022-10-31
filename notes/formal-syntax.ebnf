@@ -9,7 +9,8 @@ control		= 'if' expression ':' statement ['else' statement]
 function	= fn | disjunction ;
 disjunction	= conjunction {'or' conjunction} ;
 conjunction	= application {'and' application} ;
-application	= comparison {'|>' comparison} ;
+application	= lowpredop {'|>' lowpredop} ;
+lowpredop	= comparison {'++' comparison} ;
 comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;

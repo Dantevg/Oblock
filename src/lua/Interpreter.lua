@@ -71,7 +71,7 @@ function Interpreter.context(loc, trace, fn, ...)
 	else
 		local err = values[2]
 		if type(err) == "table" and err.__name == "Error" then
-			err:get("traceback"):push("\tin "..tostring(trace))
+			err:get("traceback"):append("\tin "..tostring(trace))
 			if not err.loc then err.loc = loc end
 			error(err, 0)
 		else

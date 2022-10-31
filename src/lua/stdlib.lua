@@ -35,8 +35,10 @@ function stdlib.Block:get(key)
 	
 	if not value then
 		for _, proto in ipairs(self.protos) do
-			value = proto:get(key)
-			if value ~= nil then break end
+			if proto:has(key) then
+				value = proto:get(key)
+				break
+			end
 		end
 	end
 	if value and (value.__name == "Function" or value.__name == "NativeFunction") then
@@ -149,6 +151,10 @@ function stdlib.Block:call(...)
 	return self:get("()"):call(...)
 end
 
+function stdlib.Block:not_()
+	return stdlib.Boolean(false)
+end
+
 stdlib.Block.proto = stdlib.Block.new()
 
 setmetatable(stdlib.Block, {
@@ -251,6 +257,60 @@ setmetatable(stdlib.NativeFunction, {
 })
 
 
+--[[
+	Sequence requires of its implementors:
+	- get(index: Number)
+	- length: Number
+]]
+stdlib.Sequence = {}
+stdlib.Sequence.__index = stdlib.Sequence
+stdlib.Sequence.__name = "Sequence"
+
+stdlib.Sequence.proto = stdlib.Block()
+
+function stdlib.Sequence.new()
+	return setmetatable(stdlib.Block(), stdlib.Sequence)
+end
+
+function stdlib.Sequence:concat(other)
+	if not other:is(stdlib.Sequence.proto) then Interpreter.error("cannot perform Sequence.concat on "..other.__name) end
+	
+	local values = {}
+	for i = 1, self:get("length").value do
+		table.insert(values, self:get(i))
+	end
+	for i = 1, other:get("length").value do
+		table.insert(values, other:get(i))
+	end
+	return self.new(values)
+end
+
+function stdlib.Sequence:append(value)
+	self:set(self:get("length").value + 1, value)
+end
+
+function stdlib.Sequence:spread()
+	local values = {}
+	for i = 1, self:get("length").value do
+		table.insert(values, self:get(i))
+	end
+	return table.unpack(values)
+end
+
+function stdlib.Sequence:iterate()
+	local i = 0
+	return stdlib.NativeFunction(function()
+		i = i+1
+		return self:get(i), stdlib.Number(i)
+	end, "iterator")
+end
+
+setmetatable(stdlib.Sequence, {
+	__call = function(_, ...) return stdlib.Sequence.new(...) end,
+	__index = stdlib.Block,
+})
+
+
 
 stdlib.Value = {}
 stdlib.Value.__index = stdlib.Value
@@ -328,10 +388,6 @@ function stdlib.Number:sub(other)
 	end
 end
 
-function stdlib.Number:not_()
-	return stdlib.Boolean(false)
-end
-
 stdlib.Number.__eq = stdlib.Value.__eq
 stdlib.Number.__tostring = stdlib.Value.__tostring
 
@@ -346,24 +402,34 @@ stdlib.String = {}
 stdlib.String.__index = stdlib.String
 stdlib.String.__name = "String"
 
-stdlib.String.proto = stdlib.Block()
+stdlib.String.proto = stdlib.Sequence.proto:clone()
 
 function stdlib.String.new(value)
 	local self = stdlib.Value(tostring(value))
 	self.protos = {stdlib.String.proto}
+	self:set("length", stdlib.Number(#tostring(value)))
 	self.mutable = false
 	return setmetatable(self, stdlib.String)
 end
 
-function stdlib.String:add(other)
-	local a, b = tostring(self.value), tostring(other.value)
-	if type(b) ~= "string" then Interpreter.error("cannot perform '+' on "..other.__name) end
-	return self.new(a..b)
+function stdlib.String:get(index)
+	if type(index) == "table" then index = index.value end
+	if type(index) ~= "number" then return stdlib.Block.get(self, index) end
+	return index <= #self.value and self.new(self.value:sub(index, index)) or stdlib.Nil()
 end
 
-function stdlib.String:not_()
-	return stdlib.Boolean(false)
+-- Override from Sequence
+function stdlib.String:concat(other)
+	return self.new(self:toString().value..other:toString().value)
 end
+
+function stdlib.String:__tostring()
+	return tostring(self.value)
+end
+
+stdlib.String.append = stdlib.Sequence.append
+stdlib.String.spread = stdlib.Sequence.spread
+stdlib.String.iterate = stdlib.Sequence.iterate
 
 stdlib.String.__eq = stdlib.Value.__eq
 stdlib.String.__tostring = stdlib.Value.__tostring
@@ -429,10 +495,7 @@ function stdlib.Nil:not_()
 end
 
 stdlib.Nil.__eq = stdlib.Value.__eq
-
-function stdlib.Nil:__tostring()
-	return "nil"
-end
+stdlib.Nil.__tostring = stdlib.Value.__tostring
 
 setmetatable(stdlib.Nil, {
 	__call = function(_, ...) return stdlib.Nil.new(...) end,
@@ -445,51 +508,31 @@ stdlib.List = {}
 stdlib.List.__index = stdlib.List
 stdlib.List.__name = "List"
 
-stdlib.List.proto = stdlib.Block()
+stdlib.List.proto = stdlib.Sequence.proto:clone()
 
 function stdlib.List.new(elements)
 	local self = stdlib.Block()
+	self:set("length", stdlib.Number(0))
 	elements = elements or {}
 	for i = 1, #elements do
 		self:set(i, elements[i])
 	end
-	self:set("length", stdlib.Number(#elements))
 	self.protos = {stdlib.List.proto}
 	return setmetatable(self, stdlib.List)
 end
 
-function stdlib.List:push(value)
-	self:set(#self+1, value)
-	self:set("length", stdlib.Number(#self))
+function stdlib.List:set(index, value, modifiers)
+	stdlib.Block.set(self, index, value, modifiers)
+	if type(index) == "table" then index = index.value end
+	if type(index) == "number" then
+		self:set("length", stdlib.Number(math.max(self:get("length").value, index)))
+	end
 end
 
-function stdlib.List:add(other)
-	local values = {}
-	for i = 1, #self do
-		table.insert(values, self:get(i))
-	end
-	for i = 1, #other do
-		table.insert(values, other:get(i))
-	end
-	self:set("length", stdlib.Number(#self))
-	return self.new(nil, values)
-end
-
-function stdlib.List:spread()
-	local values = {}
-	for i = 1, #self do
-		table.insert(values, self:get(i))
-	end
-	return table.unpack(values)
-end
-
-function stdlib.List:iterate()
-	local i = 0
-	return stdlib.NativeFunction(function()
-		i = i+1
-		return self:get(i), stdlib.Number(i)
-	end, "iterator")
-end
+stdlib.List.append = stdlib.Sequence.append
+stdlib.List.spread = stdlib.Sequence.spread
+stdlib.List.iterate = stdlib.Sequence.iterate
+stdlib.List.concat = stdlib.Sequence.concat
 
 function stdlib.List:__len()
 	return #self.env
@@ -553,6 +596,8 @@ local function defineOperator(base, name, key)
 	end
 end
 
+stdlib.Block.toString = stdlib.String.new
+
 defineProtoNativeFn("Block", "eq", "==")
 defineProtoNativeFn("Block", "neq", "!=")
 defineProtoNativeFn("Block", "pipe", "|>")
@@ -560,10 +605,17 @@ defineProtoNativeFn("Block", "clone")
 defineProtoNativeFn("Block", "keys")
 defineProtoNativeFn("Block", "allProtos", "protos")
 defineProtoNativeFn("Block", "is")
+defineProtoNativeFn("Block", "not_", "!")
+defineProtoNativeFn("Block", "toString")
 
 defineProtoNativeFn("Function", "call", "()")
 defineProtoNativeFn("Function", "compose", "o")
 defineProtoNativeFn("Function", "curry")
+
+defineOperator("Sequence", "concat", "++")
+defineProtoNativeFn("Sequence", "append")
+defineProtoNativeFn("Sequence", "spread", "...")
+defineProtoNativeFn("Sequence", "iterate")
 
 defineOperator("Number", "eq", "==")
 defineOperator("Number", "lt", "<")
@@ -571,10 +623,8 @@ defineOperator("Number", "gt", ">")
 defineOperator("Number", "add", "+")
 defineOperator("Number", "sub", "-")
 defineOperator("Number", "mul", "*")
-defineProtoNativeFn("Number", "not_", "!")
 
-defineOperator("String", "add", "+")
-defineProtoNativeFn("String", "not_", "!")
+defineOperator("String", "concat", "++")
 
 defineProtoNativeFn("Boolean", "not_", "!")
 stdlib.Boolean.proto:set("true", stdlib.Boolean(true))
@@ -583,11 +633,6 @@ stdlib.Boolean.proto:set("false", stdlib.Boolean(false))
 defineProtoNativeFn("Nil", "eq", "==")
 defineProtoNativeFn("Nil", "not_", "!")
 stdlib.Nil.proto:set("nil", stdlib.Nil())
-
-defineOperator("List", "add", "+")
-defineProtoNativeFn("List", "spread", "...")
-defineProtoNativeFn("List", "push")
-defineProtoNativeFn("List", "iterate")
 
 
 
@@ -633,6 +678,7 @@ function stdlib.initEnv(env)
 	
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)
+	env:setHere("Sequence", stdlib.Sequence.proto)
 	env:setHere("Number", stdlib.Number.proto)
 	env:setHere("String", stdlib.String.proto)
 	env:setHere("Boolean", stdlib.Boolean.proto)

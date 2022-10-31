@@ -307,7 +307,7 @@ end
 function AST.Expr.List:evaluate(env)
 	local environment = Interpreter.Environment(env, stdlib.List())
 	local values = {self.expressions:evaluate(environment)}
-	for _, value in ipairs(values) do environment.block:push(value) end
+	for _, value in ipairs(values) do environment.block:append(value) end
 	return environment.block
 end
 
@@ -1245,21 +1245,21 @@ end
 
 function AST.Pattern.Rest:evaluate(env, arguments)
 	local list = stdlib.List()
-	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
+	while #arguments > 0 do list:append(table.remove(arguments, 1)) end
 	env:setHere(self.token.lexeme, list)
 	return true
 end
 
 function AST.Pattern.Rest:assign(env, arguments)
 	local list = stdlib.List()
-	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
+	while #arguments > 0 do list:append(table.remove(arguments, 1)) end
 	env:setHere(self.token.lexeme, list)
 	return true
 end
 
 function AST.Pattern.Rest:define(env, arguments, modifiers)
 	local list = stdlib.List()
-	while #arguments > 0 do list:push(table.remove(arguments, 1)) end
+	while #arguments > 0 do list:append(table.remove(arguments, 1)) end
 	env:setHere(self.token.lexeme, list, modifiers)
 	return true
 end

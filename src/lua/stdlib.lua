@@ -70,6 +70,10 @@ function stdlib.Block:set(key, value, modifiers)
 			modifiers = modifiers or {}
 		}
 	end
+	
+	if type(key) == "string" and value and not value.name then
+		value.name = key
+	end
 end
 
 function stdlib.Block:eq(other)

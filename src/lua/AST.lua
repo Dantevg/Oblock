@@ -343,15 +343,11 @@ end
 
 function AST.Expr.Function:evaluate(env)
 	local fn = stdlib.Function(env, function(environment, args)
-		return self:call(environment, args)
-	end, nil, self.parameters)
+		self.parameters:define(environment, args)
+		return self.body:evaluate(environment)
+	end, nil, self.parameters, self.loc)
 	function fn.__tostring() return self:__tostring() end
 	return fn
-end
-
-function AST.Expr.Function:call(env, arguments)
-	self.parameters:define(env, arguments)
-	return self.body:evaluate(env)
 end
 
 function AST.Expr.Function:resolve(scope)
@@ -400,7 +396,7 @@ function AST.Expr.Call:evaluate(env)
 		Interpreter.error("function parameters do not match parameter signature "..tostring(fn.parameters), self.loc)
 		return stdlib.Nil(self.loc)
 	end
-	return fn:call(table.unpack(args))
+	return fn:call(self.loc, table.unpack(args))
 end
 
 function AST.Expr.Call:resolve(scope)

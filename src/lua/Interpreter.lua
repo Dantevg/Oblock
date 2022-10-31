@@ -46,14 +46,12 @@ function Interpreter.error(message, loc, sourceLoc)
 	error(require("stdlib").Error(message, loc, sourceLoc), 0)
 end
 
+function Interpreter.formatLoc(loc)
+	return string.format("%s:%d:%d", loc.file, loc.line, loc.column)
+end
+
 function Interpreter.printError(err)
-	if err.loc then
-		print(tc(tc.fg.red)..string.format("[%s:%d:%d] %s",
-			err.loc.file, err.loc.line, err.loc.column, err:get("message"))
-			..tc(tc.reset))
-	else
-		print(tc(tc.fg.red)..tostring(err:get("message"))..tc(tc.reset))
-	end
+	print(tc(tc.fg.red)..tostring(err:get("message"))..tc(tc.reset))
 	if err.sourceLoc then
 		print(tc(tc.fg.blue)..string.format("(value came from %s:%d:%d)",
 			err.sourceLoc.file, err.sourceLoc.line, err.sourceLoc.column)..tc(tc.reset))
@@ -71,8 +69,14 @@ function Interpreter.context(loc, trace, fn, ...)
 	else
 		local err = values[2]
 		if type(err) == "table" and err.__name == "Error" then
-			err:get("traceback"):append("\tin "..tostring(trace))
-			if not err.loc then err.loc = loc end
+			local traceback = err:get("traceback")
+			local lastTracebackIndex = traceback:get("length").value
+			if lastTracebackIndex > 0 then
+				traceback:set(lastTracebackIndex, traceback:get(lastTracebackIndex).." in "..tostring(trace))
+			else
+				traceback:append("\tin "..tostring(trace))
+			end
+			traceback:append("\tat "..Interpreter.formatLoc(loc))
 			error(err, 0)
 		else
 			error(err, 0)

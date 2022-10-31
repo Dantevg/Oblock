@@ -77,13 +77,13 @@ function stdlib.Block:eq(other)
 end
 
 function stdlib.Block:neq(other)
-	local val = self:get("=="):call {other}
+	local val = self:get("=="):call(nil, {other})
 	return val:get("!"):call()
 end
 
 function stdlib.Block:pipe(other)
 	if not Interpreter.isCallable(other) then Interpreter.error("cannot pipe into "..other.__name) end
-	return other:call {self}
+	return other:call(nil, {self})
 end
 
 function stdlib.Block:clone(other)
@@ -169,12 +169,13 @@ stdlib.Function.__name = "Function"
 
 stdlib.Function.proto = stdlib.Block()
 
-function stdlib.Function.new(env, body, name, parameters)
+function stdlib.Function.new(env, body, name, parameters, loc)
 	local self = stdlib.Block()
 	self.parentEnv = env
 	self.body = body
 	self.name = name
 	self.parameters = parameters
+	self.loc = loc
 	self.protos = {stdlib.Function.proto}
 	return setmetatable(self, stdlib.Function)
 end
@@ -186,7 +187,7 @@ function stdlib.Function:bind(block)
 	return setmetatable(new, getmetatable(self))
 end
 
-function stdlib.Function:call(...)
+function stdlib.Function:call(loc, ...)
 	local args = {...}
 	local environment = Interpreter.Environment(self.parentEnv, stdlib.Block())
 	if self.this then environment:setHere("this", self.this) end
@@ -196,7 +197,7 @@ function stdlib.Function:call(...)
 		environment:setHere(i, arg)
 	end
 	
-	local values = {pcall(Interpreter.context, self.loc, tostring(self),
+	local values = {pcall(Interpreter.context, loc, tostring(self),
 		self.body, environment, args)}
 	if values[1] then
 		return table.unpack(values, 2)
@@ -209,7 +210,7 @@ end
 
 function stdlib.Function:compose(other)
 	return stdlib.NativeFunction(function(_, ...)
-		return self:call {other:call {...}}
+		return self:call(nil, {other:call(nil, {...})})
 	end)
 end
 
@@ -217,12 +218,13 @@ function stdlib.Function:curry(...)
 	local args = {...}
 	return stdlib.NativeFunction(function(_, ...)
 		for _, arg in ipairs {...} do table.insert(args, arg) end
-		return self:call(table.unpack(args))
+		return self:call(nil, table.unpack(args))
 	end)
 end
 
 function stdlib.Function:__tostring()
-	return self.name and "<function: "..self.name..">" or "<function>"
+	return (self.name and "<function: "..self.name or "<function")
+		.." @ "..Interpreter.formatLoc(self.loc)..">"
 end
 
 setmetatable(stdlib.Function, {
@@ -243,8 +245,14 @@ function stdlib.NativeFunction.new(body, name, parameters)
 	return setmetatable(self, stdlib.NativeFunction)
 end
 
-function stdlib.NativeFunction:call(...)
-	return self.body(self.this, ...)
+function stdlib.NativeFunction:call(loc, ...)
+	local values = {pcall(Interpreter.context, loc, tostring(self),
+		self.body, self.this, ...)}
+	if values[1] then
+		return table.unpack(values, 2)
+	else
+		error(values[2], 0)
+	end
 end
 
 function stdlib.NativeFunction:__tostring()
@@ -361,8 +369,8 @@ function stdlib.Number:lt(other)
 end
 
 function stdlib.Number:gt(other)
-	local val = self:get("<"):call {self, other}
-	return val:get("!"):call {val}
+	local val = self:get("<"):call(nil, {self, other})
+	return val:get("!"):call(nil, {val})
 end
 
 function stdlib.Number:add(other)
@@ -564,7 +572,11 @@ function stdlib.Error.new(message, loc, sourceLoc)
 	self.loc, self.sourceLoc = loc, sourceLoc
 	self.protos = {stdlib.Error.proto}
 	self:set("message", stdlib.String(message))
-	self:set("traceback", stdlib.List())
+	local traceback = stdlib.List()
+	if loc then
+		traceback:append("\tat "..Interpreter.formatLoc(loc))
+	end
+	self:set("traceback", traceback)
 	return setmetatable(self, stdlib.Error)
 end
 
@@ -592,7 +604,7 @@ local function defineOperator(base, name, key)
 	defineProtoNativeFn(base, name, key)
 	stdlib[base]["__"..name] = function(l, r)
 		local fn = l:get(key)
-		if fn then return fn:call(r) end
+		if fn then return fn:call(nil, r) end
 	end
 end
 

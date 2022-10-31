@@ -395,6 +395,7 @@ function AST.Expr.Call:evaluate(env)
 				..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
 		end
 	end
+	
 	local args = {self.arglist:evaluate(env)}
 	local argsToMatch = {}
 	for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
@@ -743,12 +744,13 @@ AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(pattern, expressions, modifiers, predef, loc)
+function AST.Stat.Assignment.new(pattern, expressions, modifiers, predef, op, loc)
 	local self = {}
 	self.pattern = pattern
 	self.expressions = AST.Expr.Group(expressions, loc)
 	self.modifiers = modifiers
 	self.predef = predef
+	self.op = op
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Assignment)
 end
@@ -756,7 +758,11 @@ end
 function AST.Stat.Assignment:evaluate(env)
 	local values = {self.expressions:evaluate(env)}
 	
-	if self.modifiers.empty then
+	if self.op then
+		-- TODO: error detection like in AST.Call
+		local fn = function(a, b) return a:get(self.op.lexeme):call(nil, b) end
+		self.pattern:compoundAssign(env, values, fn)
+	elseif self.modifiers.empty then
 		self.pattern:assign(env, values)
 	else
 		self.pattern:define(env, values, self.modifiers)
@@ -775,7 +781,7 @@ end
 
 function AST.Stat.Assignment:debug(indent)
 	return debugValue(indent, self.__name,
-		{modifiers = self.modifiers, predef = self.predef},
+		{modifiers = self.modifiers, predef = self.predef, op = self.op},
 		{target = {self.pattern}, expressions = self.expressions.expressions})
 end
 
@@ -841,6 +847,12 @@ end
 
 function AST.Pattern.Variable:assign(env, arguments)
 	env:setAtLevel(self.token.lexeme, table.remove(arguments, 1), nil, self.level)
+	return true
+end
+
+function AST.Pattern.Variable:compoundAssign(env, arguments, fn)
+	local newValue = fn(env:get(self.token.lexeme, self.level), table.remove(arguments, 1))
+	env:setAtLevel(self.token.lexeme, newValue, nil, self.level)
 	return true
 end
 
@@ -918,6 +930,19 @@ function AST.Pattern.Index:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.Index:compoundAssign(env, arguments, fn)
+	local arg = table.remove(arguments, 1)
+	if self.base then
+		local base = self.base:evaluate(env)
+		local newValue = fn(base:get(ref(self.expr, env), self.level), arg)
+		base:set(ref(self.expr, env), newValue)
+	else
+		local newValue = fn(env:get(ref(self.expr, env), self.level), arg)
+		env:setHere(ref(self.expr, env), newValue)
+	end
+	return true
+end
+
 function AST.Pattern.Index:define(env, arguments, modifiers)
 	Interpreter.error("index is not a valid definition target", self.loc)
 	return false
@@ -970,6 +995,12 @@ end
 
 function AST.Pattern.Literal:assign(env, arguments)
 	env:setHere(self.literal, table.remove(arguments, 1))
+	return true
+end
+
+function AST.Pattern.Literal:compoundAssign(env, arguments, fn)
+	local newValue = fn(env:get(self.literal, 0), table.remove(arguments, 1))
+	env:setHere(self.literal, newValue)
 	return true
 end
 
@@ -1030,6 +1061,13 @@ function AST.Pattern.Group:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.Group:compoundAssign(env, arguments, fn)
+	for _, pattern in ipairs(self.patterns) do
+		if not pattern:compoundAssign(env, arguments, fn) then return false end
+	end
+	return true
+end
+
 function AST.Pattern.Group:define(env, arguments, modifiers)
 	for _, pattern in ipairs(self.patterns) do
 		if not pattern:define(env, arguments, modifiers) then return false end
@@ -1086,7 +1124,7 @@ function AST.Pattern.List:evaluate(env, arguments)
 	local arg = table.remove(arguments, 1)
 	if not arg then return end
 	local values = {}
-	for _, value in ipairs(arg.environment.env) do
+	for _, value in ipairs(arg.env) do
 		table.insert(values, value.value)
 	end
 	for _, pattern in ipairs(self.patterns) do
@@ -1099,7 +1137,7 @@ function AST.Pattern.List:assign(env, arguments)
 	local arg = table.remove(arguments, 1)
 	if not arg then return end
 	local values = {}
-	for _, value in ipairs(arg.environment.env) do
+	for _, value in ipairs(arg.env) do
 		table.insert(values, value.value)
 	end
 	for _, pattern in ipairs(self.patterns) do
@@ -1108,11 +1146,24 @@ function AST.Pattern.List:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.List:compoundAssign(env, arguments, fn)
+	local arg = table.remove(arguments, 1)
+	if not arg then return end
+	local values = {}
+	for _, value in ipairs(arg.env) do
+		table.insert(values, value.value)
+	end
+	for _, pattern in ipairs(self.patterns) do
+		if not pattern:compoundAssign(env, values, fn) then return false end
+	end
+	return true
+end
+
 function AST.Pattern.List:define(env, arguments, modifiers)
 	local arg = table.remove(arguments, 1)
 	if not arg then return end
 	local values = {}
-	for _, value in ipairs(arg.environment.env) do
+	for _, value in ipairs(arg.env) do
 		table.insert(values, value.value)
 	end
 	for _, pattern in ipairs(self.patterns) do
@@ -1125,7 +1176,7 @@ function AST.Pattern.List:match(env, arguments)
 	local arg = table.remove(arguments, 1)
 	if not arg or arg.__name ~= "List" then return false end
 	local values = {}
-	for _, value in ipairs(arg.environment.env) do
+	for _, value in ipairs(arg.env) do
 		table.insert(values, value.value)
 	end
 	for _, pattern in ipairs(self.patterns) do
@@ -1194,6 +1245,14 @@ function AST.Pattern.Block:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.Block:compoundAssign(env, arguments, fn)
+	local arg = table.remove(arguments, 1)
+	for i, pattern in ipairs(self.patterns) do
+		if not pattern:compoundAssign(env, {arg:get(pattern.token.lexeme)}, fn) then return false end
+	end
+	return true
+end
+
 function AST.Pattern.Block:define(env, arguments, modifiers)
 	local arg = table.remove(arguments, 1)
 	for i, pattern in ipairs(self.patterns) do
@@ -1257,6 +1316,10 @@ function AST.Pattern.Rest:assign(env, arguments)
 	while #arguments > 0 do list:append(table.remove(arguments, 1)) end
 	env:setHere(self.token.lexeme, list)
 	return true
+end
+
+function AST.Pattern.Rest:compoundAssign(env, arguments, fn)
+	Interpreter.error("Rest is not a valid compound assignment target")
 end
 
 function AST.Pattern.Rest:define(env, arguments, modifiers)

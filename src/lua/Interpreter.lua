@@ -76,7 +76,9 @@ function Interpreter.context(loc, trace, fn, ...)
 			else
 				traceback:append("\tin "..tostring(trace))
 			end
-			traceback:append("\tat "..Interpreter.formatLoc(loc))
+			if loc then
+				traceback:append("\tat "..Interpreter.formatLoc(loc))
+			end
 			error(err, 0)
 		else
 			error(err, 0)

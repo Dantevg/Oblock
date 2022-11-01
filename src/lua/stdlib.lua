@@ -670,8 +670,8 @@ stdlib.id = function(_, x) return x or stdlib.Nil() end
 
 stdlib.import = function(_, modname)
 	package.path = package.path..";src/lua/lib/?.lua;src/test/?.lua"
-	local langModule = require("lang")(Interpreter(), "src/test/"..tostring(modname)..".lang")
-		or require("lang")(Interpreter(), "src/lua/lib/"..tostring(modname)..".lang")
+	local langModule = require("lang")(Interpreter(), "src/test/"..tostring(modname)..".ob")
+		or require("lang")(Interpreter(), "src/lua/lib/"..tostring(modname)..".ob")
 	local hasLuaModule, luaModule = pcall(require, tostring(modname))
 	return hasLuaModule and luaModule(langModule or stdlib.Block()) or langModule or stdlib.Nil()
 end

@@ -57,6 +57,15 @@ To-Do / roadmap / proposals
     		}
     	}
     Calling `myDog.greet()` will return an empty object with `_Proto = myDog`
+- Variable definition in `if`
+  - Also for `while`? Not for `for`
+  - Definition only valid in scope of if-branch
+    
+    	if var x = fn(): {
+    		print x
+    	} else {
+    		print "something else"
+    	}
 - Variables immutable by default (`const` by default)
   - Most variables can be `const`
   - Shorthand notation for mutable blocks: (`a` and `b` are `var` here)
@@ -88,7 +97,6 @@ To-Do / roadmap / proposals
     and `mut`/`var` for reassignable
   - Probably: (like JS) no syntax for immutable values, maybe freeze function.
     Immutability checking (for threads) needs to be a function as well
-- Syntax sugar for classes and constructors
 - Default parameters
   - What to do when caller explicitly passes nil?
     python will use nil/None, not default value
@@ -309,6 +317,7 @@ To-Do / roadmap / proposals
 - Comment syntax:
   - C-like: `//` and `/* */`
   - Lua-like: `--` and `--[[ ]]` works well in combination with long/raw strings
+  - Custom: `--` and `(: :)` less internally consistent, but happy faces!
   - Might not be needed: strings as statements as comments (but does not work within expressions: lists)
 - Modifiers as single characters?
   - private `-x := 42`

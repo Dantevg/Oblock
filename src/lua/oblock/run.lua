@@ -1,5 +1,5 @@
-local Lexer = require "Lexer"
-local Parser = require "Parser"
+local Lexer = require "oblock.Lexer"
+local Parser = require "oblock.Parser"
 
 return function(interpreter, filename, content)
 	if not content then

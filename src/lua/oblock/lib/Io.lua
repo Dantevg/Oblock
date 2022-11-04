@@ -1,4 +1,4 @@
-local stdlib = require "stdlib"
+local stdlib = require "oblock.stdlib"
 
 return function(Io)
 	local InputStream = stdlib.import(nil, "io/InputStream")

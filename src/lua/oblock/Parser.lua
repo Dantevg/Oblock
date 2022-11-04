@@ -1,6 +1,6 @@
 -- Inspired by http://craftinginterpreters.com/parsing-expressions.html
 
-local AST = require "AST"
+local AST = require "oblock.AST"
 
 local Parser = {}
 Parser.__index = Parser

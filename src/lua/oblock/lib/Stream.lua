@@ -1,4 +1,4 @@
-local stdlib = require "stdlib"
+local stdlib = require "oblock.stdlib"
 
 return function(Stream)
 	Stream:set("toString", stdlib.NativeFunction(function(self)

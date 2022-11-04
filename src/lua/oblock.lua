@@ -1,6 +1,6 @@
-local Lexer = require "Lexer"
-local Parser = require "Parser"
-local Interpreter = require "Interpreter"
+local Lexer = require "oblock.Lexer"
+local Parser = require "oblock.Parser"
+local Interpreter = require "oblock.Interpreter"
 local has_tc, tc = pcall(require, "terminalcolours")
 local pretty = require("pretty").new { deep = 2, multiline = true}
 

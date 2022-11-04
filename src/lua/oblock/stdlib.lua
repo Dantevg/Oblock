@@ -1,4 +1,4 @@
-local Interpreter = require "Interpreter"
+local Interpreter = require "oblock.Interpreter"
 
 local stdlib = {}
 
@@ -672,9 +672,9 @@ stdlib.id = function(_, x) return x or stdlib.Nil() end
 
 stdlib.import = function(_, modname)
 	-- TODO: generalise to all paths, not just specifically the test directory
-	package.path = package.path..";lib/?.lua;../test/?.lua"
-	local langModule = require("lang")(Interpreter(), "../test/"..tostring(modname)..".ob")
-		or require("lang")(Interpreter(), "/lib/"..tostring(modname)..".ob")
+	package.path = package.path..";oblock/lib/?.lua;../test/?.lua"
+	local langModule = require("oblock.run")(Interpreter(), "../test/"..tostring(modname)..".ob")
+		or require("oblock.run")(Interpreter(), "oblock/lib/"..tostring(modname)..".ob")
 	local hasLuaModule, luaModule = pcall(require, tostring(modname))
 	return hasLuaModule and luaModule(langModule or stdlib.Block()) or langModule or stdlib.Nil()
 end

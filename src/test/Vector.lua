@@ -1,4 +1,4 @@
-local stdlib = require "stdlib"
+local stdlib = require "oblock.stdlib"
 
 return function(Vector)
 	Vector:set("+", stdlib.NativeFunction(function(self, other)

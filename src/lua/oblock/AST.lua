@@ -1,7 +1,7 @@
 -- Inspired by https://craftinginterpreters.com/evaluating-expressions.html
 
-local Interpreter = require "Interpreter"
-local stdlib = require "stdlib"
+local Interpreter = require "oblock.Interpreter"
+local stdlib = require "oblock.stdlib"
 
 local function catchBreakContinue(body, env)
 	local success, err = pcall(body.evaluate, body, env)

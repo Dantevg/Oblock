@@ -5,7 +5,7 @@ Interpreter.__index = Interpreter
 
 function Interpreter.new()
 	local self = {}
-	local stdlib = require "stdlib"
+	local stdlib = require "oblock.stdlib"
 	self.environment = Interpreter.Environment(nil, stdlib.Block())
 	stdlib.initEnv(self.environment)
 	return setmetatable(self, Interpreter)
@@ -43,7 +43,7 @@ function Interpreter.isCallable(fn)
 end
 
 function Interpreter.error(message, loc, sourceLoc)
-	error(require("stdlib").Error(message, loc, sourceLoc), 0)
+	error(require("oblock.stdlib").Error(message, loc, sourceLoc), 0)
 end
 
 function Interpreter.formatLoc(loc)

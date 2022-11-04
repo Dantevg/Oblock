@@ -1,4 +1,4 @@
-local stdlib = require "stdlib"
+local stdlib = require "oblock.stdlib"
 
 return function(OutputStream)
 	OutputStream:set("write", stdlib.NativeFunction(function(self, str)

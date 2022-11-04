@@ -65,7 +65,7 @@ local run = loadfile(basePath.."/lua/language.lua", "bt", setmetatable({}, {
 }))
 
 for test in lfs.dir(basePath.."/test/") do
-	if test:sub(-5) == ".lang" then
+	if test:sub(-3) == ".ob" then
 		local path = basePath.."/test/"..test
 		local file = io.open(path..".out", "r")
 		local correct, output

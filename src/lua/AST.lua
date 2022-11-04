@@ -395,6 +395,7 @@ function AST.Expr.Call:evaluate(env)
 				..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
 		end
 	end
+	
 	local args = {self.arglist:evaluate(env)}
 	local argsToMatch = {}
 	for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
@@ -743,12 +744,13 @@ AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(pattern, expressions, modifiers, predef, loc)
+function AST.Stat.Assignment.new(pattern, expressions, modifiers, predef, op, loc)
 	local self = {}
 	self.pattern = pattern
 	self.expressions = AST.Expr.Group(expressions, loc)
 	self.modifiers = modifiers
 	self.predef = predef
+	self.op = op
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Assignment)
 end
@@ -756,7 +758,25 @@ end
 function AST.Stat.Assignment:evaluate(env)
 	local values = {self.expressions:evaluate(env)}
 	
-	if self.modifiers.empty then
+	if self.op then
+		local fn = function(a, b)
+			local opFn = a:get(self.op.lexeme)
+			if not Interpreter.isCallable(opFn) then
+				Interpreter.error("No callable operator '"..self.op.lexeme
+					.."' on this value", self.loc, opFn and opFn.loc)
+			end
+			
+			local args = {b}
+			local argsToMatch = {}
+			for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
+			if opFn.parameters and not opFn.parameters:match(env, argsToMatch) then
+				Interpreter.error("function parameters do not match parameter signature "..tostring(opFn.parameters), self.loc)
+				return stdlib.Nil(self.loc)
+			end
+			return opFn:call(self.loc, table.unpack(args))
+		end
+		self.pattern:compoundAssign(env, values, fn)
+	elseif self.modifiers.empty then
 		self.pattern:assign(env, values)
 	else
 		self.pattern:define(env, values, self.modifiers)
@@ -765,17 +785,17 @@ end
 
 function AST.Stat.Assignment:resolve(scope)
 	if self.predef then
-		self.pattern:resolve(scope, not self.modifiers.empty)
+		self.pattern:resolve(scope, not self.modifiers.empty, self.op ~= nil)
 		self.expressions:resolve(scope)
 	else
 		self.expressions:resolve(scope)
-		self.pattern:resolve(scope, not self.modifiers.empty)
+		self.pattern:resolve(scope, not self.modifiers.empty, self.op ~= nil)
 	end
 end
 
 function AST.Stat.Assignment:debug(indent)
 	return debugValue(indent, self.__name,
-		{modifiers = self.modifiers, predef = self.predef},
+		{modifiers = self.modifiers, predef = self.predef, op = self.op},
 		{target = {self.pattern}, expressions = self.expressions.expressions})
 end
 
@@ -844,6 +864,12 @@ function AST.Pattern.Variable:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.Variable:compoundAssign(env, arguments, fn)
+	local newValue = fn(env:get(self.token.lexeme, self.level), table.remove(arguments, 1))
+	env:setAtLevel(self.token.lexeme, newValue, nil, self.level)
+	return true
+end
+
 function AST.Pattern.Variable:define(env, arguments, modifiers)
 	env:setHere(self.token.lexeme, table.remove(arguments, 1), modifiers)
 	return true
@@ -853,7 +879,7 @@ function AST.Pattern.Variable:match(env, arguments)
 	return not not table.remove(arguments, 1)
 end
 
-function AST.Pattern.Variable:resolve(scope, isDef)
+function AST.Pattern.Variable:resolve(scope, isDef, isCompound)
 	if isDef and scope[self.token.lexeme] then
 		Interpreter.error("Redefinition of variable "..tostring(self.token.lexeme))
 	end
@@ -869,6 +895,9 @@ function AST.Pattern.Variable:resolve(scope, isDef)
 	end
 	-- Always define at current level (explicit or implicit)
 	if not self.level then
+		if isCompound then
+			Interpreter.error("unresolved variable "..self.token.lexeme, self.loc)
+		end
 		origScope[self.token.lexeme] = true
 		self.level = 0
 	end
@@ -914,6 +943,19 @@ function AST.Pattern.Index:assign(env, arguments)
 		self.base:evaluate(env):set(ref(self.expr, env), arg)
 	else
 		env:setHere(ref(self.expr, env), arg)
+	end
+	return true
+end
+
+function AST.Pattern.Index:compoundAssign(env, arguments, fn)
+	local arg = table.remove(arguments, 1)
+	if self.base then
+		local base = self.base:evaluate(env)
+		local newValue = fn(base:get(ref(self.expr, env), self.level), arg)
+		base:set(ref(self.expr, env), newValue)
+	else
+		local newValue = fn(env:get(ref(self.expr, env), self.level), arg)
+		env:setHere(ref(self.expr, env), newValue)
 	end
 	return true
 end
@@ -973,6 +1015,12 @@ function AST.Pattern.Literal:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.Literal:compoundAssign(env, arguments, fn)
+	local newValue = fn(env:get(self.literal, 0), table.remove(arguments, 1))
+	env:setHere(self.literal, newValue)
+	return true
+end
+
 function AST.Pattern.Literal:define(env, arguments, modifiers)
 	env:setHere(self.literal, table.remove(arguments, 1), modifiers)
 	return true
@@ -983,9 +1031,12 @@ function AST.Pattern.Literal:match(env, arguments)
 	return value and value.__name == "Literal" and value.literal == self.literal
 end
 
-function AST.Pattern.Literal:resolve(scope, isDef)
+function AST.Pattern.Literal:resolve(scope, isDef, isCompound)
 	if isDef and scope[self.literal] then
 		Interpreter.error("Redefinition of variable "..tostring(self.literal))
+	end
+	if isCompound and not scope[self.literal] then
+		Interpreter.error("unresolved variable "..self.literal, self.loc)
 	end
 	scope[self.literal] = true
 end
@@ -1016,39 +1067,21 @@ function AST.Pattern.Group.new(patterns, loc)
 	return setmetatable(self, AST.Pattern.Group)
 end
 
-function AST.Pattern.Group:evaluate(env, arguments)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:evaluate(env, arguments) then return false end
+function AST.Pattern.Group.makeLoop(fn)
+	return function(self, ...)
+		for _, pattern in ipairs(self.patterns) do
+			if pattern[fn](pattern, ...) == false then return false end
+		end
+		return true
 	end
-	return true
 end
 
-function AST.Pattern.Group:assign(env, arguments)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:assign(env, arguments) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:define(env, arguments, modifiers)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:define(env, arguments, modifiers) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:match(env, arguments)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:match(env, arguments) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:resolve(scope, isDef)
-	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope, isDef)
-	end
-end
+AST.Pattern.Group.evaluate = AST.Pattern.Group.makeLoop "evaluate"
+AST.Pattern.Group.assign = AST.Pattern.Group.makeLoop "assign"
+AST.Pattern.Group.compoundAssign = AST.Pattern.Group.makeLoop "compoundAssign"
+AST.Pattern.Group.define = AST.Pattern.Group.makeLoop "define"
+AST.Pattern.Group.match = AST.Pattern.Group.makeLoop "match"
+AST.Pattern.Group.resolve = AST.Pattern.Group.makeLoop "resolve"
 
 function AST.Pattern.Group:debug(indent)
 	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
@@ -1082,50 +1115,31 @@ function AST.Pattern.List.new(patterns, loc)
 	return setmetatable(self, AST.Pattern.List)
 end
 
-function AST.Pattern.List:evaluate(env, arguments)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.environment.env) do
-		table.insert(values, value.value)
+function AST.Pattern.List.makeLoop(fn)
+	return function(self, env, arguments, ...)
+		local arg = table.remove(arguments, 1)
+		if not arg then return end
+		local values = {}
+		for _, value in ipairs(arg.env) do
+			table.insert(values, value.value)
+		end
+		for _, pattern in ipairs(self.patterns) do
+			if pattern[fn](pattern, env, values, ...) == false then return false end
+		end
+		return true
 	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:evaluate(env, values) then return false end
-	end
-	return true
 end
 
-function AST.Pattern.List:assign(env, arguments)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.environment.env) do
-		table.insert(values, value.value)
-	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:assign(env, values) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.List:define(env, arguments, modifiers)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.environment.env) do
-		table.insert(values, value.value)
-	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:define(env, values, modifiers) then return false end
-	end
-	return true
-end
+AST.Pattern.List.evaluate = AST.Pattern.List.makeLoop "evaluate"
+AST.Pattern.List.assign = AST.Pattern.List.makeLoop "assign"
+AST.Pattern.List.compoundAssign = AST.Pattern.List.makeLoop "compoundAssign"
+AST.Pattern.List.define = AST.Pattern.List.makeLoop "define"
 
 function AST.Pattern.List:match(env, arguments)
 	local arg = table.remove(arguments, 1)
 	if not arg or arg.__name ~= "List" then return false end
 	local values = {}
-	for _, value in ipairs(arg.environment.env) do
+	for _, value in ipairs(arg.env) do
 		table.insert(values, value.value)
 	end
 	for _, pattern in ipairs(self.patterns) do
@@ -1134,9 +1148,9 @@ function AST.Pattern.List:match(env, arguments)
 	return true
 end
 
-function AST.Pattern.List:resolve(scope, isDef)
+function AST.Pattern.List:resolve(scope, isDef, isCompound)
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope, isDef)
+		pattern:resolve(scope, isDef, isCompound)
 	end
 end
 
@@ -1178,41 +1192,27 @@ function AST.Pattern.Block.new(patterns, loc)
 	return setmetatable(self, AST.Pattern.Block)
 end
 
-function AST.Pattern.Block:evaluate(env, arguments)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:evaluate(env, {arg:get(pattern.token.lexeme)}) then return false end
+function AST.Pattern.Block.makeLoop(fn)
+	return function(self, env, arguments, ...)
+		local arg = table.remove(arguments, 1)
+		for i, pattern in ipairs(self.patterns) do
+			if pattern[fn](pattern, env, {arg:get(pattern.token.lexeme)}, ...) == false then
+				return false
+			end
+		end
+		return true
 	end
-	return true
 end
 
-function AST.Pattern.Block:assign(env, arguments)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:assign(env, {arg:get(pattern.token.lexeme)}) then return false end
-	end
-	return true
-end
+AST.Pattern.Block.evaluate = AST.Pattern.Block.makeLoop "evaluate"
+AST.Pattern.Block.assign = AST.Pattern.Block.makeLoop "assign"
+AST.Pattern.Block.compoundAssign = AST.Pattern.Block.makeLoop "compoundAssign"
+AST.Pattern.Block.define = AST.Pattern.Block.makeLoop "define"
+AST.Pattern.Block.match = AST.Pattern.Block.makeLoop "match"
 
-function AST.Pattern.Block:define(env, arguments, modifiers)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:define(env, {arg:get(pattern.token.lexeme)}, modifiers) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Block:match(env, arguments)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:match(env, {arg:get(pattern.token.lexeme)}) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Block:resolve(scope, isDef)
+function AST.Pattern.Block:resolve(scope, isDef, isCompound)
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope, isDef)
+		pattern:resolve(scope, isDef, isCompound)
 	end
 end
 
@@ -1259,6 +1259,10 @@ function AST.Pattern.Rest:assign(env, arguments)
 	return true
 end
 
+function AST.Pattern.Rest:compoundAssign(env, arguments, fn)
+	Interpreter.error("Rest is not a valid compound assignment target", self.loc)
+end
+
 function AST.Pattern.Rest:define(env, arguments, modifiers)
 	local list = stdlib.List()
 	while #arguments > 0 do list:append(table.remove(arguments, 1)) end
@@ -1270,7 +1274,10 @@ function AST.Pattern.Rest:match(env, arguments)
 	return true
 end
 
-function AST.Pattern.Rest:resolve(scope)
+function AST.Pattern.Rest:resolve(scope, isDef, isCompound)
+	if isCompound then
+		Interpreter.error("Rest is not a valid compound assignment target", self.loc)
+	end
 	scope[self.token.lexeme] = true
 end
 

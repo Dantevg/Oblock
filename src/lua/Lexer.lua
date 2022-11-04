@@ -153,7 +153,8 @@ function Lexer:combine(token)
 		name = name.." "..token[1]
 		nextChar = self:peek()
 	end
-	if self.current > self.start + 2 and not Lexer.longTokens[name] then
+	if self.current > self.start + 2 and not Lexer.longTokens[name]
+			and (self:peek(-1) ~= "=" or self:peek(-2) == "=") then
 		self:error("Unknown long token", true)
 	else
 		self:addToken(name)

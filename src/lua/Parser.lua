@@ -347,6 +347,7 @@ end
 function Parser:assignment(isExpr)
 	local modifiers = {empty = true}
 	local isAssignment, isFunction = false, false
+	local compoundOp = nil
 	local loc = self:loc(self:peek())
 	
 	-- Match modifiers: `var`, `const`
@@ -367,11 +368,18 @@ function Parser:assignment(isExpr)
 	if self:match {"equal"} then -- a = b
 		isAssignment = true
 		loc = self:loc()
+	elseif modifiers.empty and self:peek().type:find(" equal$") then -- a += b
+		self:advance()
+		isAssignment = true
+		loc = self:loc()
+		local opToken = self:previous()
+		local opLexeme = opToken.lexeme:sub(1, -2) -- Strip away '='
+		compoundOp = AST.Expr.Literal(opLexeme, opLexeme, self:loc(opToken))
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()
 	elseif not modifiers.empty then -- var a, const a
-		return AST.Stat.Assignment(pattern, {}, modifiers, false, loc)
+		return AST.Stat.Assignment(pattern, {}, modifiers, false, nil, loc)
 	end
 	
 	if isAssignment or isFunction then
@@ -381,17 +389,12 @@ function Parser:assignment(isExpr)
 			and {self:expression()}
 			or self:anylist(self.expression, "expression", true)
 		if isAssignment then
-			return AST.Stat.Assignment(pattern, values, modifiers, false, loc)
+			return AST.Stat.Assignment(pattern, values, modifiers, false, compoundOp, loc)
 		elseif isFunction and expr.__name == "Call" and #patterns == 1 then
 			local name, parameters = expr.expression, AST.Pattern(expr.arglist)
-			-- if parameters.__name == "Variable" then -- name arg => body
-			-- 	parameters = AST.Expr.Group({parameters}, loc)
-			-- elseif parameters.__name ~= "Group" then -- name(arg, arg) => body
-			-- 	self:error(equal, "Invalid function parameter: "..parameters.__name)
-			-- end
 			return AST.Stat.Assignment(
 				AST.Pattern(name), {AST.Expr.Function(parameters, values[1], loc)},
-				modifiers, true, loc)
+				modifiers, true, nil, loc)
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end

@@ -1,3 +1,5 @@
+#!/usr/bin/env lua
+
 package.path = package.path..";lib/?.lua"
 
 local Lexer = require "oblock.Lexer"

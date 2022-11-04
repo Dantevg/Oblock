@@ -2,6 +2,7 @@ local Lexer = require "Lexer"
 local Parser = require "Parser"
 local Interpreter = require "Interpreter"
 local has_tc, tc = pcall(require, "terminalcolours")
+local pretty = require("pretty").new { deep = 2, multiline = true}
 
 local version = "0.4"
 
@@ -14,8 +15,8 @@ local function hasArg(name)
 end
 
 local path = args[1]
-local isDemo = hasArg("--demo")
-local isDebug = hasArg("--debug")
+local doParse = not hasArg("--lex")
+local doInterpret = doParse and not hasArg("--parse")
 local isInteractive = hasArg("--interactive") or hasArg("-i")
 local file = (path and not isInteractive) and io.open(path) or io.stdin
 local filename = (file == io.stdin) and "stdin" or string.match(path or "", "/([^/]+)$") or path
@@ -62,35 +63,40 @@ end
 
 local interpreter = Interpreter()
 
-function eval(content)
-	if isDemo then print() end
-	
+function perform(content)
+	-- Lex
 	local tokens = Lexer(content, filename):lex()
 	if not tokens then return end
+	
+	if not doParse then
+		print(pretty(tokens))
+		return
+	end
+	
+	-- Parse
 	local program = Parser(tokens, filename):parse()
 	if not program then return end
 	
-	if isDebug then print(program:debug()) end
-	
-	if isDemo then
-		interpreter:interpret(program)
-		print()
-	else
-		local values = {interpreter:interpret(program)}
-		if #values > 0 then print(table.unpack(values)) end
+	if not doInterpret then
+		print(program)
+		print( (program:debug()) )
+		return
 	end
+	
+	-- Interpret
+	local values = {interpreter:interpret(program)}
+	if #values > 0 then print(table.unpack(values)) end
 end
 
-if isDemo then print() end
 if isInteractive then
 	while true do
 		io.write("> ")
 		local content = file:read("l")
 		if content == nil then print() break end
-		eval(content)
+		perform(content)
 	end
 else
 	local content = file:read("a")
-	eval(content)
+	perform(content)
 end
 file:close()

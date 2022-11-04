@@ -285,7 +285,9 @@ function stdlib.Sequence.new()
 end
 
 function stdlib.Sequence:concat(other)
-	if not other:is(stdlib.Sequence.proto) then Interpreter.error("cannot perform Sequence.concat on "..other.__name) end
+	if not other:is(stdlib.Sequence.proto).value then
+		Interpreter.error("cannot perform Sequence.concat on "..other.__name)
+	end
 	
 	local values = {}
 	for i = 1, self:get("length").value do

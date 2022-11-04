@@ -759,8 +759,22 @@ function AST.Stat.Assignment:evaluate(env)
 	local values = {self.expressions:evaluate(env)}
 	
 	if self.op then
-		-- TODO: error detection like in AST.Call
-		local fn = function(a, b) return a:get(self.op.lexeme):call(nil, b) end
+		local fn = function(a, b)
+			local opFn = a:get(self.op.lexeme)
+			if not Interpreter.isCallable(opFn) then
+				Interpreter.error("No callable operator '"..self.op.lexeme
+					.."' on this value", self.loc, opFn and opFn.loc)
+			end
+			
+			local args = {b}
+			local argsToMatch = {}
+			for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
+			if opFn.parameters and not opFn.parameters:match(env, argsToMatch) then
+				Interpreter.error("function parameters do not match parameter signature "..tostring(opFn.parameters), self.loc)
+				return stdlib.Nil(self.loc)
+			end
+			return opFn:call(self.loc, table.unpack(args))
+		end
 		self.pattern:compoundAssign(env, values, fn)
 	elseif self.modifiers.empty then
 		self.pattern:assign(env, values)

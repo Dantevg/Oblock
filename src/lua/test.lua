@@ -1,3 +1,5 @@
+package.path = package.path..";lib/?.lua"
+
 local lfs = require "lfs"
 local has_tc, tc = pcall(require, "terminalcolours")
 

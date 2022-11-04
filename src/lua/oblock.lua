@@ -1,3 +1,5 @@
+package.path = package.path..";lib/?.lua"
+
 local Lexer = require "oblock.Lexer"
 local Parser = require "oblock.Parser"
 local Interpreter = require "oblock.Interpreter"

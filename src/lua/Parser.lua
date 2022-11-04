@@ -368,14 +368,13 @@ function Parser:assignment(isExpr)
 	if self:match {"equal"} then -- a = b
 		isAssignment = true
 		loc = self:loc()
-	elseif modifiers.empty and self:match {"plus equal", "plus plus equal"} then
+	elseif modifiers.empty and self:peek().type:find(" equal$") then -- a += b
+		self:advance()
 		isAssignment = true
 		loc = self:loc()
 		local opToken = self:previous()
 		local opLexeme = opToken.lexeme:sub(1, -2) -- Strip away '='
 		compoundOp = AST.Expr.Literal(opLexeme, opLexeme, self:loc(opToken))
-		-- TODO: check that this is not a (function) definition
-		-- TODO: apply to all operators
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()

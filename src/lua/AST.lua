@@ -771,11 +771,11 @@ end
 
 function AST.Stat.Assignment:resolve(scope)
 	if self.predef then
-		self.pattern:resolve(scope, not self.modifiers.empty)
+		self.pattern:resolve(scope, not self.modifiers.empty, self.op ~= nil)
 		self.expressions:resolve(scope)
 	else
 		self.expressions:resolve(scope)
-		self.pattern:resolve(scope, not self.modifiers.empty)
+		self.pattern:resolve(scope, not self.modifiers.empty, self.op ~= nil)
 	end
 end
 
@@ -865,7 +865,7 @@ function AST.Pattern.Variable:match(env, arguments)
 	return not not table.remove(arguments, 1)
 end
 
-function AST.Pattern.Variable:resolve(scope, isDef)
+function AST.Pattern.Variable:resolve(scope, isDef, isCompound)
 	if isDef and scope[self.token.lexeme] then
 		Interpreter.error("Redefinition of variable "..tostring(self.token.lexeme))
 	end
@@ -881,6 +881,9 @@ function AST.Pattern.Variable:resolve(scope, isDef)
 	end
 	-- Always define at current level (explicit or implicit)
 	if not self.level then
+		if isCompound then
+			Interpreter.error("unresolved variable "..self.token.lexeme, self.loc)
+		end
 		origScope[self.token.lexeme] = true
 		self.level = 0
 	end
@@ -1047,46 +1050,21 @@ function AST.Pattern.Group.new(patterns, loc)
 	return setmetatable(self, AST.Pattern.Group)
 end
 
-function AST.Pattern.Group:evaluate(env, arguments)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:evaluate(env, arguments) then return false end
+function AST.Pattern.Group.makeLoop(fn)
+	return function(self, ...)
+		for _, pattern in ipairs(self.patterns) do
+			if pattern[fn](pattern, ...) == false then return false end
+		end
+		return true
 	end
-	return true
 end
 
-function AST.Pattern.Group:assign(env, arguments)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:assign(env, arguments) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:compoundAssign(env, arguments, fn)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:compoundAssign(env, arguments, fn) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:define(env, arguments, modifiers)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:define(env, arguments, modifiers) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:match(env, arguments)
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:match(env, arguments) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Group:resolve(scope, isDef)
-	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope, isDef)
-	end
-end
+AST.Pattern.Group.evaluate = AST.Pattern.Group.makeLoop "evaluate"
+AST.Pattern.Group.assign = AST.Pattern.Group.makeLoop "assign"
+AST.Pattern.Group.compoundAssign = AST.Pattern.Group.makeLoop "compoundAssign"
+AST.Pattern.Group.define = AST.Pattern.Group.makeLoop "define"
+AST.Pattern.Group.match = AST.Pattern.Group.makeLoop "match"
+AST.Pattern.Group.resolve = AST.Pattern.Group.makeLoop "resolve"
 
 function AST.Pattern.Group:debug(indent)
 	return debugValue(indent, self.__name, {}, {patterns = self.patterns})
@@ -1120,57 +1098,25 @@ function AST.Pattern.List.new(patterns, loc)
 	return setmetatable(self, AST.Pattern.List)
 end
 
-function AST.Pattern.List:evaluate(env, arguments)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.env) do
-		table.insert(values, value.value)
+function AST.Pattern.List.makeLoop(fn)
+	return function(self, env, arguments, ...)
+		local arg = table.remove(arguments, 1)
+		if not arg then return end
+		local values = {}
+		for _, value in ipairs(arg.env) do
+			table.insert(values, value.value)
+		end
+		for _, pattern in ipairs(self.patterns) do
+			if pattern[fn](pattern, env, values, ...) == false then return false end
+		end
+		return true
 	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:evaluate(env, values) then return false end
-	end
-	return true
 end
 
-function AST.Pattern.List:assign(env, arguments)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.env) do
-		table.insert(values, value.value)
-	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:assign(env, values) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.List:compoundAssign(env, arguments, fn)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.env) do
-		table.insert(values, value.value)
-	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:compoundAssign(env, values, fn) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.List:define(env, arguments, modifiers)
-	local arg = table.remove(arguments, 1)
-	if not arg then return end
-	local values = {}
-	for _, value in ipairs(arg.env) do
-		table.insert(values, value.value)
-	end
-	for _, pattern in ipairs(self.patterns) do
-		if not pattern:define(env, values, modifiers) then return false end
-	end
-	return true
-end
+AST.Pattern.List.evaluate = AST.Pattern.List.makeLoop "evaluate"
+AST.Pattern.List.assign = AST.Pattern.List.makeLoop "assign"
+AST.Pattern.List.compoundAssign = AST.Pattern.List.makeLoop "compoundAssign"
+AST.Pattern.List.define = AST.Pattern.List.makeLoop "define"
 
 function AST.Pattern.List:match(env, arguments)
 	local arg = table.remove(arguments, 1)
@@ -1185,9 +1131,9 @@ function AST.Pattern.List:match(env, arguments)
 	return true
 end
 
-function AST.Pattern.List:resolve(scope, isDef)
+function AST.Pattern.List:resolve(scope, isDef, isCompound)
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope, isDef)
+		pattern:resolve(scope, isDef, isCompound)
 	end
 end
 
@@ -1229,49 +1175,27 @@ function AST.Pattern.Block.new(patterns, loc)
 	return setmetatable(self, AST.Pattern.Block)
 end
 
-function AST.Pattern.Block:evaluate(env, arguments)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:evaluate(env, {arg:get(pattern.token.lexeme)}) then return false end
+function AST.Pattern.Block.makeLoop(fn)
+	return function(self, env, arguments, ...)
+		local arg = table.remove(arguments, 1)
+		for i, pattern in ipairs(self.patterns) do
+			if pattern[fn](pattern, env, {arg:get(pattern.token.lexeme)}, ...) == false then
+				return false
+			end
+		end
+		return true
 	end
-	return true
 end
 
-function AST.Pattern.Block:assign(env, arguments)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:assign(env, {arg:get(pattern.token.lexeme)}) then return false end
-	end
-	return true
-end
+AST.Pattern.Block.evaluate = AST.Pattern.Block.makeLoop "evaluate"
+AST.Pattern.Block.assign = AST.Pattern.Block.makeLoop "assign"
+AST.Pattern.Block.compoundAssign = AST.Pattern.Block.makeLoop "compoundAssign"
+AST.Pattern.Block.define = AST.Pattern.Block.makeLoop "define"
+AST.Pattern.Block.match = AST.Pattern.Block.makeLoop "match"
 
-function AST.Pattern.Block:compoundAssign(env, arguments, fn)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:compoundAssign(env, {arg:get(pattern.token.lexeme)}, fn) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Block:define(env, arguments, modifiers)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:define(env, {arg:get(pattern.token.lexeme)}, modifiers) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Block:match(env, arguments)
-	local arg = table.remove(arguments, 1)
-	for i, pattern in ipairs(self.patterns) do
-		if not pattern:match(env, {arg:get(pattern.token.lexeme)}) then return false end
-	end
-	return true
-end
-
-function AST.Pattern.Block:resolve(scope, isDef)
+function AST.Pattern.Block:resolve(scope, isDef, isCompound)
 	for _, pattern in ipairs(self.patterns) do
-		pattern:resolve(scope, isDef)
+		pattern:resolve(scope, isDef, isCompound)
 	end
 end
 

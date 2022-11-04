@@ -16,7 +16,7 @@ if has_tc then
 	status.create = tc(tc.fg.blue)..status.create..tc(tc.reset)
 end
 
-local basePath = (...)
+local basePath = (...) or "../test"
 local oldPrint = print
 
 local function tostringAll(tbl)
@@ -58,15 +58,15 @@ local function makeWatchdogFunction(timeout)
 	end
 end
 
-local run = loadfile(basePath.."/lua/language.lua", "bt", setmetatable({}, {
+local run = loadfile("oblock.lua", "bt", setmetatable({}, {
 	__index = function(_, k)
 		return k == "print" and function() end or _G[k]
 	end
 }))
 
-for test in lfs.dir(basePath.."/test/") do
+for test in lfs.dir(basePath) do
 	if test:sub(-3) == ".ob" then
-		local path = basePath.."/test/"..test
+		local path = basePath.."/"..test
 		local file = io.open(path..".out", "r")
 		local correct, output
 		if not file then

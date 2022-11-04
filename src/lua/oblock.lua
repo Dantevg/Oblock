@@ -4,7 +4,7 @@ local Interpreter = require "Interpreter"
 local has_tc, tc = pcall(require, "terminalcolours")
 local pretty = require("pretty").new { deep = 2, multiline = true}
 
-local version = "0.4"
+local version = "0.5"
 
 local args = {...}
 local function hasArg(name)

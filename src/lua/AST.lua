@@ -1017,9 +1017,12 @@ function AST.Pattern.Literal:match(env, arguments)
 	return value and value.__name == "Literal" and value.literal == self.literal
 end
 
-function AST.Pattern.Literal:resolve(scope, isDef)
+function AST.Pattern.Literal:resolve(scope, isDef, isCompound)
 	if isDef and scope[self.literal] then
 		Interpreter.error("Redefinition of variable "..tostring(self.literal))
+	end
+	if isCompound and not scope[self.literal] then
+		Interpreter.error("unresolved variable "..self.literal, self.loc)
 	end
 	scope[self.literal] = true
 end
@@ -1243,7 +1246,7 @@ function AST.Pattern.Rest:assign(env, arguments)
 end
 
 function AST.Pattern.Rest:compoundAssign(env, arguments, fn)
-	Interpreter.error("Rest is not a valid compound assignment target")
+	Interpreter.error("Rest is not a valid compound assignment target", self.loc)
 end
 
 function AST.Pattern.Rest:define(env, arguments, modifiers)
@@ -1257,7 +1260,10 @@ function AST.Pattern.Rest:match(env, arguments)
 	return true
 end
 
-function AST.Pattern.Rest:resolve(scope)
+function AST.Pattern.Rest:resolve(scope, isDef, isCompound)
+	if isCompound then
+		Interpreter.error("Rest is not a valid compound assignment target", self.loc)
+	end
 	scope[self.token.lexeme] = true
 end
 

@@ -64,10 +64,7 @@ You can give Oblock a spin:
 1. Clone the repository (`git clone https://github.com/Dantevg/Oblock`)
 2. Install Lua if you haven't already
 3. From the [`src/lua/`](src/lua/) directory, run `./oblock.lua` and type away!
-   (the `--interactive` parameter enables a REPL).  
-   Note that an Oblock file is a single *expression*, so if you want to execute
-   multiple statements, you must enclose them in `{}`. (the brackets were left
-   out in the examples above, for brevity.)
+   (the `--interactive` parameter enables a REPL).
 
 ## Status and roadmap
 Oblock is currently still very much in development and the design is not yet

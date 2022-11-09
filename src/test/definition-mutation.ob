@@ -1,16 +1,14 @@
-{
-	var z
-	x = -5
-	a = { var x = x + 1 }
-	if x < 10: {
-		x = -x
-		z = 1
-	}
-	print x
-	print(a.x)
-	print z
-	
-	b = { 37 + 5 = "forty-two" }
-	"hello world" = "hehe"
-	print(b.42, ."hello world")
+var z
+x = -5
+a = { var x = x + 1 }
+if x < 10: {
+	x = -x
+	z = 1
 }
+print x
+print(a.x)
+print z
+
+b = { 37 + 5 = "forty-two" }
+"hello world" = "hehe"
+print(b.42, ."hello world")

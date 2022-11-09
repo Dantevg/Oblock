@@ -1,18 +1,16 @@
-{
-	Person = {
-		prototype = {}
-		
-		"()" name => prototype.clone {
-			var name = name
-		}
-		
-		prototype.greet = () => {
-			print("Hello, " ++ this.name ++ "!")
-		}
+Person = {
+	prototype = {}
+	
+	"()" name => prototype.clone {
+		var name = name
 	}
 	
-	inst = Person "RedPolygon"
-	inst.greet()
-	inst.name = "World"
-	inst.greet()
+	prototype.greet = () => {
+		print("Hello, " ++ this.name ++ "!")
+	}
 }
+
+inst = Person "RedPolygon"
+inst.greet()
+inst.name = "World"
+inst.greet()

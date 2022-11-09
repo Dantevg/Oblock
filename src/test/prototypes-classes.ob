@@ -1,10 +1,8 @@
-{
-	Person = {
-		greet() => print("Hello, " ++ this.name ++ "!")
-	}
-	
-	me = Person.clone { name = "RedPolygon" }
-	me.greet()
-	me.name = "World"
-	me.greet()
+Person = {
+	greet() => print("Hello, " ++ this.name ++ "!")
 }
+
+me = Person.clone { name = "RedPolygon" }
+me.greet()
+me.name = "World"
+me.greet()

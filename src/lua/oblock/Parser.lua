@@ -94,7 +94,8 @@ end
 
 function Parser:parse()
 	local success, result = pcall(function()
-		local expr = self:expression()
+		local loc = self:loc()
+		local expr = AST.Expr.Block(self:statseq(true), loc)
 		if self:peek().type ~= "EOF" then
 			self:error(self:peek(), "Expected EOF")
 		end
@@ -277,7 +278,7 @@ function Parser:expseq(endTokenName)
 	return elements
 end
 
-function Parser:statseq()
+function Parser:statseq(isRoot)
 	local elements = {}
 	while self:peek().type ~= "closing curly bracket" and self:peek().type ~= "EOF" do
 		local success, element = pcall(self.statement, self)
@@ -287,7 +288,7 @@ function Parser:statseq()
 			error(element)
 		end
 	end
-	self:consume("closing curly bracket", "Expected '}'")
+	if not isRoot then self:consume("closing curly bracket", "Expected '}'") end
 	return elements
 end
 

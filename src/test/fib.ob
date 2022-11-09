@@ -1,4 +1,2 @@
-{
-	fib n => n < 2 and 1 or fib(n-1) + fib(n-2)
-	print("fib 10 = " ++ fib 10)
-}
+fib n => n < 2 and 1 or fib(n-1) + fib(n-2)
+print("fib 10 = " ++ fib 10)

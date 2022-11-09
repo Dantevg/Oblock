@@ -1,8 +1,6 @@
-{
-	Vector = import "Vector"
-	a = Vector.clone { x = 10; y = 20 }
-	b = Vector.clone { x = 5; y = 2 }
-	c = a + b
-	d = a * b
-	print(c.toString(), d)
-}
+Vector = import "Vector"
+a = Vector.clone { x = 10; y = 20 }
+b = Vector.clone { x = 5; y = 2 }
+c = a + b
+d = a * b
+print(c.toString(), d)

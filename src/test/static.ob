@@ -1,33 +1,31 @@
-{
-	var Vector
-	Vector = {
-		const prototype = {
-			init(x, y) => {
-				this.x, this.y = x, y
-			}
-			
-			add(that) => {
-				this.x = this.x + that.x
-				this.y = this.y + that.y
-			}
-			
-			toString() => "Vector (" ++ this.x ++ ", " ++ this.y ++ ")"
+var Vector
+Vector = {
+	const prototype = {
+		init(x, y) => {
+			this.x, this.y = x, y
 		}
 		
-		add(a, b) => {
-			print(a.toString(), b.toString())
+		add(that) => {
+			this.x = this.x + that.x
+			this.y = this.y + that.y
 		}
 		
-		add(a, b) => Vector(a.x + b.x, a.y + b.y)
-		
-		"()" (x, y) => prototype.clone {
-			var x, y = x, y
-		}
+		toString() => "Vector (" ++ this.x ++ ", " ++ this.y ++ ")"
 	}
 	
-	vec = Vector(10, 20)
-	print(vec.toString())
-	vec.add(Vector(2, 1))
-	print(Vector.add(vec, Vector(1, 2)).toString())
-	print(vec.toString())
+	add(a, b) => {
+		print(a.toString(), b.toString())
+	}
+	
+	add(a, b) => Vector(a.x + b.x, a.y + b.y)
+	
+	"()" (x, y) => prototype.clone {
+		var x, y = x, y
+	}
 }
+
+vec = Vector(10, 20)
+print(vec.toString())
+vec.add(Vector(2, 1))
+print(Vector.add(vec, Vector(1, 2)).toString())
+print(vec.toString())

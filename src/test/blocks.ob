@@ -1,8 +1,6 @@
-{
-	a = {
-		x = 10
-		y = 20
-	}
-	print a
-	print(a.x)
+a = {
+	x = 10
+	y = 20
 }
+print a
+print(a.x)

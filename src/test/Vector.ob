@@ -1,5 +1,3 @@
-{
-	"*" that => this.x * that.x + this.y * that.y
-	
-	toString() => "Vector (" ++ this.x ++ ", " ++ this.y ++ ")"
-}
+"*" that => this.x * that.x + this.y * that.y
+
+toString() => "Vector (" ++ this.x ++ ", " ++ this.y ++ ")"

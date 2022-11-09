@@ -1,4 +1,2 @@
-{
-	a = {}
-	a.fn() => print "A!"
-}
+a = {}
+a.fn() => print "A!"

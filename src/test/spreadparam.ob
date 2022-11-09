@@ -1,4 +1,2 @@
-{
-	f(...list) => list
-	print(f(10, 20))
-}
+f(...list) => list
+print(f(10, 20))

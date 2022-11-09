@@ -1,15 +1,13 @@
-{
-	matrix = [
-		[1,2,3]
-		[4,5,6]
-		[7,8,9]
-	]
-	
-	a, b = for row, row_id in matrix: {
-		for elem, col_id in row: {
-			if elem == 6: break break row_id, col_id
-		}
+matrix = [
+	[1,2,3]
+	[4,5,6]
+	[7,8,9]
+]
+
+a, b = for row, row_id in matrix: {
+	for elem, col_id in row: {
+		if elem == 6: break break row_id, col_id
 	}
-	
-	print(a, b)
 }
+
+print(a, b)

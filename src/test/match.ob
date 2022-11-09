@@ -1,10 +1,8 @@
-{
-	match(...params) => functions => {
-		const functions = functions
-		addFunction fn => functions.push fn
-		"()" (...args) => {
-			print functions
-			print args
-		}
+match(...params) => functions => {
+	const functions = functions
+	addFunction fn => functions.push fn
+	"()" (...args) => {
+		print functions
+		print args
 	}
 }

@@ -79,8 +79,13 @@ hello
 ## Status and roadmap
 Oblock is currently still very much in development and the design is not yet
 final. Most basic features are complete, but the language is missing some key
-features like a proper module system, error handling, coroutines, parallelism
-and a standard library.
+features. These are the features that are still to come, roughly in order:
+- I/O with streams
+- proper module system
+- standard library
+- error handling
+- coroutines
+- parallelism
 
 The [`notes/`](notes/) directory contains some files with notes. Please keep in
 mind that most of those files are old and I haven't updated them in a while.

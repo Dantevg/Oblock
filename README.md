@@ -89,8 +89,8 @@ features. These are the features that are still to come, roughly in order:
 
 The [`notes/`](notes/) directory contains some files with notes. Please keep in
 mind that most of those files are old and I haven't updated them in a while.
-[`syntax-semantics.md`](notes/syntax-semantics.md) is the most active notes
-file, but that also still has some old ideas and out-of-date information.
+[`notes.md`](notes/notes.md) is the most active notes file, but that also still
+has some old ideas and out-of-date information the further down you go.
 These notes were also primarily meant for my later self (this repo was private
 until very recent, depending on when you read this), so some may not even make
 sense to you. They may also show you how much I don't know what I'm doing, but

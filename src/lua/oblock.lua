@@ -67,7 +67,9 @@ if file == io.stdin then
 end
 
 local interpreter = Interpreter()
-interpreter.environment:setHere("O", stdlib.Block())
+if isInteractive then
+	interpreter.environment:setHere("O", stdlib.Block())
+end
 
 function perform(content)
 	-- Lex
@@ -80,7 +82,7 @@ function perform(content)
 	end
 	
 	-- Parse
-	local program = Parser(tokens, filename):parse(true)
+	local program = Parser(tokens, filename):parse(isInteractive)
 	if not program then return end
 	
 	if not doInterpret then

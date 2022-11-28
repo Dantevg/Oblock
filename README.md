@@ -64,7 +64,17 @@ You can give Oblock a spin:
 1. Clone the repository (`git clone https://github.com/Dantevg/Oblock`)
 2. Install Lua if you haven't already
 3. From the [`src/lua/`](src/lua/) directory, run `./oblock.lua` and type away!
-   (the `--interactive` parameter enables a REPL).
+
+## REPL
+To enable the REPL, run Oblock with the `--interactive` or `-i` parameter. Each
+line is interpreted as an expression. To keep variables between REPL lines, you
+can store them in the block `O`, specifically meant for this:
+```
+> { O.hey = "hello" }
+{}
+> O.hey
+hello
+```
 
 ## Status and roadmap
 Oblock is currently still very much in development and the design is not yet
@@ -74,8 +84,8 @@ and a standard library.
 
 The [`notes/`](notes/) directory contains some files with notes. Please keep in
 mind that most of those files are old and I haven't updated them in a while.
-[`syntax-semantics.md`](notes/syntax-semantics.md) is the most active notes file,
-but that also still has some old ideas and out-of-date information.
+[`syntax-semantics.md`](notes/syntax-semantics.md) is the most active notes
+file, but that also still has some old ideas and out-of-date information.
 These notes were also primarily meant for my later self (this repo was private
 until very recent, depending on when you read this), so some may not even make
 sense to you. They may also show you how much I don't know what I'm doing, but

@@ -78,9 +78,7 @@ function perform(content)
 	end
 	
 	-- Parse
-	local isExpression = (tokens[1].type == "equal")
-	if isExpression then table.remove(tokens, 1) end
-	local program = Parser(tokens, filename):parse(isExpression)
+	local program = Parser(tokens, filename):parse(true)
 	if not program then return end
 	
 	if not doInterpret then

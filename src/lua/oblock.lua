@@ -5,6 +5,7 @@ package.path = package.path..";lib/?.lua"
 local Lexer = require "oblock.Lexer"
 local Parser = require "oblock.Parser"
 local Interpreter = require "oblock.Interpreter"
+local stdlib = require "oblock.stdlib"
 local has_tc, tc = pcall(require, "terminalcolours")
 local pretty = require("pretty").new { deep = 2, multiline = true}
 
@@ -66,6 +67,7 @@ if file == io.stdin then
 end
 
 local interpreter = Interpreter()
+interpreter.environment:setHere("O", stdlib.Block())
 
 function perform(content)
 	-- Lex

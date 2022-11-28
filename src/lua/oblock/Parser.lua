@@ -92,10 +92,12 @@ function Parser:binary(tokens, next, fn)
 	return expr
 end
 
-function Parser:parse()
+function Parser:parse(isExpression)
 	local success, result = pcall(function()
 		local loc = self:loc()
-		local expr = AST.Expr.Block(self:statseq(true), loc)
+		local expr = isExpression
+			and self:expression()
+			or AST.Expr.Block(self:statseq(true), loc)
 		if self:peek().type ~= "EOF" then
 			self:error(self:peek(), "Expected EOF")
 		end

@@ -342,8 +342,8 @@ function AST.Expr.Function.new(parameters, body, loc)
 end
 
 function AST.Expr.Function:evaluate(env)
-	local fn = stdlib.Function(env, function(environment, args)
-		self.parameters:define(environment, args)
+	local fn = stdlib.Function(env, function(environment, ...)
+		self.parameters:define(environment, {...})
 		return self.body:evaluate(environment)
 	end, nil, self.parameters, self.loc)
 	function fn.__tostring() return self:__tostring() end

@@ -81,13 +81,13 @@ function stdlib.Block:eq(other)
 end
 
 function stdlib.Block:neq(other)
-	local val = self:get("=="):call(nil, {other})
+	local val = self:get("=="):call(nil, other)
 	return val:get("!"):call()
 end
 
 function stdlib.Block:pipe(other)
 	if not Interpreter.isCallable(other) then Interpreter.error("cannot pipe into "..other.__name) end
-	return other:call(nil, {self})
+	return other:call(nil, self)
 end
 
 function stdlib.Block:clone(other)
@@ -202,7 +202,7 @@ function stdlib.Function:call(loc, ...)
 	end
 	
 	local values = {pcall(Interpreter.context, loc, tostring(self),
-		self.body, environment, args)}
+		self.body, environment, table.unpack(args))}
 	if values[1] then
 		return table.unpack(values, 2)
 	elseif type(values[2]) == "table" and values[2].__name == "Return" then
@@ -214,7 +214,7 @@ end
 
 function stdlib.Function:compose(other)
 	return stdlib.NativeFunction(function(_, ...)
-		return self:call(nil, {other:call(nil, {...})})
+		return self:call(nil, other:call(nil, ...))
 	end)
 end
 
@@ -375,8 +375,8 @@ function stdlib.Number:lt(other)
 end
 
 function stdlib.Number:gt(other)
-	local val = self:get("<"):call(nil, {self, other})
-	return val:get("!"):call(nil, {val})
+	local val = self:get("<"):call(nil, self, other)
+	return val:get("!"):call(nil, val)
 end
 
 function stdlib.Number:add(other)

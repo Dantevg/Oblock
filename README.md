@@ -55,7 +55,13 @@ l = map (x => x+1) [10, 20, 30]
 print l --> [11, 21, 31]
 ```
 
-### More examples
+## Examples
+### Reading input
+```lua
+IO = import "Io"
+for word in IO.stdin.splitAt " ": print(word.toString().length)
+```
+
 For more examples of Oblock, have a look at the files in the
 [`src/test/`](src/test/) directory.
 

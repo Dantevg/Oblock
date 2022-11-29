@@ -30,7 +30,7 @@ Stream = {
 	
 	group(fn) => {
 		const source = this
-		const buffer = []
+		var buffer = []
 		return this.clone {
 			read() => {
 				for x in source: {
@@ -43,12 +43,17 @@ Stream = {
 					}
 				}
 				-- Source is empty, buffer still has items
-				if buffer.length > 0: return Stream(buffer)
+				if buffer.length > 0: {
+					const oldBuffer = buffer
+					buffer = []
+					return Stream(oldBuffer)
+				}
+				return nil
 			}
 		}
 	}
 	
-	splitAt(at) => group(x => x != at)
+	splitAt(at) => this.group(x => x != at)
 }
 
 yield Stream

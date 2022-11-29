@@ -185,6 +185,16 @@ function Lexer:blockComment()
 		if self:peek() == "\n" then self:nextLine() end
 	end
 	self:advance() -- Closing )
+	
+	-- Prevent multiple newline tokens
+	if self:peek():match("[ \r\t\n]") then
+		self:whitespace(self:advance())
+		if #self.tokens >= 2
+				and self.tokens[#self.tokens].type == "newline"
+				and self.tokens[#self.tokens-1].type == "newline" then
+			table.remove(self.tokens, #self.tokens)
+		end
+	end
 end
 
 function Lexer:scanToken()

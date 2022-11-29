@@ -375,8 +375,8 @@ function stdlib.Number:lt(other)
 end
 
 function stdlib.Number:gt(other)
-	local val = self:get("<"):call(nil, self, other)
-	return val:get("!"):call(nil, val)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	return stdlib.Boolean(a > b)
 end
 
 function stdlib.Number:add(other)

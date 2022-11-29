@@ -1,1 +1,1 @@
-(import "Stream").clone {}
+yield (import "Stream").clone {}

@@ -1,4 +1,5 @@
-{
+var Stream
+Stream = {
 	"()" source => {
 		iterator = source.iterate()
 		return this.clone {
@@ -26,4 +27,28 @@
 			}
 		}
 	}
+	
+	group(fn) => {
+		const source = this
+		const buffer = []
+		return this.clone {
+			read() => {
+				for x in source: {
+					if fn(x, buffer.(buffer.length), buffer.length): {
+						buffer.append(x)
+					} else if buffer.length > 0: {
+						const oldBuffer = buffer
+						buffer = if fn(x, nil, 0): [x] else []
+						return Stream(oldBuffer)
+					}
+				}
+				-- Source is empty, buffer still has items
+				if buffer.length > 0: return Stream(buffer)
+			}
+		}
+	}
+	
+	splitAt(at) => group(x => x != at)
 }
+
+yield Stream

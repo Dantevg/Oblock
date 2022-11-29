@@ -71,6 +71,13 @@ You can give Oblock a spin:
 2. Install Lua if you haven't already
 3. From the [`src/lua/`](src/lua/) directory, run `./oblock.lua` and type away!
 
+### VS Code language extension
+There is a VS Code extension that provides syntax highlighting. You can find it
+here: https://github.com/Dantevg/Oblock-vscode. It's not yet on the marketplace,
+but you can install it manually by downloading the latest version from the
+[releases page](https://github.com/Dantevg/Oblock-vscode/releases) and running
+`code --install-extension  oblock-language-0.0.3.vsix`.
+
 ## REPL
 To enable the REPL, run Oblock with the `--interactive` or `-i` parameter. Each
 line is interpreted as an expression. To keep variables between REPL lines, you

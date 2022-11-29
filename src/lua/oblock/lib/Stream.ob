@@ -1,6 +1,6 @@
 var Stream
 Stream = {
-	"()" source => {
+	of(source) => {
 		iterator = source.iterate()
 		return this.clone {
 			read = id.o iterator
@@ -33,14 +33,14 @@ Stream = {
 				} else if buffer.length > 0: {
 					const oldBuffer = buffer
 					buffer = if fn(x, nil, 0): [x] else []
-					return Stream(oldBuffer)
+					return Stream.of(oldBuffer)
 				}
 			}
 			-- Source is empty, buffer still has items
 			if buffer.length > 0: {
 				const oldBuffer = buffer
 				buffer = []
-				return Stream(oldBuffer)
+				return Stream.of(oldBuffer)
 			}
 			return nil
 		}

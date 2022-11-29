@@ -7,10 +7,7 @@ Stream = {
 		}
 	}
 	
-	iterate() => {
-		const self = this
-		return () => self.read()
-	}
+	iterate() => this.read
 	
 	"..." () => {
 		const values = []
@@ -18,38 +15,34 @@ Stream = {
 		return ...values
 	}
 	
-	map(fn) => {
-		const self = this
-		return this.clone {
-			read() => {
-				val = self.read()
-				return if val != nil: fn(val)
-			}
+	map(fn) => this.clone {
+		const source = this
+		read() => {
+			val = source.read()
+			return if val != nil: fn(val)
 		}
 	}
 	
-	group(fn) => {
+	group(fn) => this.clone {
 		const source = this
-		var buffer = []
-		return this.clone {
-			read() => {
-				for x in source: {
-					if fn(x, buffer.(buffer.length), buffer.length): {
-						buffer.append(x)
-					} else if buffer.length > 0: {
-						const oldBuffer = buffer
-						buffer = if fn(x, nil, 0): [x] else []
-						return Stream(oldBuffer)
-					}
-				}
-				-- Source is empty, buffer still has items
-				if buffer.length > 0: {
+		buffer = []
+		read() => {
+			for x in source: {
+				if fn(x, buffer.(buffer.length), buffer.length): {
+					buffer.append(x)
+				} else if buffer.length > 0: {
 					const oldBuffer = buffer
-					buffer = []
+					buffer = if fn(x, nil, 0): [x] else []
 					return Stream(oldBuffer)
 				}
-				return nil
 			}
+			-- Source is empty, buffer still has items
+			if buffer.length > 0: {
+				const oldBuffer = buffer
+				buffer = []
+				return Stream(oldBuffer)
+			}
+			return nil
 		}
 	}
 	

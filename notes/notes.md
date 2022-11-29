@@ -5,6 +5,15 @@ Links:
 To-Do / roadmap / proposals
 ---------------------------
 (*roughly* in order of importance)
+- Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
+  - Before:
+    
+    	a = 10
+    		+ 20
+  - After:
+    
+    	a = (10
+    		+ 20)
 - Set `this` on all functions
   - "global" functions and functions in current scope get current block as `this`
 - Classical vs prototypal inheritance
@@ -149,17 +158,17 @@ To-Do / roadmap / proposals
   - For things like Javascript's Promise (which is not always a monad) or Maybe
     With the example from MDN:
     
-        fetch("https://github.com")
+    	fetch("https://github.com")
     		.then(response => response.json())
     		.then(data => print(data))
     With pipe operator:
     
-        fetch("https://github.com")
+    	fetch("https://github.com")
     		|> response => response.json()
     		|> data => print(data)
     With pipe operator and holes:
     
-        fetch("https://github.com")
+    	fetch("https://github.com")
     		|> _.json()
     		|> print(_)
     In callback style:

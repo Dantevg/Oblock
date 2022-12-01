@@ -113,12 +113,12 @@ Stream = {
 	min() => this.reduce((acc, x) => Number.min(acc, x), nil)
 	
 	any(predicate) => {
-		for x in source: if predicate(x): return true
+		for x in this: if predicate(x): return true
 		return false
 	}
 	
 	all(predicate) => {
-		for x in source: if !predicate(x): return false
+		for x in this: if !predicate(x): return false
 		return true
 	}
 }

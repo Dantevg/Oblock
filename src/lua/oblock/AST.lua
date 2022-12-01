@@ -397,12 +397,14 @@ function AST.Expr.Call:evaluate(env)
 	end
 	
 	local args = {self.arglist:evaluate(env)}
-	local argsToMatch = {}
+	-- Do not check function signatures for now, as there is no way to define
+	-- optional parameters yet
+	--[[ local argsToMatch = {}
 	for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
 	if fn.parameters and not fn.parameters:match(env, argsToMatch) then
 		Interpreter.error("function parameters do not match parameter signature "..tostring(fn.parameters), self.loc)
 		return stdlib.Nil(self.loc)
-	end
+	end ]]
 	return fn:call(self.loc, table.unpack(args))
 end
 

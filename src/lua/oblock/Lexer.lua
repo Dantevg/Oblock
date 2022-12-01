@@ -180,7 +180,7 @@ function Lexer:combine(token)
 	end
 end
 
-function Lexer:whitespace(char)
+function Lexer:whitespace(char, ignore)
 	-- Collapse multiple whitespace and newline characters into a single token
 	-- (or no token if no newlines were present)
 	local hasNewline = (char == "\n")
@@ -191,12 +191,14 @@ function Lexer:whitespace(char)
 			self:nextLine()
 		end
 	end
-	if hasNewline then self:addToken("newline") end
+	if hasNewline and not ignore then self:addToken("newline") end
 end
 
 function Lexer:lineComment()
 	while self:advance() ~= "\n" do end
-	if self:peek() == "\n" then self:nextLine() end
+	self:nextLine()
+	-- Prevent multiple newline tokens
+	if self:peek():match("[ \r\t\n]") then self:whitespace(self:advance(), true) end
 end
 
 function Lexer:blockComment()
@@ -204,16 +206,8 @@ function Lexer:blockComment()
 		if self:peek() == "\n" then self:nextLine() end
 	end
 	self:advance() -- Closing )
-	
 	-- Prevent multiple newline tokens
-	if self:peek():match("[ \r\t\n]") then
-		self:whitespace(self:advance())
-		if #self.tokens >= 2
-				and self.tokens[#self.tokens].type == "newline"
-				and self.tokens[#self.tokens-1].type == "newline" then
-			table.remove(self.tokens, #self.tokens)
-		end
-	end
+	if self:peek():match("[ \r\t\n]") then self:whitespace(self:advance(), true) end
 end
 
 function Lexer:scanToken()

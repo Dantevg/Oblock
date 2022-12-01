@@ -15,7 +15,7 @@ comparison	= bitwise {('==' | '!=' | '<' | '>' | '<=' | '>=') bitwise} ;
 bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= unary {('*' | '/') unary} ;
-unary		= ('-' | '!' | '...') unary | varcall ;
+unary		= ('-' | '!' | '#' | '...') unary | varcall ;
 varcall		= [primary] {'.' primary | primary} ;
 primary		= Identifier | Number | String | group | list | block ;
 group		= '(' expseq ')' ;

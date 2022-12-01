@@ -311,6 +311,10 @@ function stdlib.Sequence:spread()
 	return table.unpack(values)
 end
 
+function stdlib.Sequence:length()
+	return self:get "length"
+end
+
 function stdlib.Sequence:iterate()
 	local i = 0
 	return stdlib.NativeFunction(function()
@@ -535,7 +539,10 @@ function stdlib.Nil:not_()
 	return stdlib.Boolean(true)
 end
 
-stdlib.Nil.__eq = stdlib.Value.__eq
+function stdlib.Nil:__eq(other)
+	return self.proto == stdlib.Nil.proto and other.proto == stdlib.Nil.proto
+end
+
 stdlib.Nil.__tostring = stdlib.Value.__tostring
 
 setmetatable(stdlib.Nil, {
@@ -658,6 +665,7 @@ defineProtoNativeFn("Function", "compose", "o")
 defineProtoNativeFn("Function", "curry")
 
 defineOperator("Sequence", "concat", "++")
+defineOperator("Sequence", "length", "#")
 defineProtoNativeFn("Sequence", "append")
 defineProtoNativeFn("Sequence", "spread", "...")
 defineProtoNativeFn("Sequence", "iterate")

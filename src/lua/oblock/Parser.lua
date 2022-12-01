@@ -210,7 +210,7 @@ function Parser:muldiv()
 end
 
 function Parser:unary()
-	if self:match {"minus", "exclamation", "dot dot dot"} then
+	if self:match {"minus", "exclamation", "hash", "dot dot dot"} then
 		local op = self:previous()
 		local right = self:unary()
 		return AST.Expr.Call(

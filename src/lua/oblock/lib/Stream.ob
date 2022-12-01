@@ -112,6 +112,11 @@ Stream = {
 	max() => this.reduce((acc, x) => Number.max(acc, x), nil)
 	min() => this.reduce((acc, x) => Number.min(acc, x), nil)
 	
+	forAll(fn) => {
+		for x in this: fn(x)
+		return nil
+	}
+	
 	any(predicate) => {
 		for x in this: if predicate(x): return true
 		return false

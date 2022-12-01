@@ -11,7 +11,7 @@ Stream = {
 	
 	"..." () => {
 		const values = []
-		for value in this: values.push value
+		for value in this: values.append value
 		return ...values
 	}
 	
@@ -23,14 +23,26 @@ Stream = {
 		}
 	}
 	
-	group(fn) => this.clone {
+	take(n) => this.clone {
+		const source = this
+		taken = 0
+		read() => {
+			if taken < n: {
+				taken += 1
+				return source.read()
+			}
+			return nil
+		}
+	}
+	
+	group(fn, keepEmpty) => this.clone {
 		const source = this
 		buffer = []
 		read() => {
 			for x in source: {
 				if fn(x, buffer.(buffer.length), buffer.length): {
 					buffer.append(x)
-				} else if buffer.length > 0: {
+				} else if buffer.length > 0 or keepEmpty: {
 					const oldBuffer = buffer
 					buffer = if fn(x, nil, 0): [x] else []
 					return Stream.of(oldBuffer)
@@ -46,7 +58,25 @@ Stream = {
 		}
 	}
 	
-	splitAt(at) => this.group(x => x != at)
+	splitAt(at, keepEmpty) => this.group(x => x != at, keepEmpty)
+	
+	sorted(fn) => this.clone {
+		const source = this
+		var values
+		read() => {
+			if !values: values = Stream.of([...source].sorted(fn))
+			return values.read()
+		}
+	}
+	
+	reduce(fn, acc) => {
+		acc = acc or this.read()
+		for x in this: acc = fn(acc, x)
+		return acc
+	}
+	
+	max() => this.reduce((acc, x) => Number.max(acc, x), nil)
+	min() => this.reduce((acc, x) => Number.min(acc, x), nil)
 }
 
 yield Stream

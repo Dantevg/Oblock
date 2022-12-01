@@ -319,6 +319,17 @@ function stdlib.Sequence:iterate()
 	end, "iterator")
 end
 
+function stdlib.Sequence:sorted(fn)
+	local values = {self:spread()}
+	table.sort(values, function(a, b)
+		return stdlib.Boolean.toBoolean(fn
+				and fn:call(nil, a, b)
+				or a:get("<"):call(nil, b)
+			).value
+	end)
+	return self.new(values)
+end
+
 setmetatable(stdlib.Sequence, {
 	__call = function(_, ...) return stdlib.Sequence.new(...) end,
 	__index = stdlib.Block,
@@ -365,7 +376,9 @@ function stdlib.Number.new(value)
 end
 
 function stdlib.Number:parse(str)
-	return stdlib.Number.new(tonumber(tostring(str)))
+	local num = tonumber(tostring(str))
+	if not num then return stdlib.Nil() end
+	return stdlib.Number.new(num)
 end
 
 function stdlib.Number:eq(other)
@@ -406,6 +419,20 @@ function stdlib.Number:sub(other)
 	end
 end
 
+function stdlib.Number:max(this, other)
+	local a, b = tonumber(this.value), tonumber(other.value)
+	if type(a) ~= "number" then Interpreter.error("cannot perform 'max' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.error("cannot perform 'max' on "..other.__name) end
+	return stdlib.Number.new(math.max(a, b))
+end
+
+function stdlib.Number:min(this, other)
+	local a, b = tonumber(this.value), tonumber(other.value)
+	if type(a) ~= "number" then Interpreter.error("cannot perform 'min' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.error("cannot perform 'min' on "..other.__name) end
+	return stdlib.Number.new(math.min(a, b))
+end
+
 stdlib.Number.__eq = stdlib.Value.__eq
 stdlib.Number.__tostring = stdlib.Value.__tostring
 
@@ -439,10 +466,6 @@ end
 -- Override from Sequence
 function stdlib.String:concat(other)
 	return self.new(self:toString().value..other:toString().value)
-end
-
-function stdlib.String:__tostring()
-	return tostring(self.value)
 end
 
 stdlib.String.append = stdlib.Sequence.append
@@ -638,8 +661,11 @@ defineOperator("Sequence", "concat", "++")
 defineProtoNativeFn("Sequence", "append")
 defineProtoNativeFn("Sequence", "spread", "...")
 defineProtoNativeFn("Sequence", "iterate")
+defineProtoNativeFn("Sequence", "sorted")
 
 defineProtoNativeFn("Number", "parse")
+defineProtoNativeFn("Number", "max")
+defineProtoNativeFn("Number", "min")
 defineOperator("Number", "eq", "==")
 defineOperator("Number", "lt", "<")
 defineOperator("Number", "gt", ">")

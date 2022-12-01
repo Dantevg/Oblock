@@ -364,6 +364,10 @@ function stdlib.Number.new(value)
 	return setmetatable(self, stdlib.Number)
 end
 
+function stdlib.Number:parse(str)
+	return stdlib.Number.new(tonumber(tostring(str)))
+end
+
 function stdlib.Number:eq(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	return stdlib.Boolean(a == b)
@@ -635,6 +639,7 @@ defineProtoNativeFn("Sequence", "append")
 defineProtoNativeFn("Sequence", "spread", "...")
 defineProtoNativeFn("Sequence", "iterate")
 
+defineProtoNativeFn("Number", "parse")
 defineOperator("Number", "eq", "==")
 defineOperator("Number", "lt", "<")
 defineOperator("Number", "gt", ">")

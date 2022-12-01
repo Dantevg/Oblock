@@ -106,9 +106,28 @@ function Lexer:sub()
 end
 
 function Lexer:string(quote)
+	local strTbl = {}
 	while self:peek() ~= quote and self.current <= #self.source do
-		if self:peek() == "\n" then self:nextLine() end
-		self:advance()
+		if self:match("\n") then
+			self:nextLine()
+			table.insert(strTbl, "\n")
+		elseif self:match("\\") then
+			if self:match("n") then
+				table.insert(strTbl, "\n")
+			elseif self:match("t") then
+				table.insert(strTbl, "\t")
+			elseif self:match("\\") then
+				table.insert(strTbl, "\\")
+			elseif self:match('"') then
+				table.insert(strTbl, '"')
+			elseif self:match("'") then
+				table.insert(strTbl, "'")
+			else
+				self:error("Invalid escape sequence: \\"..self:peek())
+			end
+		else
+			table.insert(strTbl, self:advance())
+		end
 	end
 	
 	if self.current > #self.source then
@@ -117,7 +136,7 @@ function Lexer:string(quote)
 	end
 	
 	self:advance() -- Closing " or '
-	self:addToken("string", self.source:sub(self.start+1, self.current-2))
+	self:addToken("string", table.concat(strTbl))
 end
 
 function Lexer:number()

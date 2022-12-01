@@ -15,11 +15,30 @@ Stream = {
 		return ...values
 	}
 	
+	-- FILTERS
+	-- These functions transform a stream into another stream
+	
 	map(fn) => this.clone {
 		const source = this
 		read() => {
 			val = source.read()
 			return if val != nil: fn(val)
+		}
+	}
+	
+	forEach(fn) => this.clone {
+		const source = this
+		read() => {
+			val = source.read()
+			fn(val)
+			return val
+		}
+	}
+	
+	filter(fn) => this.clone {
+		const source = this
+		read() => {
+			for x in source: if fn(x): return x
 		}
 	}
 	
@@ -32,6 +51,18 @@ Stream = {
 				return source.read()
 			}
 			return nil
+		}
+	}
+	
+	drop(n) => this.clone {
+		const source = this
+		dropped = 0
+		read() => {
+			if dropped < n: {
+				dropped += 1
+				return
+			}
+			return source.read()
 		}
 	}
 	
@@ -69,6 +100,9 @@ Stream = {
 		}
 	}
 	
+	-- SINKS
+	-- These functions transform a stream into a single value
+	
 	reduce(fn, acc) => {
 		acc = acc or this.read()
 		for x in this: acc = fn(acc, x)
@@ -77,6 +111,16 @@ Stream = {
 	
 	max() => this.reduce((acc, x) => Number.max(acc, x), nil)
 	min() => this.reduce((acc, x) => Number.min(acc, x), nil)
+	
+	any(predicate) => {
+		for x in source: if predicate(x): return true
+		return false
+	}
+	
+	all(predicate) => {
+		for x in source: if !predicate(x): return false
+		return true
+	}
 }
 
 yield Stream

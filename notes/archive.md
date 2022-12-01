@@ -110,3 +110,7 @@ because I scrapped the idea or implemented it.
     - `a [b]` should call `[]` with b as argument and pass that as argument to a: `a([](b))`
       - definition of `[]` method should be defined in its own operator class
         (see operators as first-class citizens ^)
+- Keyword for binary actual data layout in const classes like Int (8 bytes for long long)?
+  - Maybe define class instance size in bytes for const classes: sizeof(struct MyClass) in C?
+    - should you need to define size for foreign/external classes *within* the language?
+      maybe makes creating classes too much work: when changing internal size, need to recalculate "by hand"

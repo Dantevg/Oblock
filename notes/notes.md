@@ -297,6 +297,10 @@ To-Do / roadmap / proposals
 - Blocks as ordered associative arrays?
   - keys are sorted by their addition time
   - what happens when deleting (setting to nil) and re-inserting a key?
+- Properties in objects for memory optimisation
+  - Stored at prototype-defined memory indices instead of in hash-table
+  - https://v8.dev/blog/fast-properties
+  - Like Python's slots (explicit) or automatically-defined (implicit)
 - Shorthand field names
   - `{a, b}`  is  `{a = a; b = b}`
   - https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer#property_definitions
@@ -346,10 +350,6 @@ To-Do / roadmap / proposals
   - Rust's attributes: https://doc.rust-lang.org/reference/attributes.html
   - Typescript's decorators: https://www.typescriptlang.org/docs/handbook/decorators.html
   - Python's decorators: https://peps.python.org/pep-0318/
-- Keyword for binary actual data layout in const classes like Int (8 bytes for long long)?
-  - Maybe define class instance size in bytes for const classes: sizeof(struct MyClass) in C?
-    - should you need to define size for foreign/external classes *within* the language?
-      maybe makes creating classes too much work: when changing internal size, need to recalculate "by hand"
 - Enums
   - Boolean should be an enum with 2 values? true and false are the only 2 instances of Bool
   - Maybe like Java?

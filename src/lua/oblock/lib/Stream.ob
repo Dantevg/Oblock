@@ -30,7 +30,7 @@ Stream = {
 		const source = this
 		read() => {
 			val = source.read()
-			fn(val)
+			if val != nil: fn(val)
 			return val
 		}
 	}

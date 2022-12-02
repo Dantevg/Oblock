@@ -2,9 +2,16 @@
 
 local tc = require "terminalcolours"
 
+---@class Lexer
+---@field source string
+---@field name string?
 local Lexer = {}
 Lexer.__index = Lexer
 
+--- Create a new lexer instance.
+---@param source string
+---@param name string?
+---@return Lexer
 function Lexer.new(source, name)
 	local self = {}
 	self.source = source
@@ -16,16 +23,31 @@ function Lexer.new(source, name)
 	return setmetatable(self, Lexer)
 end
 
+--- Get an entire line of the given `source` at the given index `lineStart`.
+---@param source string
+---@param lineStart integer
+---@return string
 function Lexer.getLine(source, lineStart)
 	local lineEnd = source:find("\n", lineStart, true)
 	return source:sub(lineStart, lineEnd and lineEnd-1)
 end
 
+--- Get the entire line of code which the `token` is placed in.
+---@param token Token
+---@return string
 function Lexer.getLineFromToken(token)
 	if not token.lexer then return "" end
 	return Lexer.getLine(token.lexer.source, token.lineStart)
 end
 
+---@class Token
+---@field lexer Lexer
+---@field type string
+---@field lexeme string
+---@field literal any
+---@field line integer
+---@field column integer
+---@field lineStart integer
 function Lexer:token(type, lexeme, literal)
 	return {
 		lexer = self,
@@ -38,6 +60,9 @@ function Lexer:token(type, lexeme, literal)
 	}
 end
 
+--- Lex the source file.
+--- Returns `nil` if there were errors.
+---@return Token[]?
 function Lexer:lex()
 	while self.current <= #self.source do
 		self.start = self.current
@@ -50,15 +75,23 @@ function Lexer:lex()
 	if not self.hasError then return self.tokens end
 end
 
+--- Add a token of given `type` to the token list.
+---@param type string
+---@param literal any?
 function Lexer:addToken(type, literal)
 	local text = self:sub()
 	table.insert(self.tokens, self:token(type, text, literal))
 end
 
+--- Get the line of code the lexer is currently at.
+---@return string
 function Lexer:getCurrentLine()
 	return Lexer.getLine(self.source, self.lineStart)
 end
 
+--- Print an error message for the given `token`.
+---@param token Token?
+---@param message string
 function Lexer:printError(token, message)
 	local line = token and token.line or self.line
 	local column = token and token.column or self.column
@@ -72,26 +105,40 @@ function Lexer:printError(token, message)
 		..string.rep('▔', token and math.max(1, #token.lexeme) or 1)..tc(tc.reset))
 end
 
+--- Error with the given `message` for the given `token`.
+---@param message string
+---@param token boolean? whether to add an error token at the current position
 function Lexer:error(message, token)
 	self.hasError = true
-	self:printError(token and self:token("error", self:sub()), message)
+	self:printError(token and self:token("error", self:sub()) or nil, message)
 end
 
+--- Advance the scanner and return the character that was advanced over.
+---@return string
 function Lexer:advance()
 	self.current = self.current+1
 	return self.source:sub(self.current-1, self.current-1)
 end
 
+--- Update the `line` and `lineStart` counters for a line break.
+--- Does *not* insert a newline token.
 function Lexer:nextLine()
 	self.line = self.line+1
 	self.lineStart = self.current
 end
 
+--- Get the character at the current scanner location, but do not advance.
+--- When at or past the end of the file, returns a null-character.
+---@param n integer? the index after the current location to peek (default 0)
+---@return string
 function Lexer:peek(n)
 	n = n or 0
 	return self.current+n <= #self.source and self.source:sub(self.current+n, self.current+n) or "\0"
 end
 
+--- If the current character is `char`, advance.
+---@param char string
+---@return boolean # whether the character matches
 function Lexer:match(char)
 	if self:peek() == char then
 		self.current = self.current+1
@@ -101,10 +148,14 @@ function Lexer:match(char)
 	end
 end
 
+--- Get the substring from the start of the token to the current position.
+---@return string
 function Lexer:sub()
 	return self.source:sub(self.start, self.current-1)
 end
 
+--- Lex a string, including escape characters.
+---@param quote string the quote type used to start the string, either `"` or `'`
 function Lexer:string(quote)
 	local strTbl = {}
 	while self:peek() ~= quote and self.current <= #self.source do
@@ -139,6 +190,7 @@ function Lexer:string(quote)
 	self:addToken("string", table.concat(strTbl))
 end
 
+--- Lex a number.
 function Lexer:number()
 	while self:peek():match("%d") do self:advance() end
 	
@@ -150,12 +202,17 @@ function Lexer:number()
 	self:addToken("number", tonumber(self:sub()))
 end
 
+--- Lex an identifier or keyword.
 function Lexer:identifier()
 	while self:peek():match("[%w_]") do self:advance() end
 	local keyword = self:sub()
 	self:addToken(Lexer.keywords[keyword] and keyword or "identifier")
 end
 
+--- Check if `char` appended to `token` is a valid token.
+---@param token Token
+---@param char string
+---@return boolean
 local function canCombineWith(token, char)
 	for i = 2, #token do
 		if token[i] == char then return true end
@@ -163,6 +220,8 @@ local function canCombineWith(token, char)
 	return false
 end
 
+--- Try to combine the current token with as many following characters as possible.
+---@param token Token
 function Lexer:combine(token)
 	local name = token[1]
 	local nextChar = self:peek()
@@ -180,6 +239,9 @@ function Lexer:combine(token)
 	end
 end
 
+--- Lex whitespace and newlines.
+---@param char string the character that started the whitespace
+---@param ignore boolean? whether to ignore newlines (to not add newline tokens)
 function Lexer:whitespace(char, ignore)
 	-- Collapse multiple whitespace and newline characters into a single token
 	-- (or no token if no newlines were present)
@@ -194,6 +256,7 @@ function Lexer:whitespace(char, ignore)
 	if hasNewline and not ignore then self:addToken("newline") end
 end
 
+--- Lex line comments.
 function Lexer:lineComment()
 	while self:advance() ~= "\n" do end
 	self:nextLine()
@@ -201,6 +264,7 @@ function Lexer:lineComment()
 	if self:peek():match("[ \r\t\n]") then self:whitespace(self:advance(), true) end
 end
 
+--- Lex block comments.
 function Lexer:blockComment()
 	while self:advance() ~= ":" or self:peek() ~= ")" do
 		if self:peek() == "\n" then self:nextLine() end
@@ -210,6 +274,7 @@ function Lexer:blockComment()
 	if self:peek():match("[ \r\t\n]") then self:whitespace(self:advance(), true) end
 end
 
+--- Scan a single token.
 function Lexer:scanToken()
 	local char = self:advance()
 	if char:match("[ \r\t\n]") then

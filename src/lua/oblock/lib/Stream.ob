@@ -26,6 +26,8 @@ Stream = {
 		}
 	}
 	
+	mapIndex(object) => this.map(x => object.(x))
+	
 	forEach(fn) => this.clone {
 		const source = this
 		read() => {

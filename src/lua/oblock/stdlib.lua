@@ -412,6 +412,12 @@ function stdlib.Number:mul(other)
 	return self.new(a * b)
 end
 
+function stdlib.Number:mod(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '%' on "..other.__name) end
+	return self.new(a % b)
+end
+
 function stdlib.Number:sub(other)
 	local a = tonumber(self.value)
 	if other then
@@ -680,6 +686,7 @@ defineOperator("Number", "gt", ">")
 defineOperator("Number", "add", "+")
 defineOperator("Number", "sub", "-")
 defineOperator("Number", "mul", "*")
+defineOperator("Number", "mod", "%")
 
 defineOperator("String", "concat", "++")
 

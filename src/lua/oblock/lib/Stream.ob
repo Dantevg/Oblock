@@ -22,7 +22,7 @@ Stream = {
 		const source = this
 		read() => {
 			val = source.read()
-			return if val != nil: fn(val) else nil
+			return if val != nil: fn(val)
 		}
 	}
 	

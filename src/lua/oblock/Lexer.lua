@@ -44,10 +44,16 @@ end
 ---@field lexer Lexer
 ---@field type string
 ---@field lexeme string
----@field literal any
+---@field literal any?
 ---@field line integer
 ---@field column integer
 ---@field lineStart integer
+
+--- Create a new token.
+---@param type string
+---@param lexeme string
+---@param literal any?
+---@return Token
 function Lexer:token(type, lexeme, literal)
 	return {
 		lexer = self,

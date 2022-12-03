@@ -2,9 +2,16 @@
 
 local AST = require "oblock.AST"
 
+---@class Parser
+---@field tokens Token[]
+---@field name string?
 local Parser = {}
 Parser.__index = Parser
 
+--- Create a new parser.
+---@param tokens Token[]
+---@param name string?
+---@return Parser
 function Parser.new(tokens, name)
 	local self = {}
 	self.tokens = tokens
@@ -14,6 +21,14 @@ function Parser.new(tokens, name)
 	return setmetatable(self, Parser)
 end
 
+---@class Loc
+---@field file string
+---@field line integer
+---@field column integer
+
+--- Create a table with the location of `token`
+---@param token Token
+---@return Loc
 function Parser:loc(token)
 	token = token or self:previous() or self:peek()
 	return {
@@ -23,11 +38,16 @@ function Parser:loc(token)
 	}
 end
 
+--- Error with the given `message` for the given `token`.
+---@param token Token
+---@param message string
 function Parser:error(token, message)
 	token.lexer:printError(token, message)
 	error(true)
 end
 
+--- Get the index of the next token, possibly ignoring newline tokens.
+---@return integer
 function Parser:nextIndex()
 	return (self.nlSensitive or self.tokens[self.current].type ~= "newline")
 		and self.current or self.current+1

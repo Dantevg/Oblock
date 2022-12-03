@@ -1,0 +1,17 @@
+var Range
+Range = {
+	"()" (from, to) => this.clone {
+		this.from, this.to = from, to
+	}
+	
+	iterate() => {
+		var i = this.from-1
+		const self = this
+		return () => {
+			i += 1
+			return if i < self.to+1: i else nil
+		}
+	}
+}
+
+yield Range

@@ -478,6 +478,10 @@ function stdlib.String:concat(other)
 	return self.new(self:toString().value..other:toString().value)
 end
 
+function stdlib.String:charCode()
+	return stdlib.Number.new(string.byte(self.value))
+end
+
 stdlib.String.append = stdlib.Sequence.append
 stdlib.String.spread = stdlib.Sequence.spread
 stdlib.String.iterate = stdlib.Sequence.iterate
@@ -689,6 +693,7 @@ defineOperator("Number", "mul", "*")
 defineOperator("Number", "mod", "%")
 
 defineOperator("String", "concat", "++")
+defineProtoNativeFn("String", "charCode")
 
 defineProtoNativeFn("Boolean", "not_", "!")
 stdlib.Boolean.proto:set("true", stdlib.Boolean(true))

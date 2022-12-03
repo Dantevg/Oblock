@@ -22,7 +22,7 @@ Stream = {
 		const source = this
 		read() => {
 			val = source.read()
-			return if val != nil: fn(val)
+			return if val != nil: fn(val) else nil
 		}
 	}
 	
@@ -90,6 +90,8 @@ Stream = {
 			return nil
 		}
 	}
+	
+	groupBySize(size) => this.group((_, __, s) => s < size)
 	
 	splitAt(at, keepEmpty) => this.group(x => x != at, keepEmpty)
 	

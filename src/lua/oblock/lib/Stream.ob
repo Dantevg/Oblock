@@ -113,13 +113,11 @@ Stream = {
 		return acc
 	}
 	
-	max() => this.reduce((acc, x) => Number.max(acc, x), nil)
-	min() => this.reduce((acc, x) => Number.min(acc, x), nil)
+	max() => this.reduce((acc, x) => Number.max(acc, x))
+	min() => this.reduce((acc, x) => Number.min(acc, x))
+	sum() => this.reduce((acc, x) => acc + x)
 	
-	forAll(fn) => {
-		for x in this: fn(x)
-		return nil
-	}
+	forAll(fn) => for x in this: fn(x)
 	
 	any(predicate) => {
 		for x in this: if predicate(x): return true

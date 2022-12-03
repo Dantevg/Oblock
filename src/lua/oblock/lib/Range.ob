@@ -1,7 +1,7 @@
 var Range
 Range = {
-	"()" (from, to) => this.clone {
-		this.from, this.to = from, to
+	"()" (from, to) => Range.clone {
+		const from, to = from, to
 	}
 	
 	iterate() => {

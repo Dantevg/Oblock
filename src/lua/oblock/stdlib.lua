@@ -98,7 +98,13 @@ end
 
 function stdlib.Block:keys()
 	local keys = {}
-	for k in pairs(self.env) do table.insert(keys, stdlib.String(k)) end
+	for k in pairs(self.env) do
+		local key = type(k) == "string" and stdlib.String(k)
+			or type(k) == "number" and stdlib.Number(k)
+			or type(k) == "boolean" and stdlib.Boolean(k)
+			or k
+		table.insert(keys, key)
+	end
 	return stdlib.List(keys)
 end
 
@@ -332,6 +338,21 @@ function stdlib.Sequence:sorted(fn)
 			).value
 	end)
 	return self.new(values)
+end
+
+function stdlib.Sequence:sub(from, to)
+	local values = {}
+	for i = from and from.value or 1, to and to.value or self:get("length").value do
+		table.insert(values, self:get(i))
+	end
+	return self.new(values)
+end
+
+function stdlib.Sequence:contains(value)
+	for _, x in ipairs {self:spread()} do
+		if x == value then return stdlib.Boolean(true) end
+	end
+	return stdlib.Boolean(false)
 end
 
 setmetatable(stdlib.Sequence, {
@@ -569,14 +590,14 @@ stdlib.List.__name = "List"
 stdlib.List.proto = stdlib.Sequence.proto:clone()
 
 function stdlib.List.new(elements)
-	local self = stdlib.Block()
+	local self = setmetatable(stdlib.Block(), stdlib.List)
 	self:set("length", stdlib.Number(0))
 	elements = elements or {}
 	for i = 1, #elements do
 		self:set(i, elements[i])
 	end
 	self.protos = {stdlib.List.proto}
-	return setmetatable(self, stdlib.List)
+	return self
 end
 
 function stdlib.List:set(index, value, modifiers)
@@ -680,6 +701,8 @@ defineProtoNativeFn("Sequence", "append")
 defineProtoNativeFn("Sequence", "spread", "...")
 defineProtoNativeFn("Sequence", "iterate")
 defineProtoNativeFn("Sequence", "sorted")
+defineProtoNativeFn("Sequence", "sub")
+defineProtoNativeFn("Sequence", "contains")
 
 defineProtoNativeFn("Number", "parse")
 defineProtoNativeFn("Number", "max")

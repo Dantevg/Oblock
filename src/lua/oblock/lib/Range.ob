@@ -12,6 +12,12 @@ Range = {
 			return if i < self.to+1: i else nil
 		}
 	}
+	
+	contains(that) =>
+		if that.is Number: that > this.from-1 and that < this.to+1
+		else if that.is Range: that.from > this.from-1 and that.to < this.to+1
+	
+	toString() => "(" ++ this.from ++ ".." ++ this.to ++ ")"
 }
 
 yield Range

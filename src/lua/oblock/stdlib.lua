@@ -358,6 +358,29 @@ function stdlib.Sequence:sub(from, to)
 	return self.new(values)
 end
 
+function stdlib.Sequence:transpose()
+	local values = self.new()
+	for row_idx = 1, self:get("length").value do
+		local row = self:get(row_idx)
+		for col_idx = 1, row:get("length").value do
+			if values:get(col_idx).__name == "Nil" then
+				values:set(col_idx, self.new())
+			end
+			values:get(col_idx):set(row_idx, row:get(col_idx))
+		end
+	end
+	return values
+end
+
+function stdlib.Sequence:reverse()
+	local values = {}
+	local length = self:get("length").value
+	for i = 1, length do
+		values[i] = self:get(length - i + 1)
+	end
+	return self.new(values)
+end
+
 function stdlib.Sequence:contains(value)
 	for _, x in ipairs {self:spread()} do
 		if x == value then return stdlib.Boolean(true) end
@@ -624,7 +647,7 @@ stdlib.List.iterate = stdlib.Sequence.iterate
 stdlib.List.concat = stdlib.Sequence.concat
 
 function stdlib.List:__len()
-	return #self.env
+	return self:get("length").value
 end
 
 function stdlib.List:__tostring()
@@ -713,6 +736,8 @@ defineProtoNativeFn("Sequence", "spread", "...")
 defineProtoNativeFn("Sequence", "iterate")
 defineProtoNativeFn("Sequence", "sorted")
 defineProtoNativeFn("Sequence", "sub")
+defineProtoNativeFn("Sequence", "transpose")
+defineProtoNativeFn("Sequence", "reverse")
 defineProtoNativeFn("Sequence", "contains")
 
 defineProtoNativeFn("Number", "parse")

@@ -2,6 +2,17 @@ local Interpreter = require "oblock.Interpreter"
 
 local stdlib = {}
 
+-- Lazy initialization of stdlib modules written in Oblock itself,
+-- to avoid require-loops
+stdlib.lazy = setmetatable({}, {
+	__index = function(t, k)
+		t[k] = stdlib.import(nil, k)
+		return t[k]
+	end
+})
+
+
+
 stdlib.Block = {}
 stdlib.Block.__index = stdlib.Block
 stdlib.Block.__name = "Block"
@@ -290,6 +301,10 @@ stdlib.Sequence.proto = stdlib.Block()
 
 function stdlib.Sequence.new()
 	return setmetatable(stdlib.Block(), stdlib.Sequence)
+end
+
+function stdlib.Sequence:stream()
+	return stdlib.lazy.Stream:get("of"):call(nil, self)
 end
 
 function stdlib.Sequence:concat(other)
@@ -730,6 +745,7 @@ defineProtoNativeFn("Function", "curry")
 
 defineOperator("Sequence", "concat", "++")
 defineOperator("Sequence", "length", "#")
+defineProtoNativeFn("Sequence", "stream")
 defineProtoNativeFn("Sequence", "append")
 defineProtoNativeFn("Sequence", "pop")
 defineProtoNativeFn("Sequence", "spread", "...")

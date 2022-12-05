@@ -61,9 +61,9 @@ Stream = {
 		const source = this
 		dropped = 0
 		read() => {
-			if dropped < n: {
+			while dropped < n: {
 				dropped += 1
-				return
+				source.read()
 			}
 			return source.read()
 		}

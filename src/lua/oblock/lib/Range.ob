@@ -1,21 +1,29 @@
 var Range
 Range = {
 	"()" (from, to) => Range.clone {
-		const from, to = from, to
+		const from, to, step = from, to, 1
+	}
+	
+	by(step) => Range.clone {
+		const from, to, step = this.from, this.to, step
 	}
 	
 	iterate() => {
-		var i = this.from-1
+		var i = this.from - this.step
 		const self = this
 		return () => {
-			i += 1
-			return if i < self.to+1: i else nil
+			i += self.step
+			return if self.contains(i): i else nil
 		}
 	}
 	
 	contains(that) =>
-		if that.is Number: that > this.from-1 and that < this.to+1
-		else if that.is Range: that.from > this.from-1 and that.to < this.to+1
+		if that.is Number:
+			that > Number.min(this.from-1, this.to-1)
+			and that < Number.max(this.to+1, this.from+1)
+		else if that.is Range:
+			Number.min(that.from) > Number.min(this.from-1)
+			and Number.max(that.to) < Number.max(this.to+1)
 	
 	toString() => "(" ++ this.from ++ ".." ++ this.to ++ ")"
 }

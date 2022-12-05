@@ -64,11 +64,13 @@ function stdlib.Block:set(key, value, modifiers)
 			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
-	else
+	elseif key ~= nil then
 		self.env[key] = {
 			value = value,
 			modifiers = modifiers or {}
 		}
+	elseif key == nil then
+		Interpreter.error("Cannot set nil key")
 	end
 	
 	if type(key) == "string" and value and not value.name then
@@ -307,6 +309,14 @@ end
 
 function stdlib.Sequence:append(value)
 	self:set(self:get("length").value + 1, value)
+end
+
+function stdlib.Sequence:pop()
+	local length = self:get("length").value
+	local value = self:get(length)
+	self.env[length] = nil
+	self:set("length", stdlib.Number(length-1)) -- TODO: check correctness
+	return value
 end
 
 function stdlib.Sequence:spread()
@@ -698,6 +708,7 @@ defineProtoNativeFn("Function", "curry")
 defineOperator("Sequence", "concat", "++")
 defineOperator("Sequence", "length", "#")
 defineProtoNativeFn("Sequence", "append")
+defineProtoNativeFn("Sequence", "pop")
 defineProtoNativeFn("Sequence", "spread", "...")
 defineProtoNativeFn("Sequence", "iterate")
 defineProtoNativeFn("Sequence", "sorted")

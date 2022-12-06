@@ -74,11 +74,11 @@ Stream = {
 		buffer = []
 		read() => {
 			for x in source: {
-				if fn(x, buffer.(buffer.length), buffer.length): {
+				if fn(x, buffer): {
 					buffer.append(x)
 				} else if buffer.length > 0 or keepEmpty: {
 					const oldBuffer = buffer
-					buffer = if fn(x, nil, 0): [x] else []
+					buffer = if fn(x, []): [x] else []
 					return Stream.of(oldBuffer)
 				}
 			}
@@ -92,7 +92,7 @@ Stream = {
 		}
 	}
 	
-	groupBySize(size) => this.group((_, __, s) => s < size)
+	groupBySize(size) => this.group((_, buffer) => #buffer < size)
 	
 	splitAt(at, keepEmpty) => this.group(x => x != at, keepEmpty)
 	
@@ -103,6 +103,15 @@ Stream = {
 			if !values: values = Stream.of([...source].sorted(fn))
 			return values.read()
 		}
+	}
+	
+	distinct() => {
+		const occurred = {}
+		return this.filter(x => {
+			const has = occurred.(x)
+			occurred.(x) = true
+			return !has
+		})
 	}
 	
 	-- SINKS

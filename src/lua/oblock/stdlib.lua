@@ -60,6 +60,7 @@ end
 
 function stdlib.Block:set(key, value, modifiers)
 	if type(key) == "table" then key = key.value end
+	if key == nil then Interpreter.error("Cannot set nil key") end
 	if not self.mutable then
 		Interpreter.error("Attempt to mutate immutable value "..tostring(self))
 	end
@@ -75,13 +76,11 @@ function stdlib.Block:set(key, value, modifiers)
 			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
-	elseif key ~= nil then
+	else
 		self.env[key] = {
 			value = value,
 			modifiers = modifiers or {}
 		}
-	elseif key == nil then
-		Interpreter.error("Cannot set nil key")
 	end
 	
 	if type(key) == "string" and value and not value.name then
@@ -579,7 +578,7 @@ function stdlib.Boolean.new(value)
 end
 
 function stdlib.Boolean.toBoolean(value)
-	return stdlib.Boolean(value.value)
+	return stdlib.Boolean(value and value.value)
 end
 
 function stdlib.Boolean:not_()

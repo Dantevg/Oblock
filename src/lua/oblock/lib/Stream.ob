@@ -15,14 +15,18 @@ Stream = {
 		return ...values
 	}
 	
+	empty() => this.clone { read() => nil }
+	
 	-- FILTERS
 	-- These functions transform a stream into another stream
 	
 	map(fn) => this.clone {
 		const source = this
+		var i = 0
 		read() => {
 			val = source.read()
-			return if val != nil: fn(val)
+			i += 1
+			return if val != nil: fn(val, i)
 		}
 	}
 	
@@ -30,17 +34,34 @@ Stream = {
 	
 	forEach(fn) => this.clone {
 		const source = this
+		var i = 0
 		read() => {
+			i += 1
 			val = source.read()
-			if val != nil: fn(val)
+			if val != nil: fn(val, i)
 			return val
 		}
 	}
 	
 	filter(fn) => this.clone {
 		const source = this
+		var i = 0
 		read() => {
-			for x in source: if fn(x): return x
+			for x in source: {
+				i += 1
+				if fn(x, i): return x
+			}
+			return nil
+		}
+	}
+	
+	takeWhile(fn) => this.clone {
+		const source = this
+		i = 0
+		read() => {
+			i += 1
+			value = source.read()
+			if value != nil and fn(value, i): return value
 			return nil
 		}
 	}
@@ -128,7 +149,7 @@ Stream = {
 	sum() => this.reduce((acc, x) => acc + x)
 	count() => this.reduce((acc, x) => acc + 1, 0)
 	
-	forAll(fn) => for x in this: fn(x)
+	forAll(fn) => for x, i in this: fn(x, i)
 	
 	any(predicate) => {
 		for x in this: if predicate(x): return true

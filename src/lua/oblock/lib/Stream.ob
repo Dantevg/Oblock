@@ -1,3 +1,5 @@
+const Range = import "Range"
+
 var Stream
 Stream = {
 	of(source) => {
@@ -116,6 +118,26 @@ Stream = {
 	groupBySize(size) => this.group((_, buffer) => #buffer < size)
 	
 	splitAt(at, keepEmpty) => this.group(x => x != at, keepEmpty)
+	
+	windowed(size, step) => this.clone {
+		const source = this
+		var window = []
+		-- Fill initial window
+		for i in Range(1, size): {
+			const value = source.read()
+			if value == nil: return Stream.empty()
+			window.append(value)
+		}
+		read() => {
+			const oldWindow = window
+			for i in Range(1, step or 1): {
+				const value = source.read()
+				if value != nil: window = window.sub(2) ++ [value]
+				else { window = nil; break }
+			}
+			return oldWindow
+		}
+	}
 	
 	sorted(fn) => this.clone {
 		const source = this

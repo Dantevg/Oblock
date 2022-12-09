@@ -497,6 +497,10 @@ function stdlib.Number:sub(other)
 	end
 end
 
+function stdlib.Number:abs()
+	return self.new(math.abs(tonumber(self.value)))
+end
+
 function stdlib.Number:max(this, other)
 	local a, b = tonumber(this.value), tonumber(other.value)
 	if type(a) ~= "number" then Interpreter.error("cannot perform 'max' on "..other.__name) end
@@ -756,6 +760,7 @@ defineProtoNativeFn("Sequence", "reverse")
 defineProtoNativeFn("Sequence", "contains")
 
 defineProtoNativeFn("Number", "parse")
+defineProtoNativeFn("Number", "abs")
 defineProtoNativeFn("Number", "max")
 defineProtoNativeFn("Number", "min")
 defineOperator("Number", "eq", "==")

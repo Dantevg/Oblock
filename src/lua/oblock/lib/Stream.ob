@@ -197,6 +197,8 @@ Stream = {
 		for x in this: if !predicate(x): return false
 		return true
 	}
+	
+	toList() => [...this]
 }
 
 yield Stream

@@ -582,7 +582,7 @@ function stdlib.Boolean.new(value)
 end
 
 function stdlib.Boolean.toBoolean(value)
-	return stdlib.Boolean(value and value.value)
+	return stdlib.Boolean(value ~= nil and value.__name ~= "Nil" and value.value ~= false)
 end
 
 function stdlib.Boolean:not_()

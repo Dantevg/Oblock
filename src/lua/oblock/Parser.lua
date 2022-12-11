@@ -226,7 +226,11 @@ function Parser:addsub()
 end
 
 function Parser:muldiv()
-	return self:binary({"star", "slash", "percent"}, Parser.unary)
+	return self:binary({"star", "slash", "slash slash", "percent"}, Parser.range)
+end
+
+function Parser:range()
+	return self:binary({"dot dot"}, Parser.unary)
 end
 
 function Parser:unary()

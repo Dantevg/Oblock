@@ -480,6 +480,18 @@ function stdlib.Number:mul(other)
 	return self.new(a * b)
 end
 
+function stdlib.Number:div(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '/' on "..other.__name) end
+	return self.new(a / b)
+end
+
+function stdlib.Number:idiv(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '//' on "..other.__name) end
+	return self.new(a // b)
+end
+
 function stdlib.Number:mod(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(b) ~= "number" then Interpreter.error("cannot perform '%' on "..other.__name) end
@@ -495,6 +507,12 @@ function stdlib.Number:sub(other)
 	else
 		return self.new(-a)
 	end
+end
+
+function stdlib.Number:range(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '..' on "..other.__name) end
+	return stdlib.lazy.Range:call(nil, self, other)
 end
 
 function stdlib.Number:abs()
@@ -769,7 +787,10 @@ defineOperator("Number", "gt", ">")
 defineOperator("Number", "add", "+")
 defineOperator("Number", "sub", "-")
 defineOperator("Number", "mul", "*")
+defineOperator("Number", "div", "/")
+defineOperator("Number", "idiv", "//")
 defineOperator("Number", "mod", "%")
+defineOperator("Number", "range", "..")
 
 defineOperator("String", "concat", "++")
 defineProtoNativeFn("String", "charCode")

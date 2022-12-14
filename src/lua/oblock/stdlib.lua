@@ -37,7 +37,7 @@ function stdlib.Block:has(key)
 end
 
 function stdlib.Block:get(key)
-	if type(key) == "table" then key = key.value end
+	if type(key) == "table" and key.value ~= nil then key = key.value end
 	
 	-- TODO: either make protos list immutable (unnatural) or somehow propagate changes
 	if key == "_Protos" then return stdlib.List(self.protos) end
@@ -59,7 +59,7 @@ function stdlib.Block:get(key)
 end
 
 function stdlib.Block:set(key, value, modifiers)
-	if type(key) == "table" then key = key.value end
+	if type(key) == "table" and key.value ~= nil then key = key.value end
 	if key == nil then Interpreter.error("Cannot set nil key") end
 	if not self.mutable then
 		Interpreter.error("Attempt to mutate immutable value "..tostring(self))
@@ -104,7 +104,8 @@ end
 
 function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
-	other.protos = {self}
+	-- other.protos = {self}
+	table.insert(other.protos, self) -- TODO: eliminate double protos
 	return other
 end
 
@@ -115,7 +116,9 @@ function stdlib.Block:keys()
 			or type(k) == "number" and stdlib.Number(k)
 			or type(k) == "boolean" and stdlib.Boolean(k)
 			or k
-		table.insert(keys, key)
+		if not (type(self.env[k].value) == "table" and self.env[k].value.__name == "Nil") then
+			table.insert(keys, key)
+		end
 	end
 	return stdlib.List(keys)
 end
@@ -460,12 +463,26 @@ end
 
 function stdlib.Number:lt(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '<' on "..other.__name) end
 	return stdlib.Boolean(a < b)
+end
+
+function stdlib.Number:leq(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '<=' on "..other.__name) end
+	return stdlib.Boolean(a <= b)
 end
 
 function stdlib.Number:gt(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '>' on "..other.__name) end
 	return stdlib.Boolean(a > b)
+end
+
+function stdlib.Number:geq(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
+	if type(b) ~= "number" then Interpreter.error("cannot perform '>=' on "..other.__name) end
+	return stdlib.Boolean(a >= b)
 end
 
 function stdlib.Number:add(other)
@@ -521,15 +538,17 @@ end
 
 function stdlib.Number:max(this, other)
 	local a, b = tonumber(this.value), tonumber(other.value)
-	if type(a) ~= "number" then Interpreter.error("cannot perform 'max' on "..other.__name) end
-	if type(b) ~= "number" then Interpreter.error("cannot perform 'max' on "..other.__name) end
+	if type(a) ~= "number" or type(b) ~= "number" then
+		Interpreter.error("cannot perform 'max' on "..this.__name.." and "..other.__name)
+	end
 	return stdlib.Number.new(math.max(a, b))
 end
 
 function stdlib.Number:min(this, other)
 	local a, b = tonumber(this.value), tonumber(other.value)
-	if type(a) ~= "number" then Interpreter.error("cannot perform 'min' on "..other.__name) end
-	if type(b) ~= "number" then Interpreter.error("cannot perform 'min' on "..other.__name) end
+	if type(a) ~= "number" or type(b) ~= "number" then
+		Interpreter.error("cannot perform 'min' on "..this.__name.." and "..other.__name)
+	end
 	return stdlib.Number.new(math.min(a, b))
 end
 
@@ -783,14 +802,17 @@ defineProtoNativeFn("Number", "max")
 defineProtoNativeFn("Number", "min")
 defineOperator("Number", "eq", "==")
 defineOperator("Number", "lt", "<")
+defineOperator("Number", "leq", "<=")
 defineOperator("Number", "gt", ">")
+defineOperator("Number", "geq", ">=")
 defineOperator("Number", "add", "+")
 defineOperator("Number", "sub", "-")
 defineOperator("Number", "mul", "*")
 defineOperator("Number", "div", "/")
 defineOperator("Number", "idiv", "//")
 defineOperator("Number", "mod", "%")
-defineOperator("Number", "range", "..")
+defineProtoNativeFn("Number", "range", "..")
+stdlib.Number.proto:set("INF", stdlib.Number(math.huge), {const = true})
 
 defineOperator("String", "concat", "++")
 defineProtoNativeFn("String", "charCode")

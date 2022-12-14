@@ -105,7 +105,7 @@ end
 function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
 	-- other.protos = {self}
-	table.insert(other.protos, self) -- TODO: eliminate double protos
+	table.insert(other.protos, 1, self) -- TODO: eliminate double protos
 	return other
 end
 

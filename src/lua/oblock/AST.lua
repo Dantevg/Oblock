@@ -442,7 +442,8 @@ function AST.Expr.If.new(condition, ifTrue, ifFalse, loc)
 end
 
 function AST.Expr.If:evaluate(env)
-	if self.condition:evaluate(env).value then
+	local cond = self.condition:evaluate(env)
+	if cond and cond.value then
 		return self.ifTrue:evaluate(env)
 	elseif self.ifFalse then
 		return self.ifFalse:evaluate(env)

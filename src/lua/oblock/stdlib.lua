@@ -407,7 +407,7 @@ end
 
 function stdlib.Sequence:contains(value)
 	for _, x in ipairs {self:spread()} do
-		if x == value then return stdlib.Boolean(true) end
+		if x:get("=="):call(nil, value).value then return stdlib.Boolean(true) end
 	end
 	return stdlib.Boolean(false)
 end

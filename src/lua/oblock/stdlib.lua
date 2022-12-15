@@ -147,9 +147,16 @@ function stdlib.Block:is(other)
 		if other == proto then return stdlib.Boolean(true) end
 	end
 	
+	-- Check all own values
 	for k, v in pairs(other.env) do
 		if not self:has(k) then return stdlib.Boolean(false) end
 	end
+	
+	-- Check all other protos
+	for _, proto in pairs(other.protos) do
+		if not self:is(proto).value then return stdlib.Boolean(false) end
+	end
+	
 	return stdlib.Boolean(true)
 end
 

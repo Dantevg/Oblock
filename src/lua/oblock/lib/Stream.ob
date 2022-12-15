@@ -74,12 +74,28 @@ Stream = {
 	
 	takeWhile(fn) => this.clone {
 		const source = this
-		i = 0
+		var i = 0
 		read() => {
 			i += 1
 			value = source.read()
 			if value != nil and fn(value, i): return value
 			return nil
+		}
+	}
+	
+	takeUntil(fn) => this.clone {
+		const source = this
+		var i = 0
+		var stopped = false
+		read() => {
+			if stopped: return nil
+			i += 1
+			value = source.read()
+			if value == nil or !fn(value, i): return value
+			else {
+				stopped = true
+				return value
+			}
 		}
 	}
 	
@@ -171,6 +187,18 @@ Stream = {
 			return !has
 		})
 	}
+	
+	concat(that) => this.clone {
+		var source = this
+		read() => {
+			const value = source.read()
+			if value != nil: return value
+			source = that
+			return source.read()
+		}
+	}
+	
+	"++" = concat
 	
 	-- SINKS
 	-- These functions transform a stream into a single value

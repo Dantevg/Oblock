@@ -8,6 +8,12 @@ Range = {
 		const from, to, step = this.from, this.to, step
 	}
 	
+	"..." () => {
+		const values = []
+		for value in this: values.append(value)
+		return ...values
+	}
+	
 	iterate() => {
 		var i = this.from - this.step
 		const self = this

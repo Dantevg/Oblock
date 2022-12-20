@@ -171,7 +171,7 @@ function stdlib.Block:__tostring()
 	for i, key in ipairs(strings) do
 		local value = self.env[key].value
 		if value ~= nil then
-			strings[i] = tostring(key).." = "..tostring(value)
+			strings[i] = tostring(key).." = "..tostring(value:get("toString"):call())
 		else
 			strings[i] = tostring(key)
 		end
@@ -594,6 +594,11 @@ function stdlib.String:concat(other)
 	return self.new(self:toString().value..other:toString().value)
 end
 
+-- Override from Sequence
+function stdlib.String:sub(from, to)
+	return string.sub(self.value, from and from.value, to and to.value)
+end
+
 function stdlib.String:charCode()
 	return stdlib.Number.new(string.byte(self.value))
 end
@@ -715,7 +720,7 @@ end
 function stdlib.List:__tostring()
 	local strings = {}
 	for i = 1, #self do
-		table.insert(strings, tostring(self:get(i)))
+		table.insert(strings, tostring(self:get(i):get("toString"):call()))
 	end
 	return "["..table.concat(strings, ", ").."]"
 end
@@ -822,6 +827,7 @@ defineProtoNativeFn("Number", "range", "..")
 stdlib.Number.proto:set("INF", stdlib.Number(math.huge), {const = true})
 
 defineOperator("String", "concat", "++")
+defineProtoNativeFn("String", "sub")
 defineProtoNativeFn("String", "charCode")
 
 defineProtoNativeFn("Boolean", "not_", "!")
@@ -837,7 +843,11 @@ stdlib.Nil.proto:set("nil", stdlib.Nil())
 stdlib.clock = function() return stdlib.Number(os.clock()) end
 stdlib.print = function(_, ...)
 	-- Pass-through variables
-	print(...)
+	local items = table.pack(...)
+	for i = 1, items.n do
+		items[i] = items[i]:get("toString"):call()
+	end
+	print(table.unpack(items))
 	return ...
 end
 
@@ -851,12 +861,15 @@ end
 stdlib.id = function(_, x) return x or stdlib.Nil() end
 
 stdlib.import = function(_, modname)
+	if rawget(stdlib.lazy, tostring(modname)) then return stdlib.lazy[tostring(modname)] end
 	-- TODO: generalise to all paths, not just specifically the test directory
 	package.path = package.path..";oblock/lib/?.lua;../test/?.lua"
 	local langModule = require("oblock.run")(Interpreter(), "../test/"..tostring(modname)..".ob")
 		or require("oblock.run")(Interpreter(), "oblock/lib/"..tostring(modname)..".ob")
 	local hasLuaModule, luaModule = pcall(require, tostring(modname))
-	return hasLuaModule and luaModule(langModule or stdlib.Block()) or langModule or stdlib.Nil()
+	local mod = hasLuaModule and luaModule(langModule or stdlib.Block()) or langModule or stdlib.Nil()
+	stdlib.lazy[tostring(modname)] = mod
+	return mod
 end
 
 stdlib.clone = function(_, ...)

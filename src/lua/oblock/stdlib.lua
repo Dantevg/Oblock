@@ -104,9 +104,20 @@ end
 
 function stdlib.Block:clone(other)
 	other = other or stdlib.Block()
-	-- other.protos = {self}
-	table.insert(other.protos, 1, self) -- TODO: eliminate double protos
+	-- Prevent double protos
+	for _, v in ipairs(other.protos) do
+		if v == self then return other end
+	end
+	table.insert(other.protos, 1, self)
 	return other
+end
+
+function stdlib.Block:where(other)
+	local newblock = stdlib.Block()
+	-- TODO: take over modifiers or always var/const?
+	for k, v in pairs(self.env) do newblock.env[k] = { value = v.value, modifiers = v.modifiers } end
+	for k, v in pairs(other.env) do newblock.env[k] = { value = v.value, modifiers = v.modifiers } end
+	return newblock
 end
 
 function stdlib.Block:keys()
@@ -133,12 +144,22 @@ function stdlib.Block:allProtos()
 	
 	local protos = {}
 	for _, proto in ipairs(self.protos) do
-		table.insert(protos, proto)
+		if not contains(protos, proto) then table.insert(protos, proto) end
 		for _, p in ipairs {proto:allProtos():spread()} do
 			if not contains(protos, p) then table.insert(protos, p) end
 		end
 	end
 	return stdlib.List(protos)
+end
+
+function stdlib.Block:iterate()
+	local keys = self:keys()
+	local i = 0
+	return stdlib.NativeFunction(function()
+		i = i+1
+		local k = keys:get(i)
+		return self:get(k), k
+	end, "iterator")
 end
 
 function stdlib.Block:is(other)
@@ -785,8 +806,10 @@ defineProtoNativeFn("Block", "eq", "==")
 defineProtoNativeFn("Block", "neq", "!=")
 defineProtoNativeFn("Block", "pipe", "|>")
 defineProtoNativeFn("Block", "clone")
+defineProtoNativeFn("Block", "where")
 defineProtoNativeFn("Block", "keys")
 defineProtoNativeFn("Block", "allProtos", "protos")
+defineProtoNativeFn("Block", "iterate")
 defineProtoNativeFn("Block", "is")
 defineProtoNativeFn("Block", "not_", "!")
 defineProtoNativeFn("Block", "toString")
@@ -875,7 +898,13 @@ end
 stdlib.clone = function(_, ...)
 	local prototypes = {...}
 	return stdlib.NativeFunction(function(_, block)
-		block.protos = prototypes
+		for _, proto in ipairs(prototypes) do
+			for _, p in ipairs(block.protos) do
+				if p == proto then goto continue end
+			end
+			table.insert(block.protos, 1, proto)
+			::continue::
+		end
 		return block
 	end)
 end

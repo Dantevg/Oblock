@@ -200,6 +200,32 @@ Stream = {
 	
 	"++" = concat
 	
+	zipWith(that, partial) => this.clone {
+		const source = this
+		read() => {
+			const a, b = source.read(), that.read()
+			if !partial and (a == nil or b == nil): return nil
+			return [a, b]
+		}
+	}
+	
+	repeat() => this.clone {
+		const source = this
+		const data = []
+		var i = 0
+		read() => {
+			if i == 0: {
+				const value = source.read()
+				if value != nil: {
+					data.append(value)
+					return value
+				}
+			}
+			i = (i % #data) + 1
+			return data.(i)
+		}
+	}
+	
 	-- SINKS
 	-- These functions transform a stream into a single value
 	
@@ -227,6 +253,11 @@ Stream = {
 	}
 	
 	toList() => [...this]
+	toBlock(fn) => this.reduce((acc, x) => {
+		key, value = fn(x)
+		acc.(key) = value
+		return acc
+	}, {})
 }
 
 yield Stream

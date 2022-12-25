@@ -16,53 +16,12 @@ To-Do / roadmap / proposals
     		+ 20)
 - Set `this` on all functions
   - "global" functions and functions in current scope get current block as `this`
-- Classical vs prototypal inheritance
-  - Prototypal is simpler but less flexible: cannot set different methods
-    for static and instance
-    - overriding function call for instances also overrides for static class
-    - Vector class with static vs instance methods
-  - Like Io language, with `clone` function / syntax
-    - Should be syntax (not function) to allow computation with `_Proto`?
-      Not needed? _Proto is known by programmer
-  - `with` keyword? or function? (or both?) Extends nicely to mixins:
-    
-    	Bird = Animal with Walker with Flyer with {
-    		
-    	}
-    	
-    	-- pro: shorter
-    	Bird = clone(Animal, Walker, Flyer) {
-    		
-    	}
-    	
-    	Cat = Animal with Walker
-    	Cat = clone(Animal, Walker) {} -- con: looks weird, longer
-    	
-    	doggo = Dog with { name = "Doggo" }
-    	doggo = clone Dog { name = "Doggo" }
-    	doggo = Dog.clone { name = "Doggo" }
+  - or, they get the function itself as `this`
 - Separator for if/for/while condition and body
   - Words (Lua):    `if condition then body`,  `for var in val do body`
   - Colon (Python): `if condition: body`,      `for var in val: body`
   - Comma (Jammy):  `if condition, body`,      `for var in val, body`
   - Brackets (C):   `if (condition) body`,     `for (var in val) body`
-- How to recognise an object as an instance of a class?
-  - Simple: look in prototype chain
-  - Advanced / more flexible: structural typing
-  - When any function gets called (both constructor and normal method),
-    set `_Proto` of returning object to `this` and add to scope.
-    For constructors:
-    
-    	Dog = {
-    		"()" name => {
-    			this.name = name
-    		}
-    		
-    		greet() => {
-    			print("Hello, " + this.name + "!")
-    		}
-    	}
-    Calling `myDog.greet()` will return an empty object with `_Proto = myDog`
 - Variable definition in `if`
   - Also for `while`? Not for `for`
   - Definition only valid in scope of if-branch
@@ -74,6 +33,11 @@ To-Do / roadmap / proposals
     	}
 - Variables immutable by default (`const` by default)
   - Most variables can be `const`
+  - Values should also be const by default? Otherwise this is weird:
+    
+    	obj = { x = 10 }
+    	obj.y = 20 -- possible
+    	obj.x = 30 -- not possible, x is const
   - Shorthand notation for mutable blocks: (`a` and `b` are `var` here)
     
     	obj = var {

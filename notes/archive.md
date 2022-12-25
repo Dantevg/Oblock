@@ -1,6 +1,48 @@
 These notes came from `syntax-semantics.md`, but they are no longer applicable
 because I scrapped the idea or implemented it.
 
+- Classical vs prototypal inheritance
+  - Prototypal is simpler but less flexible: cannot set different methods
+    for static and instance
+    - overriding function call for instances also overrides for static class
+    - Vector class with static vs instance methods
+  - Like Io language, with `clone` function / syntax
+    - Should be syntax (not function) to allow computation with `_Proto`?
+      Not needed? _Proto is known by programmer
+  - `with` keyword? or function? (or both?) Extends nicely to mixins:
+    
+    	Bird = Animal with Walker with Flyer with {
+    		
+    	}
+    	
+    	-- pro: shorter
+    	Bird = clone(Animal, Walker, Flyer) {
+    		
+    	}
+    	
+    	Cat = Animal with Walker
+    	Cat = clone(Animal, Walker) {} -- con: looks weird, longer
+    	
+    	doggo = Dog with { name = "Doggo" }
+    	doggo = clone Dog { name = "Doggo" }
+    	doggo = Dog.clone { name = "Doggo" }
+- How to recognise an object as an instance of a class?
+  - Simple: look in prototype chain
+  - Advanced / more flexible: structural typing
+  - When any function gets called (both constructor and normal method),
+    set `_Proto` of returning object to `this` and add to scope.
+    For constructors:
+    
+    	Dog = {
+    		"()" name => {
+    			this.name = name
+    		}
+    		
+    		greet() => {
+    			print("Hello, " + this.name + "!")
+    		}
+    	}
+    Calling `myDog.greet()` will return an empty object with `_Proto = myDog`
 - Named return values, symmetric to named arguments using `from`
   - Probably not. Doubt usefulness, only for few special cases
 - Unary '+' for absolute value (as suggested in the /r/ProgrammingLanguages Discord)

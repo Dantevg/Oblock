@@ -275,6 +275,13 @@ function stdlib.Function:curry(...)
 	end)
 end
 
+function stdlib.Function:matches(...)
+	local args = {...}
+	if not self.parameters then return stdlib.Boolean(true) end
+	if not self.parameters:match(nil, args) then return stdlib.Boolean(false) end
+	return stdlib.Boolean(#args == 0)
+end
+
 function stdlib.Function:__tostring()
 	return (self.name and "<function "..self.name or "<function")
 		.." @ "..Interpreter.formatLoc(self.loc)..">"
@@ -817,6 +824,7 @@ defineProtoNativeFn("Block", "toString")
 defineProtoNativeFn("Function", "call", "()")
 defineProtoNativeFn("Function", "compose", "o")
 defineProtoNativeFn("Function", "curry")
+defineProtoNativeFn("Function", "matches")
 
 defineOperator("Sequence", "concat", "++")
 defineOperator("Sequence", "length", "#")
@@ -909,6 +917,17 @@ stdlib.clone = function(_, ...)
 	end)
 end
 
+stdlib.match = function(_, ...)
+	local args = {...}
+	return stdlib.NativeFunction(function(_, functions)
+		for _, fn in ipairs {functions:spread()} do
+			if fn:matches(table.unpack(args)).value then
+				return fn:call(nil, table.unpack(args))
+			end
+		end
+	end)
+end
+
 function stdlib.initEnv(env)
 	env:setHere("clock", stdlib.NativeFunction(stdlib.clock))
 	env:setHere("print", stdlib.NativeFunction(stdlib.print))
@@ -916,6 +935,7 @@ function stdlib.initEnv(env)
 	env:setHere("id", stdlib.NativeFunction(stdlib.id))
 	env:setHere("import", stdlib.NativeFunction(stdlib.import))
 	env:setHere("clone", stdlib.NativeFunction(stdlib.clone))
+	env:setHere("match", stdlib.NativeFunction(stdlib.match))
 	
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)

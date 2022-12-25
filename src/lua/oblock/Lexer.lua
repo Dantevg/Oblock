@@ -265,9 +265,8 @@ end
 --- Lex line comments.
 function Lexer:lineComment()
 	while self:advance() ~= "\n" do end
-	self:nextLine()
-	-- Prevent multiple newline tokens
-	if self:peek():match("[ \r\t\n]") then self:whitespace(self:advance(), true) end
+	-- Prevent multiple newline tokens if there was a newline before this comment
+	self:whitespace("\n", self.tokens[#self.tokens].type == "newline")
 end
 
 --- Lex block comments.

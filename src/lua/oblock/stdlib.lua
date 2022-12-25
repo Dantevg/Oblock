@@ -255,7 +255,7 @@ function stdlib.Function:curry(...)
 end
 
 function stdlib.Function:__tostring()
-	return (self.name and "<function: "..self.name or "<function")
+	return (self.name and "<function "..self.name or "<function")
 		.." @ "..Interpreter.formatLoc(self.loc)..">"
 end
 
@@ -288,7 +288,7 @@ function stdlib.NativeFunction:call(loc, ...)
 end
 
 function stdlib.NativeFunction:__tostring()
-	return self.name and "<native function: "..self.name..">" or "<native function>"
+	return self.name and "<native function "..self.name..">" or "<native function>"
 end
 
 setmetatable(stdlib.NativeFunction, {
@@ -596,7 +596,7 @@ end
 
 -- Override from Sequence
 function stdlib.String:sub(from, to)
-	return string.sub(self.value, from and from.value, to and to.value)
+	return self.new(string.sub(self.value, from and from.value, to and to.value))
 end
 
 function stdlib.String:charCode()

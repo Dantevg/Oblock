@@ -31,8 +31,15 @@ To-Do / roadmap / proposals
     	} else {
     		print "something else"
     	}
-- Variables immutable by default (`const` by default)
-  - Most variables can be `const`
+- Immutability
+  - Function assignment shorthand (as opposed to definition)
+    - Now, `a.f() => 42` is no longer valid, only `a.f := () => 42`
+  - Warning on unused variables, to prevent errors when accidentally shadowing
+    instead of mutating (i.e. using `=` instead of `:=`)
+    
+    	var x = 0
+    	if x > 10: { x = 42 }
+    	-- x is still 0
   - Values should also be const by default? Otherwise this is weird:
     
     	obj = { x = 10 }

@@ -1,22 +1,22 @@
 var Range
-Range = {
+Range := {
 	"()" (from, to) => Range.clone {
-		const from, to, step = from, to, 1
+		from, to, step = from, to, 1
 	}
 	
 	by(step) => Range.clone {
-		const from, to, step = this.from, this.to, step
+		from, to, step = this.from, this.to, step
 	}
 	
 	"..." () => {
-		const values = []
+		values = []
 		for value in this: values.append(value)
 		return ...values
 	}
 	
 	iterate() => {
 		var i = this.from - this.step
-		const self = this
+		self = this
 		return () => {
 			i += self.step
 			return if self.contains(i): i else nil

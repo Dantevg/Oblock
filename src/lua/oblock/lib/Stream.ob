@@ -1,7 +1,7 @@
-const Range = import "Range"
+Range = import "Range"
 
 var Stream
-Stream = {
+Stream := {
 	of(source) => {
 		iterator = source.iterate()
 		return this.clone {
@@ -12,7 +12,7 @@ Stream = {
 	iterate() => this.read
 	
 	"..." () => {
-		const values = []
+		values = []
 		for value in this: values.append value
 		return ...values
 	}
@@ -23,7 +23,7 @@ Stream = {
 	-- These functions transform a stream into another stream
 	
 	map(fn) => this.clone {
-		const source = this
+		source = this
 		var i = 0
 		read() => {
 			val = source.read()
@@ -35,22 +35,22 @@ Stream = {
 	mapIndex(object) => this.map(x => object.(x))
 	
 	flat() => this.clone {
-		const source = this
+		source = this
 		var latest = source.read()
 		read() => {
 			if latest == nil: return nil
-			value = latest.read()
+			var value = latest.read()
 			while value == nil: {
-				latest = source.read()
+				latest := source.read()
 				if latest == nil: return nil
-				value = latest.read()
+				value := latest.read()
 			}
 			return value
 		}
 	}
 	
 	forEach(fn) => this.clone {
-		const source = this
+		source = this
 		var i = 0
 		read() => {
 			i += 1
@@ -61,7 +61,7 @@ Stream = {
 	}
 	
 	filter(fn) => this.clone {
-		const source = this
+		source = this
 		var i = 0
 		read() => {
 			for x in source: {
@@ -73,7 +73,7 @@ Stream = {
 	}
 	
 	takeWhile(fn) => this.clone {
-		const source = this
+		source = this
 		var i = 0
 		read() => {
 			i += 1
@@ -84,7 +84,7 @@ Stream = {
 	}
 	
 	takeUntil(fn) => this.clone {
-		const source = this
+		source = this
 		var i = 0
 		var stopped = false
 		read() => {
@@ -93,15 +93,15 @@ Stream = {
 			value = source.read()
 			if value == nil or !fn(value, i): return value
 			else {
-				stopped = true
+				stopped := true
 				return value
 			}
 		}
 	}
 	
 	take(n) => this.clone {
-		const source = this
-		taken = 0
+		source = this
+		var taken = 0
 		read() => {
 			if taken < n: {
 				taken += 1
@@ -112,8 +112,8 @@ Stream = {
 	}
 	
 	drop(n) => this.clone {
-		const source = this
-		dropped = 0
+		source = this
+		var dropped = 0
 		read() => {
 			while dropped < n: {
 				dropped += 1
@@ -124,22 +124,22 @@ Stream = {
 	}
 	
 	group(fn, keepEmpty) => this.clone {
-		const source = this
-		buffer = []
+		source = this
+		var buffer = []
 		read() => {
 			for x in source: {
 				if fn(x, buffer): {
 					buffer.append(x)
 				} else if buffer.length > 0 or keepEmpty: {
-					const oldBuffer = buffer
-					buffer = if fn(x, []): [x] else []
+					oldBuffer = buffer
+					buffer := if fn(x, []): [x] else []
 					return Stream.of(oldBuffer)
 				}
 			}
 			-- Source is empty, buffer still has items
 			if buffer.length > 0: {
-				const oldBuffer = buffer
-				buffer = []
+				oldBuffer = buffer
+				buffer := []
 				return Stream.of(oldBuffer)
 			}
 			return nil
@@ -151,19 +151,19 @@ Stream = {
 	splitAt(at, keepEmpty) => this.group(x => x != at, keepEmpty)
 	
 	windowed(size, step) => this.clone {
-		const source = this
+		source = this
 		var window = []
 		-- Fill initial window
 		for i in Range(1, size): {
-			const value = source.read()
+			value = source.read()
 			if value == nil: return Stream.empty()
 			window.append(value)
 		}
 		read() => {
-			const oldWindow = window
+			oldWindow = window
 			for i in Range(1, step or 1): {
-				const value = source.read()
-				if value != nil: window = window.sub(2) ++ [value]
+				value = source.read()
+				if value != nil: window := window.sub(2) ++ [value]
 				else { window = nil; break }
 			}
 			return oldWindow
@@ -171,19 +171,19 @@ Stream = {
 	}
 	
 	sorted(fn) => this.clone {
-		const source = this
+		source = this
 		var values
 		read() => {
-			if !values: values = Stream.of([...source].sorted(fn))
+			if !values: values := Stream.of([...source].sorted(fn))
 			return values.read()
 		}
 	}
 	
 	distinct() => {
-		const occurred = {}
+		occurred = {}
 		return this.filter(x => {
-			const has = occurred.(x)
-			occurred.(x) = true
+			has = occurred.(x)
+			occurred.(x) := true
 			return !has
 		})
 	}
@@ -191,9 +191,9 @@ Stream = {
 	concat(that) => this.clone {
 		var source = this
 		read() => {
-			const value = source.read()
+			value = source.read()
 			if value != nil: return value
-			source = that
+			source := that
 			return source.read()
 		}
 	}
@@ -201,27 +201,27 @@ Stream = {
 	"++" = concat
 	
 	zipWith(that, partial) => this.clone {
-		const source = this
+		source = this
 		read() => {
-			const a, b = source.read(), that.read()
+			a, b = source.read(), that.read()
 			if !partial and (a == nil or b == nil): return nil
 			return [a, b]
 		}
 	}
 	
 	repeat() => this.clone {
-		const source = this
-		const data = []
+		source = this
+		data = []
 		var i = 0
 		read() => {
 			if i == 0: {
-				const value = source.read()
+				value = source.read()
 				if value != nil: {
 					data.append(value)
 					return value
 				}
 			}
-			i = (i % #data) + 1
+			i := (i % #data) + 1
 			return data.(i)
 		}
 	}
@@ -231,7 +231,7 @@ Stream = {
 	
 	reduce(fn, acc) => {
 		acc = acc or this.read()
-		for x in this: acc = fn(acc, x)
+		for x in this: acc := fn(acc, x)
 		return acc
 	}
 	
@@ -255,7 +255,7 @@ Stream = {
 	toList() => [...this]
 	toBlock(fn) => this.reduce((acc, x) => {
 		key, value = fn(x)
-		acc.(key) = value
+		acc.(key) := value
 		return acc
 	}, {})
 }

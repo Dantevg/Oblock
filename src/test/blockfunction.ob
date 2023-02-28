@@ -1,2 +1,2 @@
 a = {}
-a.fn() => print "A!"
+a.fn := () => print "A!"

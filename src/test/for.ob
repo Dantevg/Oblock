@@ -1,8 +1,8 @@
 iterable = {
 	iterate = () => {
-		i = 0
+		var i = 0
 		return () => {
-			i = i+1
+			i := i+1
 			return i < 5 and i or nil
 		}
 	}

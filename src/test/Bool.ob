@@ -1,5 +1,5 @@
 var Bool
-Bool = {
+Bool := {
 	"true" = .clone()
 	"false" = .clone()
 	

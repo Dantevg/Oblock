@@ -5,12 +5,12 @@ Person = {
 		var name = name
 	}
 	
-	prototype.greet = () => {
+	prototype.greet := () => {
 		print("Hello, " ++ this.name ++ "!")
 	}
 }
 
 inst = Person "RedPolygon"
 inst.greet()
-inst.name = "World"
+inst.name := "World"
 inst.greet()

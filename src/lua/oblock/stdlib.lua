@@ -58,7 +58,7 @@ function stdlib.Block:get(key)
 	return value or stdlib.Nil()
 end
 
-function stdlib.Block:set(key, value, modifiers)
+function stdlib.Block:set(key, value, isVariable)
 	if type(key) == "table" and key.value ~= nil then key = key.value end
 	if key == nil then Interpreter.error("Cannot set nil key") end
 	if not self.mutable then
@@ -69,17 +69,17 @@ function stdlib.Block:set(key, value, modifiers)
 	if key == "_Protos" then Interpreter.error("cannot set _Protos field yet") end
 	
 	if self.env[key] then
-		if modifiers ~= nil and not modifiers.empty then
+		if isVariable ~= nil then
 			Interpreter.error("Redefinition of variable "..tostring(key))
 		end
-		if self.env[key].modifiers.const then
+		if not self.env[key].var then
 			Interpreter.error("Attempt to mutate const variable "..tostring(key))
 		end
 		self.env[key].value = value
 	else
 		self.env[key] = {
 			value = value,
-			modifiers = modifiers or {}
+			var = isVariable == nil and true or isVariable
 		}
 	end
 	
@@ -115,8 +115,8 @@ end
 function stdlib.Block:where(other)
 	local newblock = stdlib.Block()
 	-- TODO: take over modifiers or always var/const?
-	for k, v in pairs(self.env) do newblock.env[k] = { value = v.value, modifiers = v.modifiers } end
-	for k, v in pairs(other.env) do newblock.env[k] = { value = v.value, modifiers = v.modifiers } end
+	for k, v in pairs(self.env) do newblock.env[k] = { value = v.value, var = v.var } end
+	for k, v in pairs(other.env) do newblock.env[k] = { value = v.value, var = v.var } end
 	return newblock
 end
 
@@ -728,8 +728,8 @@ function stdlib.List.new(elements)
 	return self
 end
 
-function stdlib.List:set(index, value, modifiers)
-	stdlib.Block.set(self, index, value, modifiers)
+function stdlib.List:set(index, value, isVariable)
+	stdlib.Block.set(self, index, value, isVariable)
 	if type(index) == "table" then index = index.value end
 	if type(index) == "number" then
 		self:set("length", stdlib.Number(math.max(self:get("length").value, index)))

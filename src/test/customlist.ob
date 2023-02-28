@@ -2,22 +2,22 @@ List_ = {
 	length = 0
 	
 	add(item) => {
-		this.length = this.length + 1
-		this.(this.length) = item
+		this.length := this.length + 1
+		this.(this.length) := item
 	}
 	
 	iterate() => {
-		i = 0
-		const self = this
+		var i = 0
+		self = this
 		return () => {
-			i = i + 1
+			i := i + 1
 			return self.(i), i
 		}
 	}
 	
 	toString() => {
-		str = "["
-		for item in this: str = str ++ item ++ ", "
+		var str = "["
+		for item in this: str := str ++ item ++ ", "
 		return str ++ "]"
 	}
 }

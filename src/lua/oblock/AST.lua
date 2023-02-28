@@ -743,16 +743,58 @@ setmetatable(AST.Stat.Continue, {
 
 
 
+AST.Stat.Definition = {}
+AST.Stat.Definition.__index = AST.Stat.Definition
+AST.Stat.Definition.__name = "Definition"
+
+function AST.Stat.Definition.new(pattern, expressions, isVariable, predef, loc)
+	local self = {}
+	self.pattern = pattern
+	self.expressions = AST.Expr.Group(expressions, loc)
+	self.isVariable = isVariable
+	self.predef = predef
+	self.loc = loc
+	return setmetatable(self, AST.Stat.Definition)
+end
+
+function AST.Stat.Definition:evaluate(env)
+	self.pattern:define(env, {self.expressions:evaluate(env)}, self.isVariable)
+end
+
+function AST.Stat.Definition:resolve(scope)
+	if self.predef then
+		self.pattern:resolve(scope, true)
+		self.expressions:resolve(scope)
+	else
+		self.expressions:resolve(scope)
+		self.pattern:resolve(scope, true)
+	end
+end
+
+function AST.Stat.Definition:debug(indent)
+	return debugValue(indent, self.__name,
+		{isVariable = self.isVariable, predef = self.predef},
+		{target = {self.pattern}, expressions = self.expressions.expressions})
+end
+
+function AST.Stat.Definition:__tostring()
+	return (self.isVariable and "var " or "const ")..self.pattern:__tostring().." = "..self.expressions:__tostring()
+end
+
+setmetatable(AST.Stat.Definition, {
+	__call = function(_, ...) return AST.Stat.Definition.new(...) end,
+})
+
+
+
 AST.Stat.Assignment = {}
 AST.Stat.Assignment.__index = AST.Stat.Assignment
 AST.Stat.Assignment.__name = "Assignment"
 
-function AST.Stat.Assignment.new(pattern, expressions, modifiers, predef, op, loc)
+function AST.Stat.Assignment.new(pattern, expressions, op, loc)
 	local self = {}
 	self.pattern = pattern
 	self.expressions = AST.Expr.Group(expressions, loc)
-	self.modifiers = modifiers
-	self.predef = predef
 	self.op = op
 	self.loc = loc
 	return setmetatable(self, AST.Stat.Assignment)
@@ -779,31 +821,24 @@ function AST.Stat.Assignment:evaluate(env)
 			return opFn:call(self.loc, table.unpack(args))
 		end
 		self.pattern:compoundAssign(env, values, fn)
-	elseif self.modifiers.empty then
-		self.pattern:assign(env, values)
 	else
-		self.pattern:define(env, values, self.modifiers)
+		self.pattern:assign(env, values)
 	end
 end
 
 function AST.Stat.Assignment:resolve(scope)
-	if self.predef then
-		self.pattern:resolve(scope, not self.modifiers.empty, self.op ~= nil)
-		self.expressions:resolve(scope)
-	else
-		self.expressions:resolve(scope)
-		self.pattern:resolve(scope, not self.modifiers.empty, self.op ~= nil)
-	end
+	self.expressions:resolve(scope)
+	self.pattern:resolve(scope, false, self.op ~= nil)
 end
 
 function AST.Stat.Assignment:debug(indent)
 	return debugValue(indent, self.__name,
-		{modifiers = self.modifiers, predef = self.predef, op = self.op},
+		{predef = self.predef, op = self.op},
 		{target = {self.pattern}, expressions = self.expressions.expressions})
 end
 
 function AST.Stat.Assignment:__tostring()
-	return self.pattern:__tostring().." = "..self.expressions:__tostring()
+	return self.pattern:__tostring().." := "..self.expressions:__tostring()
 end
 
 setmetatable(AST.Stat.Assignment, {
@@ -873,8 +908,8 @@ function AST.Pattern.Variable:compoundAssign(env, arguments, fn)
 	return true
 end
 
-function AST.Pattern.Variable:define(env, arguments, modifiers)
-	env:setHere(self.token.lexeme, table.remove(arguments, 1), modifiers)
+function AST.Pattern.Variable:define(env, arguments, isVariable)
+	env:setHere(self.token.lexeme, table.remove(arguments, 1), isVariable)
 	return true
 end
 
@@ -963,7 +998,7 @@ function AST.Pattern.Index:compoundAssign(env, arguments, fn)
 	return true
 end
 
-function AST.Pattern.Index:define(env, arguments, modifiers)
+function AST.Pattern.Index:define(env, arguments, isVariable)
 	Interpreter.error("index is not a valid definition target", self.loc)
 	return false
 end
@@ -1024,8 +1059,8 @@ function AST.Pattern.Literal:compoundAssign(env, arguments, fn)
 	return true
 end
 
-function AST.Pattern.Literal:define(env, arguments, modifiers)
-	env:setHere(self.literal, table.remove(arguments, 1), modifiers)
+function AST.Pattern.Literal:define(env, arguments, isVariable)
+	env:setHere(self.literal, table.remove(arguments, 1), isVariable)
 	return true
 end
 
@@ -1266,10 +1301,10 @@ function AST.Pattern.Rest:compoundAssign(env, arguments, fn)
 	Interpreter.error("Rest is not a valid compound assignment target", self.loc)
 end
 
-function AST.Pattern.Rest:define(env, arguments, modifiers)
+function AST.Pattern.Rest:define(env, arguments, isVariable)
 	local list = stdlib.List()
 	while #arguments > 0 do list:append(table.remove(arguments, 1)) end
-	env:setHere(self.token.lexeme, list, modifiers)
+	env:setHere(self.token.lexeme, list, isVariable)
 	return true
 end
 
@@ -1319,8 +1354,8 @@ function AST.Pattern.Expression:assign(env, arguments)
 	return true
 end
 
-function AST.Pattern.Expression:define(env, arguments, modifiers)
-	env:setHere(self.expression:evaluate(env), table.remove(arguments, 1), modifiers)
+function AST.Pattern.Expression:define(env, arguments, isVariable)
+	env:setHere(self.expression:evaluate(env), table.remove(arguments, 1), isVariable)
 	return true
 end
 

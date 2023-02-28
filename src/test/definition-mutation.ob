@@ -1,9 +1,9 @@
 var z
-x = -5
+var x = -5
 a = { var x = x + 1 }
 if x < 10: {
-	x = -x
-	z = 1
+	x := -x
+	z := 1
 }
 print x
 print(a.x)

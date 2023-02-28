@@ -27,7 +27,7 @@ end
 ---@field column integer
 
 --- Create a table with the location of `token`
----@param token Token
+---@param token? Token
 ---@return Loc
 function Parser:loc(token)
 	token = token or self:previous() or self:peek()
@@ -372,17 +372,14 @@ function Parser:continueStatement(loc)
 end
 
 function Parser:assignment(isExpr)
-	local modifiers = {empty = true}
-	local isAssignment, isFunction = false, false
+	local isVariable = nil
+	local isDefinition, isAssignment, isFunction = false, false, false
 	local compoundOp = nil
 	local loc = self:loc(self:peek())
 	
 	-- Match modifiers: `var`, `const`
-	while self:match {"var", "const"} do
-		local mod = self:previous().type
-		if modifiers[mod] then self:error(self:previous(), "duplicate modifier") end
-		modifiers[mod] = true
-		modifiers.empty = false
+	if self:match {"var", "const"} then
+		isVariable = (self:previous().type == "var")
 	end
 	
 	-- Match assignment target
@@ -393,9 +390,13 @@ function Parser:assignment(isExpr)
 	local expr = patterns[1]
 	
 	if self:match {"equal"} then -- a = b
+		isDefinition = true
+		if isVariable == nil then isVariable = false end
+		loc = self:loc()
+	elseif isVariable == nil and self:match {"colon equal"} then -- a := b
 		isAssignment = true
 		loc = self:loc()
-	elseif modifiers.empty and self:peek().type:find(" equal$") then -- a += b
+	elseif isVariable == nil and self:peek().type:find(" equal$") then -- a += b
 		self:advance()
 		isAssignment = true
 		loc = self:loc()
@@ -405,23 +406,25 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()
-	elseif not modifiers.empty then -- var a, const a
-		return AST.Stat.Assignment(pattern, {}, modifiers, false, nil, loc)
+	elseif isVariable ~= nil then -- var a, const a
+		return AST.Stat.Definition(pattern, {}, isVariable, false, loc)
 	end
 	
-	if isAssignment or isFunction then
+	if isDefinition or isAssignment or isFunction then
 		-- Match `=` and values
 		local equal = self:previous()
 		local values = isExpr
 			and {self:expression()}
 			or self:anylist(self.expression, "expression", true)
-		if isAssignment then
-			return AST.Stat.Assignment(pattern, values, modifiers, false, compoundOp, loc)
+		if isDefinition then
+			return AST.Stat.Definition(pattern, values, isVariable, false, loc)
+		elseif isAssignment then
+			return AST.Stat.Assignment(pattern, values, compoundOp, loc)
 		elseif isFunction and expr.__name == "Call" and #patterns == 1 then
 			local name, parameters = expr.expression, AST.Pattern(expr.arglist)
-			return AST.Stat.Assignment(
+			return AST.Stat.Definition(
 				AST.Pattern(name), {AST.Expr.Function(parameters, values[1], loc)},
-				modifiers, true, nil, loc)
+				isVariable, true, loc)
 		else
 			self:error(equal, "Invalid assignment target: "..expr.__name)
 		end

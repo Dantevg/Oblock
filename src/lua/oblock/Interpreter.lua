@@ -99,16 +99,16 @@ function Interpreter.Environment.new(parent, block)
 	return setmetatable(self, Interpreter.Environment)
 end
 
-function Interpreter.Environment:setAtLevel(key, value, modifiers, level)
+function Interpreter.Environment:setAtLevel(key, value, isVariable, level)
 	if level == 0 then
-		self:setHere(key, value, modifiers)
+		self:setHere(key, value, isVariable)
 	elseif self.parent then
-		self.parent:setAtLevel(key, value, modifiers, level - 1)
+		self.parent:setAtLevel(key, value, isVariable, level - 1)
 	end
 end
 
-function Interpreter.Environment:setHere(key, value, modifiers)
-	self.block:set(key, value, modifiers)
+function Interpreter.Environment:setHere(key, value, isVariable)
+	self.block:set(key, value, isVariable)
 end
 
 function Interpreter.Environment:get(key, level)

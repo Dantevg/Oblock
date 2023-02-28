@@ -19,8 +19,9 @@ print(a.y) --> 42
 List literals are also blocks: (although assignment syntax works a little
 differently)
 ```lua
-a = [16, x = 42, 32]
+a = [16, x = 42, (if true: -x), 32]
 print(a.1, a.x) --> 16, 42
+print(a) --> [16, -42, 32]
 ```
 If you were wondering, this is what led to the name (object + block = Oblock).
 
@@ -44,6 +45,8 @@ print(v + v) --> { x = 20; y = 40 }
 ```
 
 ### A grain of FP
+Definitions are constant by default and are separate from assignments. Use
+`var` to define a new variable and `:=` to assign to an existing one.
 ```lua
 map = fn => list => {
     new = []
@@ -80,12 +83,11 @@ but you can install it manually by downloading the latest version from the
 
 ## REPL
 To enable the REPL, run Oblock with the `--interactive` or `-i` parameter. Each
-line is interpreted as an expression. To keep variables between REPL lines, you
-can store them in the block `O`, specifically meant for this:
+line is interpreted as an expression. To assign variables at the top-level, you
+can wrap assignments in parentheses:
 ```
-> { O.hey = "hello" }
-{}
-> O.hey
+> (hey := "hello")
+> hey
 hello
 ```
 

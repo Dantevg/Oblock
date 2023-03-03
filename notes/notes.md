@@ -5,6 +5,9 @@ Links:
 To-Do / roadmap / proposals
 ---------------------------
 (*roughly* in order of importance)
+- Sequence to Stream operator
+  - prefix `!`, like Icon?
+  - prefix `$`, as a sort of `S`?
 - Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
   - Before:
     
@@ -74,6 +77,9 @@ To-Do / roadmap / proposals
     and `mut`/`var` for reassignable
   - Probably: (like JS) no syntax for immutable values, maybe freeze function.
     Immutability checking (for threads) needs to be a function as well
+- Function to return string representation of code: inspect, ?
+  - print "hello"            --> hello
+  - print("hello".inspect()) --> "hello"
 - Default parameters
   - What to do when caller explicitly passes nil?
     python will use nil/None, not default value

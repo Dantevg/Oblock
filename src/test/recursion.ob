@@ -10,6 +10,12 @@ fac3 n => match n [
 	n => n * fac3(n-1)
 ]
 
+fac4 = case [
+	0 => 1
+	n => n * fac3(n-1)
+]
+
 print(fac1 5)
 print(fac2 5)
 print(fac3 5)
+print(fac4 5)

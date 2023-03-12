@@ -917,14 +917,18 @@ stdlib.clone = function(_, ...)
 	end)
 end
 
+stdlib.case = function(_, functions)
+	return stdlib.NativeFunction(function(_, ...)
+		for _, fn in ipairs {functions:spread()} do
+			if fn:matches(...).value then return fn:call(nil, ...) end
+		end
+	end)
+end
+
 stdlib.match = function(_, ...)
 	local args = {...}
 	return stdlib.NativeFunction(function(_, functions)
-		for _, fn in ipairs {functions:spread()} do
-			if fn:matches(table.unpack(args)).value then
-				return fn:call(nil, table.unpack(args))
-			end
-		end
+		return stdlib.case(nil, functions):call(nil, table.unpack(args))
 	end)
 end
 
@@ -936,6 +940,7 @@ function stdlib.initEnv(env)
 	env:setHere("import", stdlib.NativeFunction(stdlib.import))
 	env:setHere("clone", stdlib.NativeFunction(stdlib.clone))
 	env:setHere("match", stdlib.NativeFunction(stdlib.match))
+	env:setHere("case", stdlib.NativeFunction(stdlib.case))
 	
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)

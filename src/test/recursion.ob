@@ -10,9 +10,10 @@ fac3 n => match n [
 	n => n * fac3(n-1)
 ]
 
-fac4 = case [
+var fac4
+fac4 := case [
 	0 => 1
-	n => n * fac3(n-1)
+	n => n * fac4(n-1)
 ]
 
 print(fac1 5)

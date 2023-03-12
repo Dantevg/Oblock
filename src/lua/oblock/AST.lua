@@ -857,7 +857,7 @@ function AST.Pattern.new(expr)
 	elseif expr.__name == "Index" then
 		return AST.Pattern.Index(expr.base, expr.expr, expr.loc)
 	elseif expr.__name == "Literal" then
-		return AST.Pattern.Literal(expr.literal, expr.loc)
+		return AST.Pattern.Literal(expr.literal, expr.lexeme, expr.loc)
 	elseif expr.__name == "Group" then
 		return AST.Pattern.Group(expr.expressions, expr.loc)
 	elseif expr.__name == "List" then
@@ -1036,9 +1036,10 @@ AST.Pattern.Literal = {}
 AST.Pattern.Literal.__index = AST.Pattern.Literal
 AST.Pattern.Literal.__name = "LiteralPattern"
 
-function AST.Pattern.Literal.new(literal, loc)
+function AST.Pattern.Literal.new(literal, lexeme, loc)
 	local self = {}
 	self.literal = literal
+	self.lexeme = lexeme
 	self.loc = loc
 	return setmetatable(self, AST.Pattern.Literal)
 end
@@ -1066,7 +1067,7 @@ end
 
 function AST.Pattern.Literal:match(env, arguments)
 	local value = table.remove(arguments, 1)
-	return value and value.__name == "Literal" and value.literal == self.literal
+	return value and value.value == self.literal
 end
 
 function AST.Pattern.Literal:resolve(scope, isDef, isCompound)

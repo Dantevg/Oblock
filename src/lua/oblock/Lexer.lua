@@ -266,7 +266,7 @@ end
 function Lexer:lineComment()
 	while self:advance() ~= "\n" do end
 	-- Prevent multiple newline tokens if there was a newline before this comment
-	self:whitespace("\n", self.tokens[#self.tokens].type == "newline")
+	self:whitespace("\n", #self.tokens == 0 or (self.tokens[#self.tokens].type == "newline"))
 end
 
 --- Lex block comments.

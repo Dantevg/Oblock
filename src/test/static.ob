@@ -1,5 +1,4 @@
-var Vector
-Vector := {
+rec Vector = {
 	const prototype = {
 		init(x, y) => {
 			this.x, this.y := x, y

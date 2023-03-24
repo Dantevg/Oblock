@@ -1,0 +1,5 @@
+rec even, odd =
+	case [0 => true,  n => odd(n-1)],
+	case [0 => false, n => even(n-1)]
+
+for x in 0..3: print(even x, odd x)

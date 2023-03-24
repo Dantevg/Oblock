@@ -412,10 +412,8 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()
-	elseif isVariable then -- var a
+	elseif isVariable ~= nil or isRec then -- var a, const a, rec a
 		return AST.Stat.Definition(pattern, {}, isVariable, isRec, loc)
-	elseif isVariable == false or isRec then -- const a, rec a
-		self:error(self:previous(), "cannot declare const or rec without defining")
 	end
 	
 	if isDefinition or isAssignment or isFunction then

@@ -68,7 +68,7 @@ end
 
 local interpreter = Interpreter()
 if isInteractive then
-	interpreter.environment:setHere("O", stdlib.Block())
+	interpreter.environment.block:set("_G", interpreter.environment.block)
 end
 
 function perform(content)

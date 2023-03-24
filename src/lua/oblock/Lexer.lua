@@ -341,7 +341,7 @@ Lexer.keywords = {
 	["and"] = true, ["or"] = true,
 	["break"] = true, ["continue"] = true,
 	["return"] = true, ["yield"] = true,
-	["var"] = true, ["const"] = true,
+	["var"] = true, ["const"] = true, ["rec"] = true
 }
 
 Lexer.longTokens = {["dot dot dot"] = true}

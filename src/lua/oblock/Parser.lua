@@ -372,14 +372,20 @@ function Parser:continueStatement(loc)
 end
 
 function Parser:assignment(isExpr)
-	local isVariable = nil
+	local isVariable, isRec = nil, false
 	local isDefinition, isAssignment, isFunction = false, false, false
 	local compoundOp = nil
 	local loc = self:loc(self:peek())
 	
-	-- Match modifiers: `var`, `const`
-	if self:match {"var", "const"} then
-		isVariable = (self:previous().type == "var")
+	-- Match modifiers: `var`, `const`, `rec`
+	while self:match {"var", "const", "rec"} do
+		if self:previous().type == "rec" then
+			if isRec then self:error(self:previous(), "modifiers can only appear once") end
+			isRec = true
+		else
+			if isVariable ~= nil then self:error(self:previous(), "only one of var and const can appear") end
+			isVariable = (self:previous().type == "var")
+		end
 	end
 	
 	-- Match assignment target
@@ -406,8 +412,10 @@ function Parser:assignment(isExpr)
 	elseif self:match {"equal greater"} then -- a => b
 		isFunction = true
 		loc = self:loc()
-	elseif isVariable ~= nil then -- var a, const a
-		return AST.Stat.Definition(pattern, {}, isVariable, false, loc)
+	elseif isVariable then -- var a
+		return AST.Stat.Definition(pattern, {}, isVariable, isRec, loc)
+	elseif isVariable == false or isRec then -- const a, rec a
+		self:error(self:previous(), "cannot declare const or rec without defining")
 	end
 	
 	if isDefinition or isAssignment or isFunction then
@@ -417,7 +425,7 @@ function Parser:assignment(isExpr)
 			and {self:expression()}
 			or self:anylist(self.expression, "expression", true)
 		if isDefinition then
-			return AST.Stat.Definition(pattern, values, isVariable, false, loc)
+			return AST.Stat.Definition(pattern, values, isVariable, isRec, loc)
 		elseif isAssignment then
 			return AST.Stat.Assignment(pattern, values, compoundOp, loc)
 		elseif isFunction and expr.__name == "Call" and #patterns == 1 then

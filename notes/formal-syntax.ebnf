@@ -30,8 +30,8 @@ statement	= 'return' [explist]
 			| 'continue'
 			| ';'
 			| definition ;
-definition	= [modifier] Identifier {',' Identifier} ['=' explist]
-			| [modifier] Identifier fn
+definition	= {modifier} Identifier {',' Identifier} ['=' explist]
+			| {modifier} Identifier fn
 			| assignment ;
 assignment	= patlist ':=' explist
 			| expression ;
@@ -52,4 +52,4 @@ expseq		= {primary '=' expression | expression | ','} ;
 statseq		= {statement} ;
 explist		= expression {',' expression} ;
 patlist		= pattern {',' pattern} ;
-modifier	= 'var' | 'const' ;
+modifier	= 'var' | 'const' | 'rec' ;

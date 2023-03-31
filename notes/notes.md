@@ -5,9 +5,6 @@ Links:
 To-Do / roadmap / proposals
 ---------------------------
 (*roughly* in order of importance)
-- Sequence to Stream operator
-  - prefix `!`, like Icon?
-  - prefix `$`, as a sort of `S`?
 - Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
   - Before:
     
@@ -17,6 +14,9 @@ To-Do / roadmap / proposals
     
     	a = (10
     		+ 20)
+- Sequence to Stream operator
+  - prefix `!`, like Icon?
+  - prefix `$`, as a sort of `S`?
 - Set `this` on all functions
   - "global" functions and functions in current scope get current block as `this`
   - or, they get the function itself as `this`
@@ -108,6 +108,7 @@ To-Do / roadmap / proposals
     - default implementation of match operator `~~` is equality, `within` for ranges, ...
   - problem: now need to execute match operator functions to decide which function to call
     - solution: no match operator, so not overloadable
+  - problem: `true` and `false` are variables, so `(true) -> ...` always matches
   - value:                `42 -> ...`
   - variable:             `x -> ...`
   - multiple variables:   `(x, y) -> ...`
@@ -332,3 +333,7 @@ To-Do / roadmap / proposals
   - Maybe like Java?
   - Enum instance (true, false, colours) is const instance with no values,
     enum "class" itself should be const as well (but do not enforce)
+- Emoji comments
+  - `🙂 comment 🙃`
+  - `👉 comment 👈`
+  - `❗ comment`

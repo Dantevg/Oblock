@@ -21,10 +21,14 @@ To-Do / roadmap / proposals
   - "global" functions and functions in current scope get current block as `this`
   - or, they get the function itself as `this`
 - Separator for if/for/while condition and body
-  - Words (Lua):    `if condition then body`,  `for var in val do body`
-  - Colon (Python): `if condition: body`,      `for var in val: body`
-  - Comma (Jammy):  `if condition, body`,      `for var in val, body`
-  - Brackets (C):   `if (condition) body`,     `for (var in val) body`
+  - Words (Lua):     `if condition then body`,  `for var in val do body`,  `for var in val do { body }`
+    - cons: long/wordy, 2 extra keywords, different keywords for `if` and `for`/`while`
+  - Colon (Python):  `if condition: body`,      `for var in val: body`,    `for var in val: { body }`
+    - cons: looks like python so makes you forget `{}`, `:` and `{}` looks superfluous
+  - Comma (Jammy):   `if condition, body`,      `for var in val, body`,    `for var in val, { body }`
+    - cons: confusing in lists, `,` and `{}` looks superfluous
+  - Parentheses (C): `if (condition) body`,     `for (var in val) body`,   `for (var in val) { body }`
+    - cons: not spaceous / many punctuation chars, parentheses suddenly part of syntax
 - Variable definition in `if`
   - Also for `while`? Not for `for`
   - Definition only valid in scope of if-branch
@@ -34,9 +38,11 @@ To-Do / roadmap / proposals
     	} else {
     		print "something else"
     	}
-- Immutability
+- Constants
   - Function assignment shorthand (as opposed to definition)
     - Now, `a.f() => 42` is no longer valid, only `a.f := () => 42`
+  - Maybe allow same-level shadowing?
+    - could be hard to implement or confusing to use
   - Warning on unused variables, to prevent errors when accidentally shadowing
     instead of mutating (i.e. using `=` instead of `:=`)
     
@@ -82,7 +88,8 @@ To-Do / roadmap / proposals
   - print("hello".inspect()) --> "hello"
 - Default parameters
   - What to do when caller explicitly passes nil?
-    python will use nil/None, not default value
+    - python will use nil/None, not default value
+    - having separate nil and nothing can help
 - Named parameters by `(<arg> = <exp>)`
   - Following C# valid-ness, valid when one of:
     - First all positional parameters, then all named parameters
@@ -235,8 +242,8 @@ To-Do / roadmap / proposals
     - set to this keyword: remove reference
     - behave like nothing was present, removed in lists, stops iteration  
       `[10, nil, 20] == [10, 20]`,  `for x in () => { yield 10; yield nil; yield 20 }` loops once
-  - Attempting to use keyword kind as value yields value kind (keyword kind == value kind is true)
-  - How to check if a variable is nil or nothing?
+  - Attempting to use keyword kind as value yields value kind? (keyword kind == value kind is true)
+  - How to check if a variable is nil or nothing? Is it really necessary?
 - Imperative function (only side effects, returns nothing):
   - with explicit return: `() => { ...; return }`
   - with `do` function: `() => do { ... }`  
@@ -310,6 +317,8 @@ To-Do / roadmap / proposals
       - solution: probably methods will differentiate
     - Solution: only use structural subtyping for non-native / non-external types?
   - Generic types
+  - Types == values, using standard operators `|`, `->`
+    - Problem: needs multiple-value operators for `(Int, Int) -> Int`
 - Mixins or traits (deriving?) 
   - Difference:
     - traits can define preconditions (methods that need to be present)

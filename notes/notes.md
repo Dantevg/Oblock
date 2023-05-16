@@ -292,6 +292,10 @@ To-Do / roadmap / proposals
   - Use comma or semicolon? Probably semicolon
   - Clashes with expression-as-statement
     - Solution: only allow for identifiers as other types are not really interesting anyway
+  - `{ :a; :b }`,  `{ const :a, :b }`,  `{ var :a, :b }`
+    - con: can no longer use `:` for symbols
+    - con: may not be clear that this defines `a` and `b`
+  - `{ =a; =b }`,  `{ const =a, =b }`,  `{ var =a, =b }`
 - Statements as expressions?
   - New style: `var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"`
   - In Lua style: `var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")`

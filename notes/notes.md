@@ -14,6 +14,18 @@ To-Do / roadmap / proposals
     
     	a = (10
     		+ 20)
+  - Alternatively, only allow single newline within expression
+    - Before:
+    
+    	a = 10
+    	
+    		+ 20
+    - After:
+    
+    	a = 10
+    		+ 20
+    - Need to work out how (line) comments interact with this. Probably easiest
+      to still count an empty line with line comment as two newlines.
 - Sequence to Stream operator
   - prefix `!`, like Icon?
   - prefix `$`, as a sort of `S`?

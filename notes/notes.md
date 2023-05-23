@@ -4,7 +4,7 @@ Links:
 
 To-Do / roadmap / proposals
 ---------------------------
-(*roughly* in order of importance)
+(*roughly* in order of importance / new-ness)
 - Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
   - Before:
     
@@ -76,7 +76,6 @@ To-Do / roadmap / proposals
   - Value that cannot change, as opposed to variable that cannot be reassigned
   - Immutable value means that every containing field is immutable
     and that no new fields can be added
-    - requires allowing changing modifiers (only var -> const, not the other way!)
     - override `_Set` method to prevent adding fields
   - Potential problem with native (C-side) code: should be impossible to change
     value/pointer via C
@@ -95,6 +94,15 @@ To-Do / roadmap / proposals
     and `mut`/`var` for reassignable
   - Probably: (like JS) no syntax for immutable values, maybe freeze function.
     Immutability checking (for threads) needs to be a function as well
+- (Value) equality/equivalence vs (reference) identity
+  - `==` for equality, `===` for identity
+    - pro: `===` looks like `==`
+  - `==` for equality, `eq` for identity
+    - pro: clearer distinction between overloadable/non-overloadable operators
+      (all keyword operators are non-overloadable)
+  - `.eq` function for equality, `==` for identity
+    - pro: simple, just a function call (no syntax needed!)
+    - con: `==` should be overloadable (it is a 2-character operator)
 - Function to return string representation of code: inspect, ?
   - print "hello"            --> hello
   - print("hello".inspect()) --> "hello"

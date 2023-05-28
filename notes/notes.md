@@ -1,6 +1,20 @@
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance / new-ness)
+### Stream-like interface in functions
+- Add functions like `map`, `filter`, etc to function namespace
+- `Function.iterate` should return the function itself to make for loops work
+
+      f = {
+          var x = 0
+          yield () => if x < 10: {
+              x += 1
+              return x
+          }
+      }
+      g = f.map(x => x * 2)
+      for i in g: print i
+
 ### Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
 - Before:
 

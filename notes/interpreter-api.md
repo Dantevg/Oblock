@@ -80,37 +80,37 @@ Value representation optimisations
 
 8-byte / 64-bit memory layout:
 
-	|----7---|----6---|----5---|----4---| |----3---|----2---|----1---|----0---|
-	 63    56 55    48 47    40 39    32   31    24 23    16 15     8 7      0
+    |----7---|----6---|----5---|----4---| |----3---|----2---|----1---|----0---|
+     63    56 55    48 47    40 39    32   31    24 23    16 15     8 7      0
 
-	. : unused bit			b : boolean
-	x : any					f : float distinguisher
-	p : pointer				s : sign
-	t : type				e : exponent
-	i : integer				m : mantissa
+    . : unused bit          b : boolean
+    x : any                 f : float distinguisher
+    p : pointer             s : sign
+    t : type                e : exponent
+    i : integer             m : mantissa
 
 ### Unoptimised value (just a pointer)
-Type			| Layout
+Type            | Layout
 ----------------|---------------------------------------------------------------
-pointer			| `pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
+pointer         | `pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
 
 ### NaN boxing (using signalling NaN because that never occurs normally)
-Type			| Layout
+Type            | Layout
 ----------------|---------------------------------------------------------------
-general			| `ffffffff fffffttt xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
-float (64 bits)	| `seeeeeee eeeemmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm`
-pointer			| `.1111111 11110010 pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
-int (50 bits)	| `01111111 111101ii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii`
-other (50 bits)	| `11111111 111101xx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
+general         | `ffffffff fffffttt xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
+float (64 bits) | `seeeeeee eeeemmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm mmmmmmmm`
+pointer         | `.1111111 11110010 pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp`
+int (50 bits)   | `01111111 111101ii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii`
+other (50 bits) | `11111111 111101xx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx`
 
 ### Pointer tagging
-Type			| Layout
+Type            | Layout
 ----------------|---------------------------------------------------------------
-general			| `xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxttt`
-float (32 bits)	| `seeeeeee emmmmmmm mmmmmmmm mmmmmmmm ........ ........ ........ .....010`
-pointer			| `pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp ppppp000`
-int (63 bits)	| `iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiii1`
-other (56 bits)	| `xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxx100`
+general         | `xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxttt`
+float (32 bits) | `seeeeeee emmmmmmm mmmmmmmm mmmmmmmm ........ ........ ........ .....010`
+pointer         | `pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp pppppppp ppppp000`
+int (63 bits)   | `iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiiii iiiiiii1`
+other (56 bits) | `xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxxxxx xxxxx100`
 
 
 

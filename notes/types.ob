@@ -79,7 +79,7 @@
 	x, y from (x = 10, y = 20)
 	x, y from (x: 10, y: 20)
 	x, y from (x :: 10, y :: 20)
-	x, y from (:x: 10, :y: 20)
+	x, y from ( :x: 10, :y: 20)
 	x, y from (10 as x, 20 as y)
 	
 	list = [10, 20]

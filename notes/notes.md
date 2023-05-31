@@ -1,19 +1,6 @@
 To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance / new-ness)
-### Stream-like interface in functions
-- Add functions like `map`, `filter`, etc to function namespace
-- `Function.iterate` should return the function itself to make for loops work
-
-      f = {
-          var x = 0
-          yield () => if x < 10: {
-              x += 1
-              return x
-          }
-      }
-      g = f.map(x => x * 2)
-      for i in g: print i
 
 ### Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
 - Before:
@@ -43,6 +30,7 @@ To-Do / roadmap / proposals
 ### Set `this` on all functions
 - "global" functions and functions in current scope get current block as `this`
 - or, they get the function itself as `this`
+- or, the current `this` is propagated
 
 ### Separator for if/for/while condition and body
 - Words (Lua):     `if condition then body`,  `for var in val do body`,  `for var in val do { body }`

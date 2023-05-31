@@ -191,13 +191,18 @@ function stdlib.Block:__tostring()
 	
 	for i, key in ipairs(strings) do
 		local value = self.env[key].value
-		if value ~= nil then
+		if value ~= nil and value ~= self then -- TODO: prevent infinite loops
 			strings[i] = tostring(key).." = "..tostring(value:get("toString"):call())
 		else
 			strings[i] = tostring(key)
 		end
 	end
-	return "{"..table.concat(strings, "; ").."}"
+	
+	if #strings > 0 then
+		return "{\n  "..table.concat(strings, "\n"):gsub("\n", "\n  ").."\n}"
+	else
+		return "{}"
+	end
 end
 
 function stdlib.Block:call(...)
@@ -261,9 +266,29 @@ function stdlib.Function:call(loc, ...)
 	end
 end
 
+function stdlib.Function:iterate()
+	return self
+end
+
 function stdlib.Function:compose(other)
 	return stdlib.NativeFunction(function(_, ...)
 		return self:call(nil, other:call(nil, ...))
+	end)
+end
+
+function stdlib.Function:map(fn)
+	return stdlib.NativeFunction(function()
+		local value = self:call()
+		if value ~= nil and value.__name ~= "Nil" then return fn:call(nil, value) end
+	end)
+end
+
+function stdlib.Function:filter(fn)
+	return stdlib.NativeFunction(function()
+		local value = self:call()
+		if value ~= nil and value.__name ~= "Nil" and fn:call(nil, value).value then
+			return value
+		end
 	end)
 end
 
@@ -822,7 +847,10 @@ defineProtoNativeFn("Block", "not_", "!")
 defineProtoNativeFn("Block", "toString")
 
 defineProtoNativeFn("Function", "call", "()")
+defineProtoNativeFn("Function", "iterate")
 defineProtoNativeFn("Function", "compose", "o")
+defineProtoNativeFn("Function", "map")
+defineProtoNativeFn("Function", "filter")
 defineProtoNativeFn("Function", "curry")
 defineProtoNativeFn("Function", "matches")
 

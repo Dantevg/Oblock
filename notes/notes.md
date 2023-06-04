@@ -99,12 +99,14 @@ To-Do / roadmap / proposals
   Immutability checking (for threads) needs to be a function as well
 
 ### (Value) equality/equivalence vs (reference) identity
-- `==` for equality, `===` for identity
+- `==` / `!=` for equality, `===` / `!==` for identity
   - pro: `===` looks like `==`
-- `==` for equality, `eq` for identity
+  - like Kotlin, JS also has these operators (with different semantics though)
+- `==` / `!=` for equality, `eq` / `neq` for identity
   - pro: clearer distinction between overloadable/non-overloadable operators
     (all keyword operators are non-overloadable)
-- `.eq` function for equality, `==` for identity
+  - for negated identity: `neq`, `ne` or `!eq` (Kotlin style)?
+- `.eq` / `.neq` function for equality, `==` / `!=` for identity
   - pro: simple, just a function call (no syntax needed!)
   - con: `==` should be overloadable (it is a 2-character operator)
 
@@ -287,7 +289,10 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
   - behave like nothing was present, removed in lists, stops iteration  
     `[10, nil, 20] == [10, 20]`,  `for x in () => { yield 10; yield nil; yield 20 }` loops once
 - Attempting to use keyword kind as value yields value kind? (keyword kind == value kind is true)
+  - Otherwise, using `==` on keyword kind results in error as `a == b` gets
+    transformed into `a."=="(b)` and keyword kind does not have `==` field
 - How to check if a variable is nil or nothing? Is it really necessary?
+  - Using reference identity, `nothing eq nil` is `false`
 
 ### Imperative function (only side effects, returns nothing):
 - with explicit return: `() => { ...; return }`

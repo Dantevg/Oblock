@@ -300,6 +300,20 @@ function stdlib.Function:curry(...)
 	end)
 end
 
+stdlib.Function["and"] = function(self, other)
+	return stdlib.NativeFunction(function(_, ...)
+		local l, r = self:call(nil, ...), other:call(nil, ...)
+		return stdlib.Boolean((l ~= nil and l.value) and (r ~= nil and r.value))
+	end)
+end
+
+stdlib.Function["or"] = function(self, other)
+	return stdlib.NativeFunction(function(_, ...)
+		local l, r = self:call(nil, ...), other:call(nil, ...)
+		return stdlib.Boolean((l ~= nil and l.value) or (r ~= nil and r.value))
+	end)
+end
+
 function stdlib.Function:matches(...)
 	local args = {...}
 	if not self.parameters then return stdlib.Boolean(true) end
@@ -852,6 +866,8 @@ defineProtoNativeFn("Function", "compose", "o")
 defineProtoNativeFn("Function", "map")
 defineProtoNativeFn("Function", "filter")
 defineProtoNativeFn("Function", "curry")
+defineProtoNativeFn("Function", "and")
+defineProtoNativeFn("Function", "or")
 defineProtoNativeFn("Function", "matches")
 
 defineOperator("Sequence", "concat", "++")

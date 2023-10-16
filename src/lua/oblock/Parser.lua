@@ -1,6 +1,7 @@
 -- Inspired by http://craftinginterpreters.com/parsing-expressions.html
 
 local AST = require "oblock.AST"
+local Lexer = require "oblock.Lexer"
 
 ---@class Parser
 ---@field tokens Token[]
@@ -251,7 +252,13 @@ function Parser:varcall()
 	while true do
 		local loc = self:loc()
 		if self:match {"dot"} then
-			expr = AST.Expr.Index(expr, self:primary(), loc)
+			local index = self:primary()
+			if not index and Lexer.keywords[self:peek().type] then
+				-- Allow keywords as identifiers here (`x.and`)
+				-- TODO: also allow operators (`x.+`)
+				index = AST.Expr.Variable(self:advance(), self:loc())
+			end
+			expr = AST.Expr.Index(expr, index, loc)
 		else
 			local nl = self.nlSensitive
 			self.nlSensitive = true

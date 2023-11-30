@@ -276,18 +276,26 @@ function stdlib.Function:compose(other)
 	end)
 end
 
+-- Check whether `tbl` contains no values or only `nil`s
+local function isEmpty(tbl)
+	for _, v in ipairs(tbl) do
+		if v ~= nil and v.__name ~= "Nil" then return false end
+	end
+	return true
+end
+
 function stdlib.Function:map(fn)
-	return stdlib.NativeFunction(function()
-		local value = self:call()
-		if value ~= nil and value.__name ~= "Nil" then return fn:call(nil, value) end
+	return stdlib.NativeFunction(function(_, ...)
+		local values = {self:call(nil, ...)}
+		if not isEmpty(values) then return fn:call(nil, table.unpack(values)) end
 	end)
 end
 
 function stdlib.Function:filter(fn)
-	return stdlib.NativeFunction(function()
-		local value = self:call()
-		if value ~= nil and value.__name ~= "Nil" and fn:call(nil, value).value then
-			return value
+	return stdlib.NativeFunction(function(_, ...)
+		local values = {self:call(nil, ...)}
+		if not isEmpty(values) and fn:call(nil, table.unpack(values)).value ~= nil then
+			return table.unpack(values)
 		end
 	end)
 end

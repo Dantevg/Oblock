@@ -171,9 +171,10 @@ To-Do / roadmap / proposals
 - at start: `f(...rest, a) => ()`
 - between:  `f(a, ...rest, b) => ()`
 
-### Monads/functors and haskell-like do-notation?
+### Monads/functors and haskell-like do-notation / gleam-like use?
 - https://discord.com/channels/530598289813536771/530604512017121290/954101398243520644
 - https://github.com/airstruck/knife/blob/master/readme/chain.md
+- https://gleam.run/news/v0.25-introducing-use-expressions/
 - Functor: `(Promise<A>, A -> B)          -> Promise<B>`
 - Monad:   `(Promise<A>, A -> Promise<B>) -> Promise<B>`
 - For things like Javascript's Promise (which is not always a monad) or Maybe
@@ -204,6 +205,16 @@ To-Do / roadmap / proposals
       response <- fetch("https://github.com")
       data <- response.json()
       print(data)
+  With use-notation:
+  
+      use response <- fetch("https://github.com")
+      data = response.json()
+      print(data)
+  
+  Pro of use-notation: can be used without value (example from Gleam website)
+  
+      use <- defer(() => print "Goodbye")
+      print "Hello"
 
 ### Problems with using Block/Object as a map
 1. indexing will yield value from prototype if not present in map

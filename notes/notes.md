@@ -23,6 +23,21 @@ To-Do / roadmap / proposals
   - Need to work out how (line) comments interact with this. Probably easiest
     to still count an empty line with line comment as two newlines.
 
+### First-class operators
+- Expression `+` is just a function `(l, r) => l + r`
+- Probably will need to enclose in parentheses most of the time, to prevent it
+  being parsed as an operator application.
+
+### Allow keywords and operators as keys
+- Operators for indexing: `a.+`, `a.++`, `a.//` (equivalent to `a."//"`)
+- Operators for defining: `{ // (l, r) => ... }` (equivalent to
+  `{ "//" = (l, r) => ... }`)
+- Keywords for indexing: `a.if`, `a.var`, `a.return` (equivalent to `a."return"`)
+- Keywords for defining: `{ if = ... }` (equivalent to `{ "if" = ... }`)
+  - Probably not, this may be hard to parse for computer and human.
+    - `{ const var = 10 }`? (constant called `var`)
+    - `{ var x => ... }`??? (function called `var` taking parameter `x`)
+
 ### Sequence to Stream operator
 - prefix `!`, like Icon?
 - prefix `$`, as a sort of `S`?
@@ -171,10 +186,21 @@ To-Do / roadmap / proposals
 - at start: `f(...rest, a) => ()`
 - between:  `f(a, ...rest, b) => ()`
 
+### Naming convention
+- `camelCase` (Lua, Java, Kotlin): requires typing shift  
+  `defineProtoNativeFn()`
+- `lowercase` (Lua): requires no extra typing, but can become harder to read  
+  `defineprotonativefn()`
+- `snake_case` (Rust, C, Python): requires typing both shift and `-`  
+  `define_proto_native_fn()`
+- `kebab-case` (Lisp): only requires typing `-`, require spaces around infix operators, vscode does not recognise as single word  
+  `define-proto-native-fn()`
+
 ### Monads/functors and haskell-like do-notation / gleam-like use?
 - https://discord.com/channels/530598289813536771/530604512017121290/954101398243520644
 - https://github.com/airstruck/knife/blob/master/readme/chain.md
 - https://gleam.run/news/v0.25-introducing-use-expressions/
+- https://yuescript.org/doc/#backcalls
 - Functor: `(Promise<A>, A -> B)          -> Promise<B>`
 - Monad:   `(Promise<A>, A -> Promise<B>) -> Promise<B>`
 - For things like Javascript's Promise (which is not always a monad) or Maybe
@@ -326,6 +352,7 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
 - only allowed to access parallel-accessible Blocks of other threads, will auto-lock
 - problem: needs "ownership": of which thread is the Block
 - maybe better to have one type of container for parallel access
+- automatically make block parallel-accessible somehow
 
 ### Stream-based programming / Flow-Based Programming (FBP)
 - Lazy streams: important! so pull, not push

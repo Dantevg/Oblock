@@ -28,6 +28,11 @@ To-Do / roadmap / proposals
 - Probably will need to enclose in parentheses most of the time, to prevent it
   being parsed as an operator application.
 
+### Auto-vectorized operators
+- `(1, 2) + (4, 8) == (5, 10)`
+- `a, b = (1, 2) + (4, 8)` === `a, b = 1 + 4, 2 + 8`
+- `a, b += 4, 8` === `a, b = a + 4, b + 8` === `a, b = (a, b) + (4, 8)`
+
 ### Allow keywords and operators as keys
 - Operators for indexing: `a.+`, `a.++`, `a.//` (equivalent to `a."//"`)
 - Operators for defining: `{ // (l, r) => ... }` (equivalent to

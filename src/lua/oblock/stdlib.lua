@@ -618,18 +618,37 @@ function stdlib.Number:abs()
 	return self.new(math.abs(tonumber(self.value)))
 end
 
-function stdlib.Number:max(this, other)
-	local a, b = tonumber(this.value), tonumber(other.value)
+function stdlib.Number:clamp(range)
+	local from, to = tonumber(range:get("from").value), tonumber(range:get("to").value)
+	return self.new(math.max(from, math.min(tonumber(self.value), to)))
+end
+
+function stdlib.Number:lerp(range)
+	local from, to = tonumber(range:get("from").value), tonumber(range:get("to").value)
+	return self.new(tonumber(self.value) * (to - from) + from)
+end
+
+function stdlib.Number:normalize(range)
+	local from, to = tonumber(range:get("from").value), tonumber(range:get("to").value)
+	return self.new((tonumber(self.value) - from) / (to - from))
+end
+
+function stdlib.Number:map(from, to)
+	return self:normalize(from):lerp(to)
+end
+
+function stdlib.Number:max(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(a) ~= "number" or type(b) ~= "number" then
-		Interpreter.error("cannot perform 'max' on "..this.__name.." and "..other.__name)
+		Interpreter.error("cannot perform 'max' on "..other.__name)
 	end
 	return stdlib.Number.new(math.max(a, b))
 end
 
-function stdlib.Number:min(this, other)
-	local a, b = tonumber(this.value), tonumber(other.value)
+function stdlib.Number:min(other)
+	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(a) ~= "number" or type(b) ~= "number" then
-		Interpreter.error("cannot perform 'min' on "..this.__name.." and "..other.__name)
+		Interpreter.error("cannot perform 'min' on "..other.__name)
 	end
 	return stdlib.Number.new(math.min(a, b))
 end
@@ -893,6 +912,10 @@ defineProtoNativeFn("Sequence", "contains")
 
 defineProtoNativeFn("Number", "parse")
 defineProtoNativeFn("Number", "abs")
+defineProtoNativeFn("Number", "clamp")
+defineProtoNativeFn("Number", "lerp")
+defineProtoNativeFn("Number", "normalize")
+defineProtoNativeFn("Number", "map")
 defineProtoNativeFn("Number", "max")
 defineProtoNativeFn("Number", "min")
 defineOperator("Number", "eq", "==")

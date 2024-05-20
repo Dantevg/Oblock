@@ -43,6 +43,10 @@ To-Do / roadmap / proposals
     - `{ const var = 10 }`? (constant called `var`)
     - `{ var x => ... }`??? (function called `var` taking parameter `x`)
 
+### Implementation problems with variable sized groups
+- Sources: groups, return (-> function calls), yield/break
+- Destinations: function arguments, assignments, list contents
+
 ### Sequence to Stream operator
 - prefix `!`, like Icon?
 - prefix `$`, as a sort of `S`?
@@ -206,6 +210,7 @@ To-Do / roadmap / proposals
 - https://github.com/airstruck/knife/blob/master/readme/chain.md
 - https://gleam.run/news/v0.25-introducing-use-expressions/
 - https://yuescript.org/doc/#backcalls
+- https://idris2.readthedocs.io/en/latest/tutorial/interfaces.html#notation
 - Functor: `(Promise<A>, A -> B)          -> Promise<B>`
 - Monad:   `(Promise<A>, A -> Promise<B>) -> Promise<B>`
 - For things like Javascript's Promise (which is not always a monad) or Maybe

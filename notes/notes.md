@@ -164,6 +164,9 @@ To-Do / roadmap / proposals
   - On success: `return nil, value, ...`
   - On failure: `return Error("description")`
   - `err, val1, val2 = fn()`
+- Error value is falsy, possible idiom using `else` or `or`
+  - `print(fn() else "failure")`
+  - `x = fn() else "default value"`
 
 ### Pattern matching
 - match function, function parameter overloading, match operator `~~`?

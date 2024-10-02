@@ -189,6 +189,47 @@ To-Do / roadmap / proposals
 - composite structures: `[{x1, y1}, {x2, y2}] -> ...`,  `[10, x] -> ...`,  `[\(x)] -> ...`
 
 ### Coroutines
+Specify yielding coroutine or yield location? To allow using coroutine yielding
+for both async stuff and more local stream stuff.
+- Option 1: specify coroutine to yield from
+  - code running that coroutine will resume
+- Option 2: specify coroutine to yield to
+  - that coroutine will resume
+- Different from symmetric coroutines because stack stays intact? Yield point
+  needs to be on the call stack.
+- Similar to Wren's `Fiber.transfer` function: https://wren.io/concurrency.html#transferring-control
+  - different because Wren allows transfer between any coroutine
+
+Example using Lua coroutine function names:
+
+    -- "Scheduler" code
+    main = Coroutine.running()
+    
+    -- User code
+    co = Coroutine(() => {
+        generator = Coroutine(() => {
+          yield(10) --> yields to for loop
+          -- Option 1 equivalent:
+          Coroutine.running().yield(10)
+          -- Other option 1 equivalent:
+          generator.yield(10)
+          -- Option 2 equivalent:
+          co.yield(10)
+          
+          -- Yields to main coroutine, "through" for loop coroutine
+          co.yield("sleep")   -- option 1
+          main.yield("sleep") -- option 2
+          
+          yield(20) --> yields to for loop
+        })
+        -- for loop resumes coroutine for each element
+        for x in generator: print x
+    })
+    
+    -- "Scheduler" code
+    val = co.resume() --> prints 10
+    -- val == "sleep"
+    co.resume() --> prints 20
 
 ### Allow single vararg anywhere in function signature
 - Important to allow only *one* vararg

@@ -425,6 +425,9 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
       evenInts = generateIntegers ||> filter(x => x % 2 == 0) ||> limit(10)
           ||> reduce((a, x) => a.push(x), [])
 - other example: `first10words = stdin ||> groupByWords ||> limit(10) ||> []`
+- Operators to create / extend streams (= coroutines?):
+  - Like Icon (co-expressions), which has `"a" | "an" | "the"`
+  - Stream concatenation (+ appending?): `s ++ "the"` (for `s` a stream)
 
 ### Indexing and setting to index as methods _Get and _Set?
 

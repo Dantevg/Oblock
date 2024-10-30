@@ -33,6 +33,43 @@ To-Do / roadmap / proposals
 - `a, b = (1, 2) + (4, 8)` === `a, b = 1 + 4, 2 + 8`
 - `a, b += 4, 8` === `a, b = a + 4, b + 8` === `a, b = (a, b) + (4, 8)`
 
+### Auto-define operators on functions
+Example with unary operator:
+
+    even x => x % 2 == 0
+    odd = !even   -- odd x => !even(x)
+    print(odd(7)) --> true
+    
+    -- Filtering only odd values:
+    stream.filter(x => !even(x))
+    stream.filter(!even)
+
+Example with binary operator:
+
+    double x => x * 2
+    succ x => x + 1
+    f = double - succ -- f x => double x - succ x
+    print(f 10)       --> 9
+
+### Function shorthand for "methods"
+- `(.f) == (x => x.f)`, `(.f)(x) == x.f()`
+
+Example:
+    
+    (.isEven)(7) == 7.isEven()
+    
+    stream.filter(x => x.isEven())
+    stream.filter(.isEven)
+
+Combined with auto-defined operators for functions:
+
+    stream.filter(x => !x.isEven())
+    stream.filter(!.isEven)
+
+How to work with binary functions, without partial application?
+- `stream.map(x => x + 10)`
+- `stream.map(.+ 10)` would not work (as that would be `stream.map(10.+())`)
+
 ### Allow keywords and operators as keys
 - Operators for indexing: `a.+`, `a.++`, `a.//` (equivalent to `a."//"`)
 - Operators for defining: `{ // (l, r) => ... }` (equivalent to

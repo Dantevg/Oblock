@@ -88,6 +88,14 @@ How to work with binary functions, without partial application?
 - prefix `!`, like Icon?
 - prefix `$`, as a sort of `S`?
 
+### Function binding syntax (UFCS operator)
+- Ability to (re-)define receiver for bound methods
+- `a.b::c.d` creates function `c.d` with `a.b` as receiver (`this`)
+  - Call like `a.b::c.d(...)`
+- Useful for "extending" standard libraries
+  - Example: suppose I want to add a `map` function to objects: `obj::ObjExtensions.map(x => x + 1)` or `obj::map(x => x + 1)` instead of `ObjExtensions.map(obj, x => x + 1)`
+- https://github.com/tc39/proposal-bind-operator
+
 ### Set `this` on all functions
 - "global" functions and functions in current scope get current block as `this`
 - or, they get the function itself as `this`

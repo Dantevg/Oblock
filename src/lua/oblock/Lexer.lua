@@ -314,7 +314,7 @@ Lexer.tokens = {
 	["#"] = {"hash", '='},
 	["$"] = {"dollar", '='},
 	["%"] = {"percent", '='},
-	["&"] = {"and", '='},
+	["&"] = {"and", '='}, -- TODO: this interferes with the 'and' keyword
 	["*"] = {"star", '='},
 	["+"] = {"plus", '=', '+'},
 	[","] = {"comma"},
@@ -331,7 +331,7 @@ Lexer.tokens = {
 	["\\"]= {"backslash"},
 	["^"] = {"hat", '='},
 	["`"] = {"backtick"},
-	["|"] = {"bar", '=', '>'},
+	["|"] = {"bar", '=', '>'}, -- TODO: this interferes with the 'or' keyword
 	["~"] = {"tilde", '='},
 }
 

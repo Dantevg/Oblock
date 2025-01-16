@@ -2,6 +2,9 @@ Range = import "Range"
 
 var Stream
 Stream := {
+	-- SOURCES / GENERATORS
+	-- These functions transform zero or more values into a stream
+	
 	of(source) => {
 		iterator = source.iterate()
 		return this.clone {
@@ -19,7 +22,7 @@ Stream := {
 	
 	empty() => this.clone { read() => nil }
 	
-	-- FILTERS
+	-- FILTERS / ADAPTERS / TRANSFORMERS
 	-- These functions transform a stream into another stream
 	
 	map(fn) => this.clone {
@@ -226,7 +229,7 @@ Stream := {
 		}
 	}
 	
-	-- SINKS
+	-- SINKS / CONSUMERS
 	-- These functions transform a stream into a single value
 	
 	reduce(fn, acc) => {

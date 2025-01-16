@@ -1,0 +1,68 @@
+rec Set = {
+	ofList(values) => {
+		set = Set.clone {}
+		for x in values: set.(x) := true
+		return set
+	}
+	
+	intersection(that) => {
+		set = Set.clone {}
+		for x in this.keys(): if that.(x): set.(x) := true
+		return set
+	}
+	"and" = intersection
+	
+	union(that) => {
+		set = Set.clone {}
+		for x in this.keys(): set.(x) := true
+		for x in that.keys(): set.(x) := true
+		return set
+	}
+	"or" = intersection
+	
+	difference(that) => {
+		set = Set.clone {}
+		for x in this.keys(): if !that.(x): set.(x) := true
+		return set
+	}
+	"-" = difference
+	
+	symmetricDifference(that) => {
+		set = Set.clone {}
+		for x in this.keys(): if !that.(x): set.(x) := true
+		for x in that.keys(): if !this.(x): set.(x) := true
+		return set
+	}
+	xor = symmetricDifference
+	
+	isSubsetOf(that) => {
+		for x in this.keys(): if !that.(x): return false
+		return true
+	}
+	"<=" = isSubsetOf
+	
+	isStrictSubsetOf(that) => {
+		for x in this.keys(): if !that.(x): return false
+		for x in that.keys(): if !this.(x): return true
+		return false
+	}
+	"<" = isStrictSubsetOf
+	
+	">=" that => that <= this
+	">" that => that < this
+	
+	isDisjointFrom(that) => {
+		for x in this.keys(): if that.(x): return false
+		return true
+	}
+	
+	toString() => {
+		var str = "{"
+		for x in this.keys(): str ++= x ++ ", "
+		return str ++ "}"
+	}
+	
+	toList() => this.keys()
+}
+
+yield Set

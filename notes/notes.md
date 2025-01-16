@@ -88,6 +88,9 @@ How to work with binary functions, without partial application?
 - prefix `!`, like Icon?
 - prefix `$`, as a sort of `S`?
 
+### Stream.zip vs variadic Stream.map
+- https://github.com/tc39/proposal-joint-iteration?tab=readme-ov-file#considered-design-space
+
 ### Function binding syntax (UFCS operator)
 - Ability to (re-)define receiver for bound methods
 - `a.b::c.d` creates function `c.d` with `a.b` as receiver (`this`)

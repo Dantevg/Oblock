@@ -3,8 +3,8 @@ Bool := {
 	"true" = .clone()
 	"false" = .clone()
 	
-	"!" () => if this == Bool.true: Bool.false else Bool.true
-	toString() => if this == Bool.true: "Bool:true" else "Bool:false"
+	"!" () => if this == Bool.true then Bool.false else Bool.true
+	toString() => if this == Bool.true then "Bool:true" else "Bool:false"
 }
 
 print(Bool.true.toString())

@@ -191,7 +191,7 @@ function stdlib.Block:__tostring()
 	
 	for i, key in ipairs(strings) do
 		local value = self.env[key].value
-		if value ~= nil and value ~= self then -- TODO: prevent infinite loops
+		if value ~= nil then -- TODO: prevent infinite loops
 			strings[i] = tostring(key).." = "..tostring(value:get("toString"):call())
 		else
 			strings[i] = tostring(key)
@@ -319,6 +319,13 @@ stdlib.Function["or"] = function(self, other)
 	return stdlib.NativeFunction(function(_, ...)
 		local l, r = self:call(nil, ...), other:call(nil, ...)
 		return stdlib.Boolean((l ~= nil and l.value) or (r ~= nil and r.value))
+	end)
+end
+
+stdlib.Function["not"] = function(self)
+	return stdlib.NativeFunction(function(_, ...)
+		local value = self:call(nil, ...)
+		return stdlib.Boolean(value == nil or not value.value)
 	end)
 end
 

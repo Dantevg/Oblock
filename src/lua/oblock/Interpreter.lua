@@ -47,6 +47,7 @@ function Interpreter.error(message, loc, sourceLoc)
 end
 
 function Interpreter.formatLoc(loc)
+	if loc.column == nil then print(debug.traceback()) end
 	return string.format("%s:%d:%d", loc.file, loc.line, loc.column)
 end
 

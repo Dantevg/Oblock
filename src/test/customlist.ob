@@ -17,7 +17,7 @@ List_ = {
 	
 	toString() => {
 		var str = "["
-		for item in this: str := str ++ item ++ ", "
+		for item in this do str := str ++ item ++ ", "
 		return str ++ "]"
 	}
 }

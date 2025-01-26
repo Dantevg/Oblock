@@ -2,6 +2,20 @@ To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance / new-ness)
 
+### "Magic" value field for basic/builtin values
+- Contains itself (recursively), just like already implemented for functions:
+  - `0.value == 0`
+  - `"hey".value == "hey"
+  - `true.value == true`
+  - `print.value == print`
+- Field name:
+  - `x.value`: same for all types. Possibly add this for all values (including
+    blocks/objects) as `.self`? Any use case?
+  - `x.Number`: possibility for getter function to convert to this type
+  - `x.(Number)`: same as `.Number` but with the type as key instead of the name
+  - `x."()"` for functions: as already implemented for the call operator `()`.
+    Does not generalise to the other basic value types though
+
 ### Require expressions spanning multiple lines to be enclosed in brackets (like Kotlin)
 - Before:
 

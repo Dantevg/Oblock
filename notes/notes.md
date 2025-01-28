@@ -513,6 +513,16 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
   - con: may not be clear that this defines `a` and `b`
 - `{ =a; =b }`,  `{ const =a, =b }`,  `{ var =a, =b }`
 
+### Shorthand nested block definition
+- `a.b.c = 10`  is  `a = { b = { c = 10 } }`
+- Especially useful for configurating with default values
+- Possible confusion with assignment `a.b.c := 10`
+  - Though this could also be used for immutable update:
+    `aNew = a.with { b.c = 10 }`
+    - `.with` needs to be deep for this to work (needs to copy over other values of `b`)
+- Analogous pattern: `{ a.b } = { a = { b = 10 } }; b == 10`
+- Wild pattern idea: `{ a.{b.c; d} } = { a = { b.c = 10; d = 20 } }; c == 10 && d == 20`
+
 ### Statements as expressions?
 - New style: `var a = if x > 10: "greater" elseif x == 10: "equal" else: "smaller"`
 - In Lua style: `var a = x > 10 and "greater" or (x == 10 and "equal" or "smaller")`

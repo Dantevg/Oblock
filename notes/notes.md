@@ -2,6 +2,43 @@ To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance / new-ness)
 
+### Object access as function call
+Access kind           | Others           | Oblock now             | Proposed
+----------------------|------------------|------------------------|--------------------------------------
+Object property       | `obj.prop`       | `obj.prop`             | `obj.prop`, `obj .prop`, `obj(.prop)`
+List index (variable) | `list[index]`    | `list.(index)`         | `list index`, `list(index)`
+List index (number)   | `list[1]`        | `list.1`               | `list 1`, `list(1)`
+Map key (variable)    | `map.get(key)`   | `map.(key)`            | `map key`
+Map key (string)      | `map.get("foo")` | `map."foo"`, `map.foo` | `map "foo"`, `map("foo")`
+Operators             | -                | `a + b`, `(a."+")(b)`  | `a + b`, `(a +)(b)`
+
+This assumes using [symbols](#symbols):
+- otherwise object property access becomes `obj 'prop'`
+- syntax needs to be `.symbol`
+- `map.foo` is not a string key access (it instead is a symbol access)
+
+Can change operators to be just symbols. Language needs no knowledge of
+"operators," besides parsing `+`, `++` etc as symbols like `.prop`.
+- Problem: need to take operator precedence into account :/
+
+How to handle regular function call on object? Either:
+1. `obj x` is a function call if `obj."()"` exists, otherwise is access
+    - not useful, actually accessing properties/indexes/keys is too common so
+     don't want Lua-like `rawget` / `rawset` everywhere
+2. `obj x` is access if `obj.(x)` exists, otherwise calls `obj."()"(x)`
+   - `obj."()"` is now like Lua's `__index` metamethod
+   - what about a function expecting an existing key as argument? Probably mostly
+     a problem for symbol arguments.
+3. `obj x` is access if `obj.(x)` exists or if `x` is a symbol
+   - i.e. `obj.prop` is always a property access, never function call
+   - what about a function expecting a symbol as argument?
+
+Example function expecting a symbol as argument:
+- previously: `[ { filter = true }, { filter = false } ].mapKey("filter")`
+- proposed: `[ { filter = true }, { filter = false } ].mapKey(.filter)`
+- problem: this gets the `filter` property of the `mapKey` function. Probably
+  not much of an issue though.
+
 ### "Magic" value field for basic/builtin values
 - Contains itself (recursively), just like already implemented for functions:
   - `0.value == 0`

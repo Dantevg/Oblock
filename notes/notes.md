@@ -16,6 +16,7 @@ This assumes using [symbols](#symbols):
 - otherwise object property access becomes `obj 'prop'`
 - syntax needs to be `.symbol`
 - `map.foo` is not a string key access (it instead is a symbol access)
+- Like Clojure: https://clojure.org/guides/learn/hashed_colls#_looking_up_by_key
 
 Can change operators to be just symbols. Language needs no knowledge of
 "operators," besides parsing `+`, `++` etc as symbols like `.prop`.
@@ -247,7 +248,7 @@ How to work with binary functions, without partial application?
   - First all positional parameters, then all named parameters
   - Named parameters in correct place?
 - problem: group is not a data structure
-  - possible solution: make group (ephemeral) data structure (introduce "tuples")
+  - possible solution: make group (ephemeral) data structure (introduce ["tuples"](#semi-tuples))
 
 ### Disallow assignment to `nil`?
 - Making it `const` does not fix: shadowing
@@ -395,6 +396,17 @@ Example using Lua coroutine function names:
       use <- defer(() => print "Goodbye")
       print "Hello"
 
+### Model events as streams
+Like JS `obj.addEventListener(eventName, callback)`
+
+- Register callback: `obj.event.map(callback)`
+- Wait for single event: `obj.event.then(callback)`
+  - or with do-notation: `x <- obj.event`
+
+Problem: streams are pull-based, events should be push-based?
+
+How to "unbind" callback from event source?
+
 ### Problems with using Block/Object as a map
 1. indexing will yield value from prototype if not present in map
 2. setting certain keys overrides functionality
@@ -407,7 +419,7 @@ Example using Lua coroutine function names:
 - solution 3: make Block/Object have Map methods
   - `a = {}`, `a.get "x"`
   - con: same as solution 2, does not solve problem 2
-- solution 4 (radical!): Use symbols for operator overrides instead of strings
+- solution 4 (radical!): [Use symbols](#symbols) for operator overrides instead of strings
   - operators use symbols `a.(Symbol "+")` for addition override
   - con: only partly solves problem 1 (by default, proto is Block/Object, and
     no string keys there then)
@@ -416,7 +428,7 @@ Example using Lua coroutine function names:
   - Map with getter/setter override, only searches prototype for symbol keys
   - con: does not solve problem 1 when used for storing symbol keys,
     need to use methods again then
-- solution 6: Use symbols for everything instead of strings (also variables)
+- solution 6: [Use symbols](#symbols) for everything instead of strings (also variables)
   - `a = {}`, `a."x" = 42`, `a."x"`
   - more radical version of solution 4
     - symbol indexing: `a.x`
@@ -452,7 +464,7 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
 ### Semi-tuples?
 - Don't like *tuples*; what do you need them for?, less generic because
   hard-coded data structure
-- Potentially more resource-heavy / wasteful?
+- Immutable -> can be stored on the stack -> more performant?
 - Evaluating semi-tuple still results in content (otherwise can't do `(1+2)*3`)
   - Therefore, these are not normal tuples
   - Cannot compose: `((a, b), (c, d))`  is  `(a, b, c, d)`  is  `a, b, c, d`
@@ -460,10 +472,17 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
   `y, x from (x = 10, y = 20)`  
   `return (x = 10, y = 20)`  
   `fn (x = 10, y = 20)`
-- Problem: when using this for named return values, named fields should still
-  "unpack" like normal values, order of named fields needs to be preserved  
-  `fn() => { x, y = 10, 20; return x, y }; a, b = fn()`  
-  `a, b = (x = 10, y = 20)`  should be equal to  `a, b = (10, 20)`
+
+How to unpack named fields from tuples?
+- as definition: `a, b, c = (30, a = 10, x = 20)`
+- as function call: `f(a, b, c) => ...; f(30, a = 10, x = 20)`
+
+Match method                   | `a`   | `b`   | `c`   | note
+-------------------------------|-------|-------|-------|------
+Ignore names                   | `30`  | `10`  | `20`  | 👎 why bother with names in the first place?
+Override named with positional | `30`  | `nil` | `nil` | 🤔 could work
+Override positional with named | `10`  | `nil` | `nil` | 🤔 could work
+Named first, append positional | `10`  | `30`  | `nil` | 👎 confusing, named args slide over
 
 ### Multiple values for nothing-ness: nil, null, unit, void, nothing, none?
 - Usage: empty indices in lists while iterating (atm iteration stops at nil)

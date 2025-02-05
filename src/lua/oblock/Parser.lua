@@ -153,7 +153,7 @@ end
 
 function Parser:ifExpr(loc)
 	local condition = self:assert(self:expression(), "expression")
-	self:consume("colon", "Expected ':'")
+	self:consume("then", "Expected 'then'")
 	local ifTrue = self:assert(self:statement(), "statement")
 	local ifFalse
 	if self:match {"else"} then
@@ -164,7 +164,7 @@ end
 
 function Parser:whileExpr(loc)
 	local condition = self:assert(self:expression(), "expression")
-	self:consume("colon", "Expected ':'")
+	self:consume("do", "Expected 'do'")
 	local body = self:assert(self:statement(), "statement")
 	return AST.Expr.While(condition, body, loc)
 end
@@ -173,7 +173,7 @@ function Parser:forExpr(loc)
 	local pattern = AST.Pattern.Group(self:anylist(self.expression, "expression", true))
 	self:consume("in", "Expected 'in'")
 	local expr = self:assert(self:expression(), "expression")
-	self:consume("colon", "Expected ':'")
+	self:consume("do", "Expected 'do'")
 	local body = self:assert(self:statement(), "statement")
 	return AST.Expr.For(pattern, expr, body, loc)
 end

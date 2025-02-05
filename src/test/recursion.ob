@@ -5,14 +5,14 @@ fac1 n => {
 
 fac2 n => n == 0 and 1 or n * fac2(n-1)
 
-fac2 n => n == 0 then 1 else n * fac2(n-1)
+fac3 n => if n == 0 then 1 else n * fac2(n-1)
 
-fac3 n => match n [
+fac4 n => match n [
 	0 => 1
 	n => n * fac3(n-1)
 ]
 
-rec fac4 = case [
+rec fac5 = case [
 	0 => 1
 	n => n * fac4(n-1)
 ]
@@ -21,3 +21,4 @@ print(fac1 5)
 print(fac2 5)
 print(fac3 5)
 print(fac4 5)
+print(fac5 5)

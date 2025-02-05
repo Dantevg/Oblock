@@ -37,17 +37,21 @@ local function isAfter(time)
 	return function() return os.clock() > time end
 end
 
+local function sleep(time)
+	coroutine.yield(isAfter(os.clock() + time))
+end
+
 parallel {
 	function()
 		print "A1"
-		coroutine.yield(isAfter(os.clock() + 2))
+		sleep(2)
 		print "A2"
-		coroutine.yield(isAfter(os.clock() + 2))
+		sleep(2)
 		print "A3"
 	end,
 	function()
 		print "B1"
-		coroutine.yield(isAfter(os.clock() + 1))
+		sleep(1)
 		print "B2"
 	end
 }

@@ -4,9 +4,9 @@ matrix = [
 	[7,8,9]
 ]
 
-a, b = for row, row_id in matrix: {
-	for elem, col_id in row: {
-		if elem == 6: break break row_id, col_id
+a, b = for row, row_id in matrix do {
+	for elem, col_id in row do {
+		if elem == 6 then break break row_id, col_id
 	}
 }
 

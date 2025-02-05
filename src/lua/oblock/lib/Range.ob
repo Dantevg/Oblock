@@ -25,8 +25,8 @@ Range := {
 	
 	contains(that) =>
 		if that.is Number:
-			that > Number.min(this.from-1, this.to-1)
-			and that < Number.max(this.to+1, this.from+1)
+			that > (this.from-1).min(this.to-1)
+			and that < (this.to+1).max(this.from+1)
 		else if that.is Range:
 			Number.min(that.from) > Number.min(this.from-1)
 			and Number.max(that.to) < Number.max(this.to+1)

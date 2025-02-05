@@ -1,7 +1,7 @@
 var z
 var x = -5
 a = { x = x + 1 }
-if x < 10: {
+if x < 10 then {
 	x := -x
 	z := 1
 }

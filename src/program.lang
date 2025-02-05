@@ -1,5 +1,0 @@
-{
-	const f = (...list) => list
-	print(10, clock(), 20)
-	print(f(10, clock(), 20))
-}

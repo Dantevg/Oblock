@@ -1,15 +1,15 @@
 isPositive = x => x > 0
 isZero = x => x == 0
 var a = 0
-if isZero(a): print "zero"
-else if isPositive(a): print "positive"
+if isZero(a) then print "zero"
+else if isPositive(a) then print "positive"
 else print "negative"
 
 var x = -5
 a := {
 	var x = 20
 }
-if x < 10: {
+if x < 10 then {
 	x := -x
 }
 print x

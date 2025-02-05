@@ -1,0 +1,8 @@
+just(x) => fn => fn x
+none() => none
+
+incr x => just (x + 1)
+monadprint x => just (print x)
+
+just 10 incr monadprint
+none () incr monadprint

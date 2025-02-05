@@ -1,0 +1,29 @@
+-- Function.mapp := fn => (self = this, arg => {
+-- 	value = self arg
+-- 	return if value != nil: fn value else nil
+-- })
+
+-- Function.zip := fn => (self = this, arg => (self arg, fn arg))
+
+-- g x => x + 1
+-- h x => x * 2
+
+-- f1 = h.mapp g
+-- f2 = g.mapp h
+
+-- f3 = g.zip(h).map((l, r) => l + r)
+
+-- print(f1 10)
+-- print(f2 10)
+-- print(f3 10)
+
+ff() => (10, 20)
+gg() => ("ten", "twenty")
+print(ff.zip(gg)())
+
+rec exp = case [
+        (n, 0) => 1
+        (n, m) => n * exp(n, m-1)
+]
+
+yield exp(2, 3)

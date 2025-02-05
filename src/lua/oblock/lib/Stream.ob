@@ -233,7 +233,7 @@ Stream := {
 	-- These functions transform a stream into a single value
 	
 	reduce(fn, acc) => {
-		acc = acc or this.read()
+		acc := acc or this.read()
 		for x in this: acc := fn(acc, x)
 		return acc
 	}

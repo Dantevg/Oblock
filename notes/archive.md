@@ -1,6 +1,91 @@
 These notes came from `syntax-semantics.md`, but they are no longer applicable
 because I scrapped the idea or implemented it.
 
+### Object access as function call
+Access kind           | Others           | Oblock now             | Proposed
+----------------------|------------------|------------------------|--------------------------------------
+Object property       | `obj.prop`       | `obj.prop`             | `obj.prop`, `obj .prop`, `obj(.prop)`
+List index (variable) | `list[index]`    | `list.(index)`         | `list index`, `list(index)`
+List index (number)   | `list[1]`        | `list.1`               | `list 1`, `list(1)`
+Map key (variable)    | `map.get(key)`   | `map.(key)`            | `map key`
+Map key (string)      | `map.get("foo")` | `map."foo"`, `map.foo` | `map "foo"`, `map("foo")`
+Operators             | -                | `a + b`, `(a."+")(b)`  | `a + b`, `(a +)(b)`
+
+This assumes using [symbols](#symbols):
+- otherwise object property access becomes `obj 'prop'`
+- syntax needs to be `.symbol`
+- `map.foo` is not a string key access (it instead is a symbol access)
+- Like Clojure: https://clojure.org/guides/learn/hashed_colls#_looking_up_by_key
+
+Can change operators to be just symbols. Language needs no knowledge of
+"operators," besides parsing `+`, `++` etc as symbols like `.prop`.
+- Problem: need to take operator precedence into account :/
+
+How to handle regular function call on object? Either:
+1. `obj x` is a function call if `obj."()"` exists, otherwise is access
+    - not useful, actually accessing properties/indexes/keys is too common so
+     don't want Lua-like `rawget` / `rawset` everywhere
+2. `obj x` is access if `obj.(x)` exists, otherwise calls `obj."()"(x)`
+   - `obj."()"` is now like Lua's `__index` metamethod
+   - what about a function expecting an existing key as argument? Probably mostly
+     a problem for symbol arguments.
+3. `obj x` is access if `obj.(x)` exists or if `x` is a symbol
+   - i.e. `obj.prop` is always a property access, never function call
+   - what about a function expecting a symbol as argument?
+
+Example function expecting a symbol as argument:
+- previously: `[ { filter = true }, { filter = false } ].mapKey("filter")`
+- proposed: `[ { filter = true }, { filter = false } ].mapKey(.filter)`
+- problem: this gets the `filter` property of the `mapKey` function. Probably
+  not much of an issue though.
+
+### Symbols
+- can be used for value-less things: enum elements, sentinels, ...  
+  `Colours = { RED = :red; GREEN = :green; BLUE = :blue }`,  `Colours.RED == :red`  
+  or  
+  `Colours = Enum(:red, :green, :blue)`,  `Colours.RED == :red`  
+  instead of  
+  `Colours = { RED = 1; GREEN = 2; BLUE = 3 }`,  `Colours.RED == 1`
+- syntax: `:symbol` seems common: `a.:+`, `a.:x`
+- make standard indexing use symbols instead of strings: `a.x` indexes `a`
+  with symbol `x`
+- should symbols be global by name?
+  - Unique: Javascript
+  - Global: Ruby, Scala?, Dart
+  - what makes global-by-name symbols different from strings?
+    essentially creates a separate string domain
+
+### Problems with using Block/Object as a map
+1. indexing will yield value from prototype if not present in map
+2. setting certain keys overrides functionality
+- solution 1: don't search prototype for indexing by expression
+  - `a = {}`, `a.x` will still search prototype, `a."x"` will not
+  - con: inconsistent, possibly confusing, does not solve problem 2
+- solution 2: add Map data structure
+  - `a = Map()`, `a.set("x", 42)`, `a.get "x"`
+  - con: more verbose / non-native syntax (requires function calls)
+- solution 3: make Block/Object have Map methods
+  - `a = {}`, `a.get "x"`
+  - con: same as solution 2, does not solve problem 2
+- solution 4 (radical!): [Use symbols](#symbols) for operator overrides instead of strings
+  - operators use symbols `a.(Symbol "+")` for addition override
+  - con: only partly solves problem 1 (by default, proto is Block/Object, and
+    no string keys there then)
+- solution 5: combine 4 and 2
+  - `a = Map()`, `a.x = 42`, `a.x`
+  - Map with getter/setter override, only searches prototype for symbol keys
+  - con: does not solve problem 1 when used for storing symbol keys,
+    need to use methods again then
+- solution 6: [Use symbols](#symbols) for everything instead of strings (also variables)
+  - `a = {}`, `a."x" = 42`, `a."x"`
+  - more radical version of solution 4
+    - symbol indexing: `a.x`
+    - string indexing: `a."x"`
+  - more standard OOP-like separation of code and data
+
+---
+### Older notes
+
 - Classical vs prototypal inheritance
   - Prototypal is simpler but less flexible: cannot set different methods
     for static and instance

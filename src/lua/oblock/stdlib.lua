@@ -25,9 +25,24 @@ function stdlib.Block.new()
 	return self
 end
 
+local function toNativeKey(key)
+	if type(key) == "table" and key.value ~= nil then
+		if key.__name == "String" then return '"'..key.value..'"'
+		else return key.value end
+	else return key end
+end
+
+local function fromNativeKey(key)
+	if type(key) == "string" and key:sub(1,1) == '"' and key:sub(-1) == '"' then return stdlib.String(key:sub(2,-2))
+	elseif type(key) == "string" then return stdlib.Symbol(key)
+	elseif type(key) == "number" then return stdlib.Number(key)
+	elseif type(key) == "boolean" then return stdlib.Boolean(key)
+	else return key end
+end
+
 -- TODO: check how 'has' should work with parent envs and protos
 function stdlib.Block:has(key)
-	if type(key) == "table" then key = key.value end
+	key = toNativeKey(key)
 	if self.env[key] or key == "_Protos" then return true end
 	
 	for _, proto in ipairs(self.protos) do
@@ -37,7 +52,7 @@ function stdlib.Block:has(key)
 end
 
 function stdlib.Block:get(key, isLocal)
-	if type(key) == "table" and key.value ~= nil then key = key.value end
+	key = toNativeKey(key)
 	
 	-- TODO: either make protos list immutable (unnatural) or somehow propagate changes
 	if key == "_Protos" then return stdlib.List(self.protos) end
@@ -59,7 +74,7 @@ function stdlib.Block:get(key, isLocal)
 end
 
 function stdlib.Block:set(key, value, isVariable)
-	if type(key) == "table" and key.value ~= nil then key = key.value end
+	key = toNativeKey(key)
 	if key == nil then Interpreter.error("Cannot set nil key") end
 	if not self.mutable then
 		Interpreter.error("Attempt to mutate immutable value "..tostring(self))
@@ -123,10 +138,7 @@ end
 function stdlib.Block:keys()
 	local keys = {}
 	for k in pairs(self.env) do
-		local key = type(k) == "string" and stdlib.String(k)
-			or type(k) == "number" and stdlib.Number(k)
-			or type(k) == "boolean" and stdlib.Boolean(k)
-			or k
+		local key = fromNativeKey(k)
 		if not (type(self.env[k].value) == "table" and self.env[k].value.__name == "Nil") then
 			table.insert(keys, key)
 		end
@@ -984,7 +996,16 @@ stdlib.Nil.proto:set("nil", stdlib.Nil())
 
 
 stdlib.clock = function() return stdlib.Number(os.clock()) end
+
 stdlib.print = function(_, ...)
+	local items = table.pack(...)
+	for i = 1, items.n do
+		items[i] = items[i]:get("toString"):call()
+	end
+	print(table.unpack(items))
+end
+
+stdlib.trace = function(_, ...)
 	-- Pass-through variables
 	local items = table.pack(...)
 	for i = 1, items.n do
@@ -1047,6 +1068,7 @@ end
 function stdlib.initEnv(env)
 	env:setHere("clock", stdlib.NativeFunction(stdlib.clock))
 	env:setHere("print", stdlib.NativeFunction(stdlib.print))
+	env:setHere("trace", stdlib.NativeFunction(stdlib.trace))
 	env:setHere("type", stdlib.NativeFunction(stdlib.type))
 	env:setHere("id", stdlib.NativeFunction(stdlib.id))
 	env:setHere("import", stdlib.NativeFunction(stdlib.import))

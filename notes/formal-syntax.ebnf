@@ -6,7 +6,8 @@ control		= 'if' expression 'then' statement ['else' statement]
 			| 'while' expression 'do' statement
 			| 'for' patlist 'in' expression 'do' statement
 			| function ;
-function	= fn | disjunction ;
+function	= fn | operator ;
+operator    = ('+' | '-' | ...) | disjunction ;
 disjunction	= conjunction {'or' conjunction} ;
 conjunction	= application {'and' application} ;
 application	= lowpredop {'|>' lowpredop} ;

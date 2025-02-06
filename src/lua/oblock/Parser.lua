@@ -3,7 +3,7 @@
 local AST = require "oblock.AST"
 local Lexer = require "oblock.Lexer"
 
-local operators = {"exclamation", "hash", "dollar", "percent", "ampersand", "star", "plus", "minus", "dot", "slash", "colon", "less", "greater", "question", "at", "backslash", "hat", "backtick", "bar", "tilde"}
+local operators = {"exclamation", "hash", "dollar", "percent", "ampersand", "star", "plus", "minus", "dot", "slash", "colon", "less", "equal", "greater", "question", "at", "backslash", "hat", "backtick", "bar", "tilde"}
 
 ---@class Parser
 ---@field tokens Token[]
@@ -198,7 +198,7 @@ function Parser:forExpr(loc)
 end
 
 function Parser:func()
-	local expr = self:disjunction()
+	local expr = self:operatorSymbol()
 	local pattern = expr and AST.Pattern(expr)
 	
 	if expr and expr.__name ~= "Call" and self:match {"equal greater"} then
@@ -212,6 +212,14 @@ function Parser:func()
 	end
 	
 	return expr
+end
+
+function Parser:operatorSymbol()
+	if self:matchOperator() then
+		return AST.Expr.Symbol(self:previous().lexeme)
+	else
+		return self:disjunction()
+	end
 end
 
 function Parser:disjunction()
@@ -297,8 +305,6 @@ function Parser:primary()
 		return AST.Expr.Variable(self:previous(), self:loc())
 	elseif self:match {"symbol"} then
 		return AST.Expr.Symbol(self:previous().literal)
-	elseif self:matchOperator() then
-		return AST.Expr.Symbol(self:previous().lexeme)
 	end
 end
 

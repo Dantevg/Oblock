@@ -855,11 +855,11 @@ function AST.Pattern.new(expr)
 	elseif expr.__name == "Block" then
 		return AST.Pattern.Block(expr.statements, expr.loc)
 	elseif expr.__name == "Call"
-			and expr.expression.__name == "Index"
-			and expr.expression.expr.__name == "Literal"
-			and expr.expression.expr.lexeme == "..."
-			and expr.expression.base.__name == "Variable" then
-		return AST.Pattern.Rest(expr.expression.base.token, expr.expression.base.loc)
+			and expr.expression.__name == "Call"
+			and expr.expression.expression.__name == "Variable"
+			and expr.expression.arglist.__name == "Symbol"
+			and expr.expression.arglist.name == "..." then
+		return AST.Pattern.Rest(expr.expression.expression.token, expr.expression.expression.loc)
 	else
 		return AST.Pattern.Expression(expr, expr.loc)
 	end
@@ -1314,7 +1314,7 @@ function AST.Pattern.Rest:resolve(scope, isDef, isCompound)
 end
 
 function AST.Pattern.Rest:debug(indent)
-	return debugValue(indent, self.__name, {token = self.token}, {})
+	return debugValue(indent, self.__name, {token = self.token.lexeme}, {})
 end
 
 function AST.Pattern.Rest:__tostring()

@@ -36,7 +36,7 @@ function stdlib.Block:has(key)
 	return false
 end
 
-function stdlib.Block:get(key)
+function stdlib.Block:get(key, isLocal)
 	if type(key) == "table" and key.value ~= nil then key = key.value end
 	
 	-- TODO: either make protos list immutable (unnatural) or somehow propagate changes
@@ -52,7 +52,7 @@ function stdlib.Block:get(key)
 			end
 		end
 	end
-	if value and (value.__name == "Function" or value.__name == "NativeFunction") then
+	if not isLocal and value and (value.__name == "Function" or value.__name == "NativeFunction") then
 		value = value:bind(self)
 	end
 	return value or stdlib.Nil()
@@ -400,7 +400,7 @@ end
 
 function stdlib.Sequence:concat(other)
 	if not other:is(stdlib.Sequence.proto).value then
-		Interpreter.error("cannot perform Sequence.concat on "..other.__name)
+		Interpreter.binOpError("++", self.__name, other.__name)
 	end
 	
 	local values = {}
@@ -552,55 +552,55 @@ end
 
 function stdlib.Number:lt(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '<' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("<", self.__name, other.__name) end
 	return stdlib.Boolean(a < b)
 end
 
 function stdlib.Number:leq(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '<=' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("<=", self.__name, other.__name) end
 	return stdlib.Boolean(a <= b)
 end
 
 function stdlib.Number:gt(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '>' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError(">", self.__name, other.__name) end
 	return stdlib.Boolean(a > b)
 end
 
 function stdlib.Number:geq(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '>=' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError(">=", self.__name, other.__name) end
 	return stdlib.Boolean(a >= b)
 end
 
 function stdlib.Number:add(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '+' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("+", self.__name, other.__name) end
 	return self.new(a + b)
 end
 
 function stdlib.Number:mul(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '*' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("*", self.__name, other.__name) end
 	return self.new(a * b)
 end
 
 function stdlib.Number:div(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '/' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("/", self.__name, other.__name) end
 	return self.new(a / b)
 end
 
 function stdlib.Number:idiv(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '//' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("//", self.__name, other.__name) end
 	return self.new(a // b)
 end
 
 function stdlib.Number:mod(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '%' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("%", self.__name, other.__name) end
 	return self.new(a % b)
 end
 
@@ -608,7 +608,7 @@ function stdlib.Number:sub(other)
 	local a = tonumber(self.value)
 	if other then
 		local b = tonumber(other.value)
-		if type(b) ~= "number" then Interpreter.error("cannot perform '-' on "..other.__name) end
+		if type(b) ~= "number" then Interpreter.binOpError("-", self.__name, other.__name) end
 		return self.new(a - b)
 	else
 		return self.new(-a)
@@ -617,7 +617,7 @@ end
 
 function stdlib.Number:range(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
-	if type(b) ~= "number" then Interpreter.error("cannot perform '..' on "..other.__name) end
+	if type(b) ~= "number" then Interpreter.binOpError("..", self.__name, other.__name) end
 	return stdlib.lazy.Range:call(nil, self, other)
 end
 
@@ -647,7 +647,7 @@ end
 function stdlib.Number:max(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(a) ~= "number" or type(b) ~= "number" then
-		Interpreter.error("cannot perform 'max' on "..other.__name)
+		Interpreter.argError("max", self.__name, other.__name)
 	end
 	return stdlib.Number.new(math.max(a, b))
 end
@@ -655,7 +655,7 @@ end
 function stdlib.Number:min(other)
 	local a, b = tonumber(self.value), tonumber(other.value)
 	if type(a) ~= "number" or type(b) ~= "number" then
-		Interpreter.error("cannot perform 'min' on "..other.__name)
+		Interpreter.argError("min", self.__name, other.__name)
 	end
 	return stdlib.Number.new(math.min(a, b))
 end
@@ -779,6 +779,36 @@ stdlib.Nil.__tostring = stdlib.Value.__tostring
 
 setmetatable(stdlib.Nil, {
 	__call = function(_, ...) return stdlib.Nil.new(...) end,
+	__index = stdlib.Value,
+})
+
+
+
+stdlib.Symbol = {}
+stdlib.Symbol.__index = stdlib.Symbol
+stdlib.Symbol.__name = "Symbol"
+
+stdlib.Symbol.proto = stdlib.Block()
+
+function stdlib.Symbol.new(value)
+	local self = stdlib.Value(value)
+	self.protos = {stdlib.Symbol.proto}
+	self.mutable = false
+	return setmetatable(self, stdlib.Symbol)
+end
+
+function stdlib.Symbol:__tostring()
+	if self.value:match("^%w+$") then
+		return "."..self.value
+	else
+		return "<symbol '"..self.value.."'>"
+	end
+end
+
+stdlib.Symbol.__eq = stdlib.Value.__eq
+
+setmetatable(stdlib.Symbol, {
+	__call = function(_, ...) return stdlib.Symbol.new(...) end,
 	__index = stdlib.Value,
 })
 

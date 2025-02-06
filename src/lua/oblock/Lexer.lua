@@ -215,6 +215,17 @@ function Lexer:identifier()
 	self:addToken(Lexer.keywords[keyword] and keyword or "identifier")
 end
 
+--- Lex a symbol.
+function Lexer:symbol()
+	-- TODO: allow symbols starting with number / consisting of only numbers?
+	while self:peek():match("[%w_]") do self:advance() end
+	if self.current == self.start + 1 then
+		self:error("Empty symbol")
+		return
+	end
+	self:addToken("symbol", self:sub():sub(2))
+end
+
 --- Check if `char` appended to `token` is a valid token.
 ---@param token Token
 ---@param char string
@@ -288,6 +299,8 @@ function Lexer:scanToken()
 		self:lineComment()
 	elseif char == "(" and self:peek() == ":" then
 		self:blockComment()
+	elseif char == "." and self:peek() ~= "." then
+		self:symbol()
 	elseif Lexer.tokens[char] then
 		self:combine(Lexer.tokens[char])
 	elseif char == '"' or char == "'" then

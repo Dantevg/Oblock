@@ -46,6 +46,14 @@ function Interpreter.error(message, loc, sourceLoc)
 	error(require("oblock.stdlib").Error(message, loc, sourceLoc), 0)
 end
 
+function Interpreter.argError(name, ...)
+	Interpreter.error("cannot perform "..name.."("..table.concat({...}, ", ")..")")
+end
+
+function Interpreter.binOpError(op, type1, type2)
+	Interpreter.error("cannot perform "..type1.." "..op.." "..type2)
+end
+
 function Interpreter.formatLoc(loc)
 	if loc.column == nil then print(debug.traceback()) end
 	return string.format("%s:%d:%d", loc.file, loc.line, loc.column)
@@ -114,7 +122,7 @@ end
 
 function Interpreter.Environment:get(key, level)
 	if level == 0 and self.block:has(key) then
-		return self.block:get(key)
+		return self.block:get(key, true)
 	elseif self.parent then
 		return self.parent:get(key, level and level-1)
 	end

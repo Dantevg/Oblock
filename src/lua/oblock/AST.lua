@@ -197,51 +197,6 @@ setmetatable(AST.Expr.Variable, {
 
 
 
-AST.Expr.Index = {}
-AST.Expr.Index.__index = AST.Expr.Index
-AST.Expr.Index.__name = "Index"
-
--- b.(c).(d)  is  (b.(c)).(d)  is  Index(Index(Variable(b), c), d)
-
-function AST.Expr.Index.new(base, expr, loc)
-	local self = {}
-	self.base = base
-	self.expr = expr
-	self.loc = loc
-	return setmetatable(self, AST.Expr.Index)
-end
-
-local function ref(value, env)
-	return value.__name == "Variable" and value.token.lexeme or value:evaluate(env)
-end
-
-function AST.Expr.Index:evaluate(env)
-	local value = (self.base and self.base:evaluate(env) or env):get(ref(self.expr, env), self.level)
-	if value and value.__name == "Nil" and not value.loc then value.loc = self.loc end
-	return value
-end
-
-function AST.Expr.Index:resolve(scope)
-	if self.level then Interpreter.error("resolving already-resolved variable "..tostring(self), self.loc) end
-	if self.base then self.base:resolve(scope) end
-	if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
-	self.level = 0
-end
-
-function AST.Expr.Index:debug(indent)
-	return debugValue(indent, self.__name, {}, {base = {self.base}, expr = {self.expr}})
-end
-
-function AST.Expr.Index:__tostring()
-	return tostring(self.base or "").."."..tostring(self.expr)
-end
-
-setmetatable(AST.Expr.Index, {
-	__call = function(_, ...) return AST.Expr.Index.new(...) end,
-})
-
-
-
 AST.Expr.Block = {}
 AST.Expr.Block.__index = AST.Expr.Block
 AST.Expr.Block.__name = "Block"
@@ -386,26 +341,31 @@ end
 
 function AST.Expr.Call:evaluate(env)
 	local fn = self.expression:evaluate(env)
-	if not Interpreter.isCallable(fn) then
+	local args = {self.arglist:evaluate(env)}
+	
+	if #args == 1 and fn:has(args[1]) then -- Index
+		local value = fn:get(args[1])
+		if value and value.__name == "Nil" and not value.loc then value.loc = self.loc end
+		return value
+	elseif Interpreter.isCallable(fn) then -- Regular call
+		-- Do not check function signatures for now, as there is no way to define
+		-- optional parameters yet
+		--[[ local argsToMatch = {}
+		for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
+		if fn.parameters and not fn.parameters:match(env, argsToMatch) then
+			Interpreter.error("function parameters do not match parameter signature "..tostring(fn.parameters), self.loc)
+			return stdlib.Nil(self.loc)
+		end ]]
+		return fn:call(self.loc, table.unpack(args))
+	else -- Not callable
 		if self.isOperator then
-			Interpreter.error("No callable operator '"..self.expression.expr.lexeme
+			Interpreter.error("No callable operator '"..args[1].value
 				.."' on this value", self.loc, fn and fn.loc)
 		else
 			Interpreter.error("Attempt to call non-callable type "
 				..(fn and fn.__name or "Nil"), self.loc, fn and fn.loc)
 		end
 	end
-	
-	local args = {self.arglist:evaluate(env)}
-	-- Do not check function signatures for now, as there is no way to define
-	-- optional parameters yet
-	--[[ local argsToMatch = {}
-	for i, v in ipairs(args) do argsToMatch[i] = v end -- Copy for matching
-	if fn.parameters and not fn.parameters:match(env, argsToMatch) then
-		Interpreter.error("function parameters do not match parameter signature "..tostring(fn.parameters), self.loc)
-		return stdlib.Nil(self.loc)
-	end ]]
-	return fn:call(self.loc, table.unpack(args))
 end
 
 function AST.Expr.Call:resolve(scope)
@@ -613,6 +573,36 @@ end
 
 setmetatable(AST.Expr.Literal, {
 	__call = function(_, ...) return AST.Expr.Literal.new(...) end,
+})
+
+
+
+AST.Expr.Symbol = {}
+AST.Expr.Symbol.__index = AST.Expr.Symbol
+AST.Expr.Symbol.__name = "Symbol"
+
+function AST.Expr.Symbol.new(name)
+	local self = {}
+	self.name = name
+	return setmetatable(self, AST.Expr.Symbol)
+end
+
+function AST.Expr.Symbol:evaluate(env)
+	return stdlib.Symbol(self.name)
+end
+
+function AST.Expr.Symbol:resolve() end
+
+function AST.Expr.Symbol:debug(indent)
+	return debugValue(indent, self.__name, {name = self.name}, {})
+end
+
+function AST.Expr.Symbol:__tostring()
+	return "."..self.name
+end
+
+setmetatable(AST.Expr.Symbol, {
+	__call = function(_, ...) return AST.Expr.Symbol.new(...) end,
 })
 
 
@@ -1014,7 +1004,10 @@ function AST.Pattern.Index:resolve(scope, isDef)
 		-- TODO: should remove the next line? (should allow index definition in function parameters)
 		if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
 	else
-		AST.Expr.Index.resolve(self, scope)
+		if self.level then Interpreter.error("resolving already-resolved variable "..tostring(self), self.loc) end
+		if self.base then self.base:resolve(scope) end
+		if self.expr.__name ~= "Variable" then self.expr:resolve(scope) end
+		self.level = 0
 	end
 end
 

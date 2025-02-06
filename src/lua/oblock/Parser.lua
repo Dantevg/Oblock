@@ -3,6 +3,8 @@
 local AST = require "oblock.AST"
 local Lexer = require "oblock.Lexer"
 
+local operators = {"exclamation", "hash", "dollar", "percent", "ampersand", "star", "plus", "minus", "dot", "slash", "colon", "less", "greater", "question", "at", "backslash", "hat", "backtick", "bar", "tilde"}
+
 ---@class Parser
 ---@field tokens Token[]
 ---@field name string?
@@ -67,15 +69,29 @@ function Parser:advance()
 	return self:previous()
 end
 
-function Parser:match(types)
-	local token = self:peek()
+local function match(type, types)
 	for _, t in ipairs(types) do
-		if token.type == t then
-			self:advance()
-			return true
-		end
+		if t == type then return true end
 	end
 	return false
+end
+
+function Parser:match(types)
+	local token = self:peek()
+	if match(token.type, types) then
+		self:advance()
+		return true
+	end
+	return false
+end
+
+function Parser:matchOperator()
+	local token = self:peek()
+	for part in token.type:gmatch("%S+") do
+		if not match(part, operators) then return false end
+	end
+	self:advance()
+	return true
 end
 
 function Parser:consume(type, message)
@@ -95,18 +111,21 @@ end
 function Parser:binary(tokens, next, fn)
 	local expr = next(self)
 	
+	if not expr then return end
+	
 	while self:match(tokens) do
 		local op = self:previous()
 		local right = next(self)
 		if fn then
 			-- For logical operators
+			if not right then self:error(self:peek(), "Expected expression") end
 			expr = fn(expr, op, right, self:loc(op))
 		else
 			-- Desugar normal binary operator into function call
-			expr = AST.Expr.Call(
-				AST.Expr.Index(expr, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
-				right, self:loc(op), true
-			)
+			expr = AST.Expr.Call(expr, AST.Expr.Symbol(op.lexeme), self:loc(op), true)
+			if right then
+				expr = AST.Expr.Call(expr, right)
+			end
 		end
 	end
 	
@@ -238,35 +257,26 @@ function Parser:unary()
 	if self:match {"minus", "exclamation", "hash", "dot dot dot"} then
 		local op = self:previous()
 		local right = self:unary()
+		if not right then return AST.Expr.Symbol(op.lexeme) end
 		return AST.Expr.Call(
-				AST.Expr.Index(right, AST.Expr.Literal(op.lexeme, op.lexeme, self:loc(op))),
-				AST.Expr.Group({}, self:loc(op)), self:loc(op), true
+				AST.Expr.Call(right, AST.Expr.Symbol(op.lexeme), self:loc(op), true),
+				AST.Expr.Group({}, self:loc(op))
 			)
 	else
-		return self:varcall()
+		return self:call()
 	end
 end
 
-function Parser:varcall()
+function Parser:call()
 	local expr = self:primary()
 	while true do
 		local loc = self:loc()
-		if self:match {"dot"} then
-			local index = self:primary()
-			if not index and Lexer.keywords[self:peek().type] then
-				-- Allow keywords as identifiers here (`x.and`)
-				-- TODO: also allow operators (`x.+`)
-				index = AST.Expr.Variable(self:advance(), self:loc())
-			end
-			expr = AST.Expr.Index(expr, index, loc)
-		else
-			local nl = self.nlSensitive
-			self.nlSensitive = true
-			local arglist = self:primary()
-			self.nlSensitive = nl
-			if not arglist then break end
-			expr = AST.Expr.Call(expr, arglist, loc)
-		end
+		local nl = self.nlSensitive
+		self.nlSensitive = true
+		local arglist = self:primary()
+		self.nlSensitive = nl
+		if not arglist then break end
+		expr = AST.Expr.Call(expr, arglist, loc)
 	end
 	return expr
 end
@@ -285,6 +295,10 @@ function Parser:primary()
 		return self:block(self:loc())
 	elseif self:match {"identifier"} then
 		return AST.Expr.Variable(self:previous(), self:loc())
+	elseif self:match {"symbol"} then
+		return AST.Expr.Symbol(self:previous().literal)
+	elseif self:matchOperator() then
+		return AST.Expr.Symbol(self:previous().lexeme)
 	end
 end
 

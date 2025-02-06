@@ -11,7 +11,7 @@ List_ = {
 		self = this
 		return () => {
 			i += 1
-			return self.(i), i
+			return self(i), i
 		}
 	}
 	

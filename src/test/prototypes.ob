@@ -1,5 +1,5 @@
 a = {x = 10}
 b = a.clone()
 print b
-print(b._Protos.1)
+print(b._Protos 1)
 print(b.x)

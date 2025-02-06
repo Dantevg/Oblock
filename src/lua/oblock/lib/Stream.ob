@@ -16,7 +16,7 @@ Stream := {
 	
 	"..." () => {
 		values = []
-		for value in this: values.append value
+		for value in this do values.append value
 		return ...values
 	}
 	
@@ -31,21 +31,21 @@ Stream := {
 		read() => {
 			val = source.read()
 			i += 1
-			return if val != nil: fn(val, i)
+			return if val != nil then fn(val, i)
 		}
 	}
 	
-	mapIndex(object) => this.map(x => object.(x))
+	mapIndex(object) => this.map(x => object(x))
 	
 	flat() => this.clone {
 		source = this
 		var latest = source.read()
 		read() => {
-			if latest == nil: return nil
+			if latest == nil then return nil
 			var value = latest.read()
-			while value == nil: {
+			while value == nil do {
 				latest := source.read()
-				if latest == nil: return nil
+				if latest == nil then return nil
 				value := latest.read()
 			}
 			return value
@@ -58,7 +58,7 @@ Stream := {
 		read() => {
 			i += 1
 			val = source.read()
-			if val != nil: fn(val, i)
+			if val != nil then fn(val, i)
 			return val
 		}
 	}
@@ -67,9 +67,9 @@ Stream := {
 		source = this
 		var i = 0
 		read() => {
-			for x in source: {
+			for x in source do {
 				i += 1
-				if fn(x, i): return x
+				if fn(x, i) then return x
 			}
 			return nil
 		}
@@ -81,7 +81,7 @@ Stream := {
 		read() => {
 			i += 1
 			value = source.read()
-			if value != nil and fn(value, i): return value
+			if value != nil and fn(value, i) then return value
 			return nil
 		}
 	}
@@ -91,10 +91,10 @@ Stream := {
 		var i = 0
 		var stopped = false
 		read() => {
-			if stopped: return nil
+			if stopped then return nil
 			i += 1
 			value = source.read()
-			if value == nil or !fn(value, i): return value
+			if value == nil or !fn(value, i) then return value
 			else {
 				stopped := true
 				return value
@@ -106,7 +106,7 @@ Stream := {
 		source = this
 		var taken = 0
 		read() => {
-			if taken < n: {
+			if taken < n then {
 				taken += 1
 				return source.read()
 			}
@@ -118,7 +118,7 @@ Stream := {
 		source = this
 		var dropped = 0
 		read() => {
-			while dropped < n: {
+			while dropped < n do {
 				dropped += 1
 				source.read()
 			}
@@ -130,17 +130,17 @@ Stream := {
 		source = this
 		var buffer = []
 		read() => {
-			for x in source: {
-				if fn(x, buffer): {
+			for x in source do {
+				if fn(x, buffer) then {
 					buffer.append(x)
-				} else if buffer.length > 0 or keepEmpty: {
+				} else if buffer.length > 0 or keepEmpty then {
 					oldBuffer = buffer
-					buffer := if fn(x, []): [x] else []
+					buffer := if fn(x, []) then [x] else []
 					return Stream.of(oldBuffer)
 				}
 			}
 			-- Source is empty, buffer still has items
-			if buffer.length > 0: {
+			if buffer.length > 0 then {
 				oldBuffer = buffer
 				buffer := []
 				return Stream.of(oldBuffer)
@@ -157,14 +157,14 @@ Stream := {
 		source = this
 		var window = []
 		-- Fill initial window
-		for i in Range(1, size): {
+		for i in Range(1, size) do {
 			value = source.read()
-			if value == nil: return Stream.empty()
+			if value == nil then return Stream.empty()
 			window.append(value)
 		}
 		read() => {
 			oldWindow = window
-			for i in Range(1, step or 1): {
+			for i in Range(1, step or 1) do {
 				value = source.read()
 				if value != nil: window := window.sub(2) ++ [value]
 				else { window = nil; break }
@@ -177,7 +177,7 @@ Stream := {
 		source = this
 		var values
 		read() => {
-			if !values: values := Stream.of([...source].sorted(fn))
+			if !values then values := Stream.of([...source].sorted(fn))
 			return values.read()
 		}
 	}
@@ -185,8 +185,8 @@ Stream := {
 	distinct() => {
 		occurred = {}
 		return this.filter(x => {
-			has = occurred.(x)
-			occurred.(x) := true
+			has = occurred(x)
+			occurred(x) := true
 			return !has
 		})
 	}
@@ -195,7 +195,7 @@ Stream := {
 		var source = this
 		read() => {
 			value = source.read()
-			if value != nil: return value
+			if value != nil then return value
 			source := that
 			return source.read()
 		}
@@ -207,7 +207,7 @@ Stream := {
 		source = this
 		read() => {
 			a, b = source.read(), that.read()
-			if !partial and (a == nil or b == nil): return nil
+			if !partial and (a == nil or b == nil) then return nil
 			return [a, b]
 		}
 	}
@@ -217,15 +217,15 @@ Stream := {
 		data = []
 		var i = 0
 		read() => {
-			if i == 0: {
+			if i == 0 then {
 				value = source.read()
-				if value != nil: {
+				if value != nil then {
 					data.append(value)
 					return value
 				}
 			}
 			i := (i % #data) + 1
-			return data.(i)
+			return data(i)
 		}
 	}
 	
@@ -234,7 +234,7 @@ Stream := {
 	
 	reduce(fn, acc) => {
 		acc := acc or this.read()
-		for x in this: acc := fn(acc, x)
+		for x in this do acc := fn(acc, x)
 		return acc
 	}
 	
@@ -243,15 +243,15 @@ Stream := {
 	sum() => this.reduce((acc, x) => acc + x)
 	count() => this.reduce((acc, x) => acc + 1, 0)
 	
-	forAll(fn) => for x, i in this: fn(x, i)
+	forAll(fn) => for x, i in this do fn(x, i)
 	
 	any(predicate) => {
-		for x in this: if predicate(x): return true
+		for x in this do if predicate(x) then return true
 		return false
 	}
 	
 	all(predicate) => {
-		for x in this: if !predicate(x): return false
+		for x in this do if !predicate(x) then return false
 		return true
 	}
 	

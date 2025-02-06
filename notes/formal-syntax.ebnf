@@ -2,9 +2,9 @@ program		= statseq ;
 expression	= control ;
 
 (* Expressions *)
-control		= 'if' expression ':' statement ['else' statement]
-			| 'while' expression ':' statement
-			| 'for' patlist 'in' expression ':' statement
+control		= 'if' expression 'then' statement ['else' statement]
+			| 'while' expression 'do' statement
+			| 'for' patlist 'in' expression 'do' statement
 			| function ;
 function	= fn | disjunction ;
 disjunction	= conjunction {'or' conjunction} ;
@@ -16,9 +16,9 @@ bitwise		= addsub {('>>' | '<<') addsub} ;
 addsub		= muldiv {('+' | '-') muldiv} ;
 muldiv		= range {('*' | '/' | '//' | '%') range} ;
 range		= unary {'..' unary} ;
-unary		= ('-' | '!' | '#' | '...') unary | varcall ;
-varcall		= [primary] {'.' primary | primary} ;
-primary		= Identifier | Number | String | group | list | block ;
+unary		= ('-' | '!' | '#' | '...') unary | call ;
+call		= primary {primary} ;
+primary		= Identifier | Symbol | Number | String | group | list | block ;
 group		= '(' expseq ')' ;
 list		= '[' expseq ']' ;
 block		= '{' statseq '}' ;

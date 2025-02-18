@@ -2,6 +2,11 @@ To-Do / roadmap / proposals
 ===========================
 (*roughly* in order of importance / new-ness)
 
+### Overridable assignment "operator" (and compound assignment?)
+- set `key` to `value`:       `(=) (key, value) => print(key, value)`
+- set `key` to `key + value`: `(+=) (key, value) => ...`
+- get `key`:                  `() key => ...`
+
 ### "Magic" value field for basic/builtin values
 - Contains itself (recursively), just like already implemented for functions:
   - `0.value == 0`

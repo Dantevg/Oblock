@@ -11,6 +11,8 @@ Map key (variable)    | `map.get(key)`   | `map.(key)`            | `map key`
 Map key (string)      | `map.get("foo")` | `map."foo"`, `map.foo` | `map "foo"`, `map("foo")`
 Operators             | -                | `a + b`, `(a."+")(b)`  | `a + b`, `(a +)(b)`
 
+Also see https://soc.me/languages/useful-syntax-sugar
+
 This assumes using [symbols](#symbols):
 - otherwise object property access becomes `obj 'prop'`
 - syntax needs to be `.symbol`

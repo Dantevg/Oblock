@@ -348,6 +348,10 @@ function stdlib.Function:matches(...)
 	return stdlib.Boolean(#args == 0)
 end
 
+function stdlib.Function:co()
+	return stdlib.Coroutine(self)
+end
+
 function stdlib.Function:__tostring()
 	return (self.name and "<function "..self.name or "<function")
 		.." @ "..Interpreter.formatLoc(self.loc)..">"
@@ -387,6 +391,66 @@ end
 
 setmetatable(stdlib.NativeFunction, {
 	__call = function(_, ...) return stdlib.NativeFunction.new(...) end,
+	__index = stdlib.Function,
+})
+
+
+
+stdlib.Coroutine = {}
+stdlib.Coroutine.__index = stdlib.Coroutine
+stdlib.Coroutine.__name = "Coroutine"
+
+stdlib.Coroutine.proto = stdlib.Function.proto:clone()
+
+stdlib.Coroutine.FLAG = setmetatable({}, { __tostring = function() return "(COROUTINE FLAG)" end })
+
+function stdlib.Coroutine.new(fn)
+	local self = stdlib.Block()
+	self.protos = {stdlib.Coroutine.proto}
+	self.co = coroutine.create(function(...) return fn:call(nil, ...) end)
+	return setmetatable(self, stdlib.Coroutine)
+end
+
+function stdlib.Coroutine.current()
+	local self = stdlib.Block()
+	self.protos = {stdlib.Coroutine.proto}
+	self.co = coroutine.running()
+	return setmetatable(self, stdlib.Coroutine)
+end
+
+function stdlib.Coroutine:call(loc, ...)
+	local args = {...}
+	while true do
+		if coroutine.status(self.co) == "dead" then return end
+		-- print("", coroutine.running(), self.co)
+		local values = {coroutine.resume(self.co, table.unpack(args))}
+		local success = table.remove(values, 1)
+		if not success then error(values[1]) end
+		-- Need to use rawequal because otherwise Oblock == takes over and returns an Oblock Boolean
+		if not rawequal(values[1], stdlib.Coroutine.FLAG) then
+			-- Not a Coroutine yield
+			return table.unpack(values)
+		end
+		if values[2] == self.co then
+			-- Should yield self
+			return table.unpack(values, 3)
+		else
+			-- Should yield coroutine up the stack
+			args = {coroutine.yield(table.unpack(values))}
+		end
+	end
+end
+
+function stdlib.Coroutine:yield(...)
+	return coroutine.yield(stdlib.Coroutine.FLAG, self.co or coroutine.running(), ...)
+end
+
+function stdlib.Coroutine:__tostring()
+	return self.name and "<coroutine "..self.name..">" or "<coroutine>"
+end
+
+setmetatable(stdlib.Coroutine, {
+	__call = function(_, ...) return stdlib.Coroutine.new(...) end,
 	__index = stdlib.Function,
 })
 
@@ -895,6 +959,8 @@ function stdlib.Error.new(message, loc, sourceLoc)
 end
 
 function stdlib.Error:__tostring()
+	-- FIXME: TODO: fix printing tracebacks. At the moment, error printing is
+	-- handled by Interpreter.printError and the traceback Oblock-list contains Lua-strings!
 	return tostring(self:get("message")).."\n"..tostring(self:get("traceback"))
 end
 
@@ -945,6 +1011,11 @@ defineProtoNativeFn("Function", "curry")
 defineProtoNativeFn("Function", "and")
 defineProtoNativeFn("Function", "or")
 defineProtoNativeFn("Function", "matches")
+defineProtoNativeFn("Function", "co")
+
+defineProtoNativeFn("Coroutine", "call", "()")
+defineProtoNativeFn("Coroutine", "current")
+defineProtoNativeFn("Coroutine", "yield")
 
 defineOperator("Sequence", "concat", "++")
 defineOperator("Sequence", "length", "#")
@@ -1078,6 +1149,7 @@ function stdlib.initEnv(env)
 	
 	env:setHere("Block", stdlib.Block.proto)
 	env:setHere("Function", stdlib.Function.proto)
+	env:setHere("Coroutine", stdlib.Coroutine.proto)
 	env:setHere("Sequence", stdlib.Sequence.proto)
 	env:setHere("Number", stdlib.Number.proto)
 	env:setHere("String", stdlib.String.proto)

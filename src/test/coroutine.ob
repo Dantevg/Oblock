@@ -1,0 +1,19 @@
+var inner, outer
+
+inner := (() => {
+	print "    inner before"
+	outer.yield() -- yield outer coroutine, transfer control to main thread
+	print "    inner after"
+}).co()
+
+outer := (() => {
+	print "  outer before"
+	inner() -- resume inner coroutine
+	print "  outer after"
+}).co()
+
+print "outside before"
+outer() -- resume outer coroutine
+print "outside between"
+outer() -- resume inner coroutine (the one that yielded)
+print "outside after"

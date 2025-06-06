@@ -16,7 +16,11 @@ To-Do / roadmap / proposals
 - Field name:
   - `x.value`: same for all types. Possibly add this for all values (including
     blocks/objects) as `.self`? Any use case?
+    - For assigning to variable keys, which would otherwise no longer be
+      possible with the new index==call syntax: `{ x = 10; self(x) = "ten!" }`
   - `x.Number`: possibility for getter function to convert to this type
+    - example: a boolean value can have `.Bool`, `.Number` and `.String`
+    - problem: conversion should be a function (at least lazily computed)
   - `x.(Number)`: same as `.Number` but with the type as key instead of the name
   - `x."()"` for functions: as already implemented for the call operator `()`.
     Does not generalise to the other basic value types though

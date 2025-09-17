@@ -272,6 +272,19 @@ for both async stuff and more local stream stuff.
   needs to be on the call stack.
 - Similar to Wren's `Fiber.transfer` function: https://wren.io/concurrency.html#transferring-control
   - different because Wren allows transfer between any coroutine
+- Transparent coroutines? (very vague idea)
+  - https://adam.nels.onl/blog/maybe-everything-is-a-coroutine/
+  - Plain call is run to completion, special syntax to instantiate coroutine
+  - This program prints "before a 2 4 after"
+  
+        f() => { print "a"; b = yield "b"; print b; c = yield "c"; return c + 1 }
+        
+        g() => { print "before"; print(f()); print "after" }
+        
+        run g() [
+          "b" => continue 2 -- `continue` means re-do as a loop
+          "c" => continue 3
+        ]
 
 Example using Lua coroutine function names:
 

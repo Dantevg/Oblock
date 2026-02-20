@@ -10,7 +10,7 @@ To-Do / roadmap / proposals
 ### "Magic" value field for basic/builtin values
 - Contains itself (recursively), just like already implemented for functions:
   - `0.value == 0`
-  - `"hey".value == "hey"
+  - `"hey".value == "hey"`
   - `true.value == true`
   - `print.value == print`
 - Field name:
@@ -415,16 +415,18 @@ Turn `a.x(); a.y(); a.z()`  into  `with a: { x(); y(); z() }`
   `return (x = 10, y = 20)`  
   `fn (x = 10, y = 20)`
 
-How to unpack named fields from tuples?
-- as definition: `a, b, c = (30, a = 10, x = 20)`
-- as function call: `f(a, b, c) => ...; f(30, a = 10, x = 20)`
+#### How to unpack named fields from tuples?
+- as definition: `a, b, c, d, e = (4, a = 1, b = 2, 5, x = 3)`
+- as function call: `f(a, b, c, d, e) => ...; f(4, a = 1, 5, b = 2, x = 3)`
 
-Match method                   | `a`   | `b`   | `c`   | note
--------------------------------|-------|-------|-------|------
-Ignore names                   | `30`  | `10`  | `20`  | 👎 why bother with names in the first place?
-Override named with positional | `30`  | `nil` | `nil` | 🤔 could work
-Override positional with named | `10`  | `nil` | `nil` | 🤔 could work
-Named first, append positional | `10`  | `30`  | `nil` | 👎 confusing, named args slide over
+Match method                   | `a`   | `b`   | `c`   | `d`   | `e`   | note
+-------------------------------|-------|-------|-------|-------|-------|------
+Ignore names                   | `4`   | `1`   | `2`   | `5`   | `3`   | 👎 why bother with names in the first place?
+Override named with positional | `4`   | `5`   | (nil) | (nil) | (nil) | 🤔 could work (probably not)
+Override positional with named | `1`   | `2`   | (nil) | (nil) | (nil) | 👍 promising, prioritises explicit-ness
+Override earlier with later    | `1`   | `5`   | (nil) | (nil) | (nil) | 👍 promising, reflects assignment order
+Named first, append positional | `1`   | `2`   | `4`   | `5`   | (nil) | 👎 confusing, named args slide over
+Error on inconsistency         | -     | -     | -     | -     | -     | 👎 only for statically typed languages
 
 ### Multiple values for nothing-ness: nil, null, unit, void, nothing, none?
 - Usage: empty indices in lists while iterating (atm iteration stops at nil)
